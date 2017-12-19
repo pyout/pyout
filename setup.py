@@ -9,7 +9,7 @@ setup(
     license="MIT",
     url="https://github.com/pyout/pyout.git",
     py_modules=["pyout"],
-    install_requires=["blessings"],
+    install_requires=["blessings", "six"],
     extras_require={"tests": ["pytest"]},
     long_description=open("README.rst").read(),
     classifiers=[
