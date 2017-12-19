@@ -37,6 +37,9 @@ class Tabular(object):
     stream : file object, optional
         Defaults to standard output.
 
+    force_styling : bool or None
+        Passed to blessings.Terminal.
+
     Attributes
     ----------
     term : blessings.Terminal instance
@@ -47,8 +50,9 @@ class Tabular(object):
                      "width": 10,
                      "attrs": []}
 
-    def __init__(self, data, columns, id_column=0, style=None, stream=None):
-        self.term = Terminal(stream=stream)
+    def __init__(self, data, columns, id_column=0, style=None, stream=None,
+                 force_styling=False):
+        self.term = Terminal(stream=stream, force_styling=force_styling)
 
         ## FIXME: Don't coerce data into a list -- store on the fly.
         self._rows = list(data)
