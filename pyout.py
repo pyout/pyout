@@ -5,7 +5,7 @@ style declaration.
 """
 
 __version__ = "0.1.0"
-__all__ = ["Outputter"]
+__all__ = ["Tabular"]
 
 from contextlib import contextmanager
 from blessings import Terminal
@@ -17,8 +17,7 @@ def _adopt(style, new_style):
     return {key: dict(style[key], **new_style.get(key, {})) for key in style}
 
 
-# TODO: Come up with a better class name.
-class Outputter(object):
+class Tabular(object):
     """Interface for writing and updating styled terminal output.
 
     Parameters

@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-from pyout import Outputter
+from pyout import Tabular
 
 
 rows = [{"name": "abide", "status": "not installed"},
@@ -21,8 +21,8 @@ rows = [{"name": "abide", "status": "not installed"},
         {"name": "abide14", "status": "not installed"},
         {"name": "corr", "status": "not installed"}]
 
-out = Outputter(rows, ["name", "status"],
-                style={"status": {"attrs": ["red", "bold"]}})
+out = Tabular(rows, ["name", "status"],
+              style={"status": {"attrs": ["red", "bold"]}})
 
 out.write()
 
