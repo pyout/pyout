@@ -10,7 +10,7 @@ setup(
     url="https://github.com/pyout/pyout.git",
     py_modules=["pyout"],
     install_requires=["blessings", "six"],
-    extras_require={"tests": ["pytest"]},
+    extras_require={"tests": ["pytest", "mock"]},
     long_description=open("README.rst").read(),
     classifiers=[
         "Intended Audience :: Developers",
