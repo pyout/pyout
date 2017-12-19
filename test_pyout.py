@@ -27,7 +27,7 @@ def test_adopt():
              "path": default_value,
              "status": default_value}
 
-    newstyle =_adopt(style, {"path": {"width": 99},
+    newstyle = _adopt(style, {"path": {"width": 99},
                               "status": {"attrs": ["foo"]}})
     for key, value in style.items():
         if key == "path":
