@@ -77,19 +77,18 @@ class Tabular(object):
             fmt = self._build_format(_adopt(self._style, style))
         self.term.stream.write(fmt.format(**{i: row[i] for i in self._columns}))
 
-    def write(self, data):
-        """Write styled `data` to the terminal.
+
+    def write(self, row):
+        """Write styled `row` to the terminal.
 
         Parameters
         ----------
-        data : iterable
-            Each element should be a dictionary where keys are the
-            column names and values are the data to write.
+        row : dict
+            A dictionary where keys are the column names and values
+            are the data to write.
         """
-        for row in data:
-            self._rows.append(row)
-            self._writerow(row)
-        self.term.stream.flush()
+        self._rows.append(row)
+        self._writerow(row)
 
     def _repaint(self):
         ## TODO: I don't think this is a good approach.  Destroys any
