@@ -79,6 +79,20 @@ def test_tabular_write_color():
 
 
 @patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_style_override():
+    fd = StringIO()
+    out = Tabular(["name"],
+                  style={"name": {"attrs": ["green"], "width": 3}},
+                  stream=fd, force_styling=True)
+    out.write({"name": "foo"},
+              style={"name": {"attrs": ["black"], "width": 3}})
+
+    expected = unicode_parm("setaf", COLORNUMS["black"]) + "foo" + \
+               unicode_cap("sgr0") + "\n"
+    assert fd.getvalue() == expected
+
+
+@patch("pyout.Terminal", TestTerminal)
 def test_tabular_write_multicolor():
     fd = StringIO()
     out = Tabular(["name", "status"],

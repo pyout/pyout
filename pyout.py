@@ -78,7 +78,7 @@ class Tabular(object):
         self.term.stream.write(fmt.format(**{i: row[i] for i in self._columns}))
 
 
-    def write(self, row):
+    def write(self, row, style=None):
         """Write styled `row` to the terminal.
 
         Parameters
@@ -86,9 +86,13 @@ class Tabular(object):
         row : dict
             A dictionary where keys are the column names and values
             are the data to write.
+        style : dict, optional
+            Each top-level key should be a column name and the value
+            should be a style dict that overrides the class instance
+            style.
         """
         self._rows.append(row)
-        self._writerow(row)
+        self._writerow(row, style=style)
 
     def _repaint(self):
         ## TODO: I don't think this is a good approach.  Destroys any
