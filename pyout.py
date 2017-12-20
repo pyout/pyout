@@ -22,9 +22,6 @@ class Tabular(object):
 
     Parameters
     ----------
-    data : iterable
-        Each element should be a dictionary where keys are the column
-        names and values are the data to write.
     columns : list of str
         Column names
     id_column : int, optional
@@ -50,12 +47,11 @@ class Tabular(object):
                      "width": 10,
                      "attrs": []}
 
-    def __init__(self, data, columns, id_column=0, style=None, stream=None,
+    def __init__(self, columns, id_column=0, style=None, stream=None,
                  force_styling=False):
         self.term = Terminal(stream=stream, force_styling=force_styling)
 
-        ## FIXME: Don't coerce data into a list -- store on the fly.
-        self._rows = list(data)
+        self._rows = []
         ## TODO: Allow columns to be infered from data or style.
         self._columns = columns
         self.id = columns[id_column]
@@ -81,10 +77,17 @@ class Tabular(object):
             fmt = self._build_format(_adopt(self._style, style))
         self.term.stream.write(fmt.format(**{i: row[i] for i in self._columns}))
 
-    def write(self):
-        """Write styled data to the terminal.
+    def write(self, data):
+        """Write styled `data` to the terminal.
+
+        Parameters
+        ----------
+        data : iterable
+            Each element should be a dictionary where keys are the
+            column names and values are the data to write.
         """
-        for row in self._rows:
+        for row in data:
+            self._rows.append(row)
             self._writerow(row)
         self.term.stream.flush()
 
