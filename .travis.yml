@@ -11,3 +11,8 @@ install:
 
 script:
   - py.test -v test_pyout.py
+
+notifications:
+  email:
+    on_success: never
+    on_failure: always
