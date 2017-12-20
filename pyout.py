@@ -77,8 +77,7 @@ class Tabular(object):
             fmt = self._build_format(_adopt(self._style, style))
         self.term.stream.write(fmt.format(**{i: row[i] for i in self._columns}))
 
-
-    def write(self, row, style=None):
+    def __call__(self, row, style=None):
         """Write styled `row` to the terminal.
 
         Parameters

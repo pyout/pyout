@@ -71,7 +71,7 @@ def test_tabular_write_color():
     out = Tabular(["name"],
                   style={"name": {"attrs": ["green"], "width": 3}},
                   stream=fd, force_styling=True)
-    out.write({"name": "foo"})
+    out({"name": "foo"})
 
     expected = unicode_parm("setaf", COLORNUMS["green"]) + "foo" + \
                unicode_cap("sgr0") + "\n"
@@ -84,8 +84,8 @@ def test_tabular_write_style_override():
     out = Tabular(["name"],
                   style={"name": {"attrs": ["green"], "width": 3}},
                   stream=fd, force_styling=True)
-    out.write({"name": "foo"},
-              style={"name": {"attrs": ["black"], "width": 3}})
+    out({"name": "foo"},
+        style={"name": {"attrs": ["black"], "width": 3}})
 
     expected = unicode_parm("setaf", COLORNUMS["black"]) + "foo" + \
                unicode_cap("sgr0") + "\n"
@@ -99,7 +99,7 @@ def test_tabular_write_multicolor():
                   style={"name": {"attrs": ["green"], "width": 3},
                          "status": {"attrs": ["white"], "width": 7}},
                   stream=fd, force_styling=True)
-    out.write({"name": "foo", "status": "unknown"})
+    out({"name": "foo", "status": "unknown"})
 
     expected = unicode_parm("setaf", COLORNUMS["green"]) + "foo" + \
                unicode_cap("sgr0") + " " + \
@@ -115,7 +115,7 @@ def test_tabular_write_align():
     out = Tabular(["name"],
                   style={"name": {"align": ">", "width": 10}},
                   stream=fd, force_styling=True)
-    out.write({"name": "foo"})
+    out({"name": "foo"})
 
     assert fd.getvalue() == "       foo\n"
 
@@ -128,7 +128,7 @@ def test_tabular_write_update():
     data = [{"name": "foo", "path": "/tmp/foo", "status": "unknown"},
             {"name": "bar", "path": "/tmp/bar", "status": "installed"}]
     for row in data:
-        out.write(row)
+        out(row)
 
     out.rewrite("foo", "status", "installed",
                 style = {"name": {"width": 3},
@@ -146,7 +146,7 @@ def test_tabular_repaint():
     data = [{"name": "foo", "status": "unknown"},
             {"name": "bar", "status": "installed"}]
     for row in data:
-        out.write(row)
+        out(row)
     out._repaint()
 
     msg = ("foo        unknown   \n"
