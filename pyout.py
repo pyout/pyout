@@ -92,7 +92,6 @@ class Tabular(object):
         ## TODO: I don't think this is a good approach.  Destroys any
         ## scroll back.
         self.term.stream.write(self.term.clear)
-        self.term.stream.write("  ".join(self._columns) + "\n")
         for row in self._rows:
             self._writerow(row)
         self.term.stream.flush()

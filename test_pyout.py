@@ -123,3 +123,19 @@ def test_tabular_write_update():
 
     expected = unicode_cap("cuu1") * 2 + unicode_cap("el") + "foo installed"
     assert fd.getvalue().strip().splitlines()[-1] == expected
+
+
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_repaint():
+    fd = StringIO()
+    data = [{"name": "foo", "status": "unknown"},
+            {"name": "bar", "status": "installed"}]
+    out = Tabular(data, ["name", "status"],
+                  stream=fd, force_styling=True)
+    out.write()
+    out._repaint()
+
+    msg = ("foo        unknown   \n"
+           "bar        installed \n")
+    expected = msg + unicode_cap("clear") + msg
+    assert fd.getvalue() == expected
