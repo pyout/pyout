@@ -1,0 +1,44 @@
+# CI on Windows via appveyor
+#
+# Modified from GitPython's .appveyor.yml
+
+environment:
+    matrix:
+        ## MINGW
+      - PYTHON: "C:\\Python27"
+        PYTHON_VERSION: "2.7"
+      - PYTHON: "C:\\Python36-x64"
+        PYTHON_VERSION: "3.6"
+      - PYTHON: "C:\\Miniconda36-x64"
+        PYTHON_VERSION: "3.6"
+        IS_CONDA: "yes"
+        ## Cygwin
+      - PYTHON: "C:\\Miniconda-x64"
+        PYTHON_VERSION: "2.7"
+        IS_CONDA: "yes"
+        IS_CYGWIN: "yes"
+      - PYTHON: "C:\\Python36-x64"
+        PYTHON_VERSION: "3.6"
+        IS_CYGWIN: "yes"
+
+install:
+    - set PATH=%PYTHON%;%PYTHON%\Scripts;%PATH%
+
+    ## Print configuration for debugging.
+    - |
+        echo %PATH%
+        uname -a
+        python --version
+        python -c "import struct; print(struct.calcsize('P') * 8)"
+
+    - IF "%IS_CONDA%" == "yes" (
+        conda info -a &
+        conda install --yes --quiet  pip
+      )
+    - pip install -U pip
+    - pip install .[tests]
+
+build: false
+
+test_script:
+    - py.test --doctest-modules -v pyout.py test_pyout.py
