@@ -1,6 +1,9 @@
 Terminal styling for structured data
 ------------------------------------
 
+.. image:: https://travis-ci.org/pyout/pyout.svg?branch=master
+    :target: https://travis-ci.org/pyout/pyout
+
 This Python module is created to provide a way to produce nice text
 outputs from structured records.  One of the goals is to separate
 style (color, formatting, etc), behavior (display as soon as available
