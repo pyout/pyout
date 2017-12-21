@@ -30,7 +30,7 @@ class Tabular(object):
     style : dict, optional
         Each top-level key should be a column name and the value
         should be a style dict that overrides the `default_style`
-        class attribute.
+        class attribute.  See the "Examples" section below.
     stream : file object, optional
         Defaults to standard output.
 
@@ -40,6 +40,27 @@ class Tabular(object):
     Attributes
     ----------
     term : blessings.Terminal instance
+
+    Examples
+    --------
+
+    Create a `Tabular` instance for two output fields, "name" and
+    "status".
+
+    >>> out = Tabular(["name", "status"], style={"status": {"width": 5}})
+
+    The first field, "name", is taken as the unique ID.  The `style`
+    argument is used to override the default width for the "status"
+    field that is defined by the class attribute `default_style`.
+
+    Write a row to stdout:
+
+    >>> out({"name": "foo", "status": "OK"})
+
+    Write another row, overriding the style:
+
+    >>> out({"name": "bar", "status": "BAD"},
+    ...     style={"status": {"attrs": ["red", "bold"]}})
     """
 
     # TODO: Support things like auto-width, value-based coloring, etc.
