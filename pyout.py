@@ -60,7 +60,7 @@ class Tabular(object):
     Write another row, overriding the style:
 
     >>> out({"name": "bar", "status": "BAD"},
-    ...     style={"status": {"attrs": ["red", "bold"]}})
+    ...     style={"status": {"color": "red", "bold": True}})
     """
 
     # TODO: Support things like auto-width, value-based coloring, etc.
