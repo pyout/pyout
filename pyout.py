@@ -85,11 +85,39 @@ class Tabular(object):
         fields = []
         for column in self._columns:
             cstyle = style[column]
+
+            attrs = (self._map_to_blessings(k, v) for k, v in cstyle.items())
+            attrs = list(filter(None, attrs))
+            for attr in attrs:
+                if attr in cstyle["attrs"]:
+                    # TODO: As styles get more complicated, we should
+                    # probably add a dedicated error.
+                    raise ValueError(
+                        "'{}' is specified more than once".format(attr))
+
             field = "{{{}:{align}{width}}}".format(column, **cstyle)
-            for attr in cstyle["attrs"]:
+            for attr in cstyle["attrs"] + attrs:
                 field = getattr(self.term, attr) + field + self.term.normal
             fields.append(field)
         return " ".join(fields) + "\n"
+
+    def _map_to_blessings(self, key, value):
+        """Convert a key-value pair into a `blessings.Terminal` attribute.
+
+        Parameters
+        ----------
+        key, value : str
+            Attribute key (e.g., "color") and value (e.g., "green")
+
+        Returns
+        -------
+        str (attribute value) or None
+        """
+        if key in ["bold", "underline"]:
+            if value:
+                return key
+        if key == "color":
+            return value
 
     def _writerow(self, row, style=None):
         if style is None:
