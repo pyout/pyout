@@ -14,9 +14,6 @@ def test_adopt_noop():
     for key, value in style.items():
         assert newstyle[key] == value
 
-    newstyle1 = _adopt(style, None)
-    for key, value in style.items():
-        assert newstyle1[key] == value
 
 def test_adopt():
     default_value = {"align": "<",
