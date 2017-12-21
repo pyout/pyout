@@ -66,7 +66,7 @@ class Tabular(object):
             cstyle = style[column]
             field = "{{{}:{align}{width}}}".format(column, **cstyle)
             for attr in cstyle["attrs"]:
-                 field = getattr(self.term, attr) + field + self.term.normal
+                field = getattr(self.term, attr) + field + self.term.normal
             fields.append(field)
         return " ".join(fields) + "\n"
 
