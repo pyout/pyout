@@ -67,12 +67,11 @@ COLORNUMS = {"black": 0, "red": 1, "green": 2, "yellow": 3, "blue": 4,
 
 @patch("pyout.Terminal", TestTerminal)
 def test_tabular_write_color():
-    data = [{"name": "foo"}]
     fd = StringIO()
-    out = Tabular(data, ["name"],
+    out = Tabular(["name"],
                   style={"name": {"attrs": ["green"], "width": 3}},
                   stream=fd, force_styling=True)
-    out.write()
+    out({"name": "foo"})
 
     expected = unicode_parm("setaf", COLORNUMS["green"]) + "foo" + \
                unicode_cap("sgr0") + "\n"
@@ -80,14 +79,27 @@ def test_tabular_write_color():
 
 
 @patch("pyout.Terminal", TestTerminal)
-def test_tabular_write_multicolor():
-    data = [{"name": "foo", "status": "unknown"}]
+def test_tabular_write_style_override():
     fd = StringIO()
-    out = Tabular(data, ["name", "status"],
+    out = Tabular(["name"],
+                  style={"name": {"attrs": ["green"], "width": 3}},
+                  stream=fd, force_styling=True)
+    out({"name": "foo"},
+        style={"name": {"attrs": ["black"], "width": 3}})
+
+    expected = unicode_parm("setaf", COLORNUMS["black"]) + "foo" + \
+               unicode_cap("sgr0") + "\n"
+    assert fd.getvalue() == expected
+
+
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_multicolor():
+    fd = StringIO()
+    out = Tabular(["name", "status"],
                   style={"name": {"attrs": ["green"], "width": 3},
                          "status": {"attrs": ["white"], "width": 7}},
                   stream=fd, force_styling=True)
-    out.write()
+    out({"name": "foo", "status": "unknown"})
 
     expected = unicode_parm("setaf", COLORNUMS["green"]) + "foo" + \
                unicode_cap("sgr0") + " " + \
@@ -99,24 +111,25 @@ def test_tabular_write_multicolor():
 
 @patch("pyout.Terminal", TestTerminal)
 def test_tabular_write_align():
-    data = [{"name": "foo"}]
     fd = StringIO()
-    out = Tabular(data, ["name"],
+    out = Tabular(["name"],
                   style={"name": {"align": ">", "width": 10}},
                   stream=fd, force_styling=True)
-    out.write()
+    out({"name": "foo"})
 
     assert fd.getvalue() == "       foo\n"
 
 
 @patch("pyout.Terminal", TestTerminal)
 def test_tabular_write_update():
+    fd = StringIO()
+    out = Tabular(["name", "status"],
+                  stream=fd, force_styling=True)
     data = [{"name": "foo", "path": "/tmp/foo", "status": "unknown"},
             {"name": "bar", "path": "/tmp/bar", "status": "installed"}]
-    fd = StringIO()
-    out = Tabular(data, ["name", "status"],
-                  stream=fd, force_styling=True)
-    out.write()
+    for row in data:
+        out(row)
+
     out.rewrite("foo", "status", "installed",
                 style = {"name": {"width": 3},
                          "status": {"width": 9}})
@@ -128,11 +141,12 @@ def test_tabular_write_update():
 @patch("pyout.Terminal", TestTerminal)
 def test_tabular_repaint():
     fd = StringIO()
+    out = Tabular(["name", "status"],
+                  stream=fd, force_styling=True)
     data = [{"name": "foo", "status": "unknown"},
             {"name": "bar", "status": "installed"}]
-    out = Tabular(data, ["name", "status"],
-                  stream=fd, force_styling=True)
-    out.write()
+    for row in data:
+        out(row)
     out._repaint()
 
     msg = ("foo        unknown   \n"
