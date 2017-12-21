@@ -4,6 +4,7 @@ from six.moves import StringIO
 
 import blessings
 from mock import patch
+import pytest
 
 from pyout import _adopt, Tabular
 
@@ -76,6 +77,53 @@ def test_tabular_write_color():
     expected = unicode_parm("setaf", COLORNUMS["green"]) + "foo" + \
                unicode_cap("sgr0") + "\n"
     assert fd.getvalue() == expected
+
+
+@pytest.mark.parametrize("attr,cap",
+                         [("underline", "smul"),
+                          ("bold", "bold")])
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_via_attrs_cap(attr, cap):
+    fd = StringIO()
+    out = Tabular(["name"],
+                  style={"name": {"attrs": [attr], "width": 3}},
+                  stream=fd, force_styling=True)
+    out({"name": "foo"})
+
+    expected = unicode_cap(cap) + "foo" + unicode_cap("sgr0") + "\n"
+    assert fd.getvalue() == expected
+
+
+@pytest.mark.parametrize("attr,key",
+                         [({"color": "green"}, {"attrs": ["green"]}),
+                          ({"underline": True}, {"attrs": ["underline"]}),
+                          ({"bold": True}, {"attrs": ["bold"]}),
+                          ({"color": False}, {"attrs": []}),
+                          ({"underline": False}, {"attrs": []}),
+                          ({"bold": False}, {"attrs": []})])
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_test_attr_key_eqiv(attr, key):
+    fd_attr = StringIO()
+    out_attr = Tabular(["name"],
+                       style={"name": attr},
+                       stream=fd_attr, force_styling=True)
+    out_attr({"name": "foo"})
+
+    fd_key = StringIO()
+    out_key = Tabular(["name"],
+                       style={"name": key},
+                      stream=fd_key, force_styling=True)
+    out_key({"name": "foo"})
+
+    assert fd_attr.getvalue() == fd_key.getvalue()
+
+
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_test_attr_key_conflict():
+    with pytest.raises(ValueError):
+        Tabular(["name"],
+                style={"name": {"attrs": ["green"],
+                                "color": "green"}})
 
 
 @patch("pyout.Terminal", TestTerminal)
