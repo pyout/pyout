@@ -66,6 +66,12 @@ COLORNUMS = {"black": 0, "red": 1, "green": 2, "yellow": 3, "blue": 4,
              "magenta": 5, "cyan": 6, "white": 7}
 
 
+def eq_repr(a, b):
+    """Compare the repr's of `a` and `b` to escape escape codes.
+    """
+    return repr(a) == repr(b)
+
+
 @patch("pyout.Terminal", TestTerminal)
 def test_tabular_write_color():
     fd = StringIO()
@@ -76,7 +82,7 @@ def test_tabular_write_color():
 
     expected = unicode_parm("setaf", COLORNUMS["green"]) + "foo" + \
                unicode_cap("sgr0") + "\n"
-    assert fd.getvalue() == expected
+    assert eq_repr(fd.getvalue(), expected)
 
 
 @pytest.mark.parametrize("attr,cap",
@@ -91,7 +97,7 @@ def test_tabular_write_via_attrs_cap(attr, cap):
     out({"name": "foo"})
 
     expected = unicode_cap(cap) + "foo" + unicode_cap("sgr0") + "\n"
-    assert fd.getvalue() == expected
+    assert eq_repr(fd.getvalue(), expected)
 
 
 @pytest.mark.parametrize("attr,key",
@@ -115,7 +121,7 @@ def test_tabular_write_test_attr_key_eqiv(attr, key):
                       stream=fd_key, force_styling=True)
     out_key({"name": "foo"})
 
-    assert fd_attr.getvalue() == fd_key.getvalue()
+    assert eq_repr(fd_attr.getvalue(), fd_key.getvalue())
 
 
 @patch("pyout.Terminal", TestTerminal)
@@ -137,7 +143,7 @@ def test_tabular_write_style_override():
 
     expected = unicode_parm("setaf", COLORNUMS["black"]) + "foo" + \
                unicode_cap("sgr0") + "\n"
-    assert fd.getvalue() == expected
+    assert eq_repr(fd.getvalue(), expected)
 
 
 @patch("pyout.Terminal", TestTerminal)
@@ -153,8 +159,7 @@ def test_tabular_write_multicolor():
                unicode_cap("sgr0") + " " + \
                unicode_parm("setaf", COLORNUMS["white"]) + "unknown" + \
                unicode_cap("sgr0") + "\n"
-
-    assert fd.getvalue() == expected
+    assert eq_repr(fd.getvalue(), expected)
 
 
 @patch("pyout.Terminal", TestTerminal)
@@ -165,7 +170,7 @@ def test_tabular_write_align():
                   stream=fd, force_styling=True)
     out({"name": "foo"})
 
-    assert fd.getvalue() == "       foo\n"
+    assert eq_repr(fd.getvalue(), "       foo\n")
 
 
 @patch("pyout.Terminal", TestTerminal)
@@ -183,7 +188,8 @@ def test_tabular_write_update():
                          "status": {"width": 9}})
 
     expected = unicode_cap("cuu1") * 2 + unicode_cap("el") + "foo installed"
-    assert fd.getvalue().strip().splitlines()[-1] == expected
+    assert eq_repr(fd.getvalue().strip().splitlines()[-1],
+                   expected)
 
 
 @patch("pyout.Terminal", TestTerminal)
@@ -200,4 +206,4 @@ def test_tabular_repaint():
     msg = ("foo        unknown   \n"
            "bar        installed \n")
     expected = msg + unicode_cap("clear") + msg
-    assert fd.getvalue() == expected
+    assert eq_repr(fd.getvalue(), expected)
