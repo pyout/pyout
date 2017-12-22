@@ -195,7 +195,7 @@ def test_tabular_write_update():
 @patch("pyout.Terminal", TestTerminal)
 def test_tabular_write_update_nondefault_id():
     fd = StringIO()
-    out = Tabular(["name", "id", "status"], id_column=1,
+    out = Tabular(["name", "id", "status"], id_column="id",
                   stream=fd, force_styling=True)
     data = [{"name": "foo", "id": "0", "status": "unknown"},
             {"name": "bar", "id": "1", "status": "installed"}]

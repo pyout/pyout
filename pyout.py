@@ -24,7 +24,7 @@ class Tabular(object):
     ----------
     columns : list of str
         Column names
-    id_column : int, optional
+    id_column : str, optional
         Column that contains unique labels that can be used to
         reference rows.
     style : dict, optional
@@ -68,14 +68,14 @@ class Tabular(object):
                      "width": 10,
                      "attrs": []}
 
-    def __init__(self, columns, id_column=0, style=None, stream=None,
+    def __init__(self, columns, id_column=None, style=None, stream=None,
                  force_styling=False):
         self.term = Terminal(stream=stream, force_styling=force_styling)
 
         self._rows = []
         ## TODO: Allow columns to be infered from data or style.
         self._columns = columns
-        self.id = columns[id_column]
+        self.id = columns[0] if id_column is None else id_column
 
         self._style = _adopt({c: self.default_style for c in columns},
                              style)
