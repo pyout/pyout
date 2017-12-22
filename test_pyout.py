@@ -166,6 +166,22 @@ def test_tabular_write_update_nondefault_id():
 
 
 @patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_update_notfound():
+    fd = StringIO()
+    out = Tabular(["name", "status"],
+                  stream=fd, force_styling=True)
+    data = [{"name": "foo", "status": "unknown"},
+            {"name": "bar", "status": "installed"}]
+    for row in data:
+        out(row)
+
+    with pytest.raises(ValueError):
+        out.rewrite("not here", "status", "installed",
+                    style = {"name": {"width": 3},
+                             "status": {"width": 9}})
+
+
+@patch("pyout.Terminal", TestTerminal)
 def test_tabular_repaint():
     fd = StringIO()
     out = Tabular(["name", "status"],
