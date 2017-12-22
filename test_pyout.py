@@ -178,8 +178,8 @@ def test_tabular_write_update():
     fd = StringIO()
     out = Tabular(["name", "status"],
                   stream=fd, force_styling=True)
-    data = [{"name": "foo", "path": "/tmp/foo", "status": "unknown"},
-            {"name": "bar", "path": "/tmp/bar", "status": "installed"}]
+    data = [{"name": "foo", "status": "unknown"},
+            {"name": "bar", "status": "installed"}]
     for row in data:
         out(row)
 
