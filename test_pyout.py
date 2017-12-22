@@ -105,6 +105,30 @@ def test_tabular_write_orderdict_columns():
 
 
 @patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_data_as_list():
+    fd = StringIO()
+    out = Tabular(["name", "status"],
+                  style={"name": {"width": 3},
+                         "status": {"width": 9}},
+                  stream=fd)
+    out(["foo", "installed"])
+    out(["bar", "unknown"])
+
+    expected = "foo installed\nbar unknown  \n"
+    assert eq_repr(fd.getvalue(), expected)
+
+
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_data_as_list_no_columns():
+    fd = StringIO()
+    out = Tabular(style={"name": {"width": 3},
+                         "status": {"width": 9}},
+                  stream=fd)
+    with pytest.raises(ValueError):
+        out(["foo", "installed"])
+
+
+@patch("pyout.Terminal", TestTerminal)
 def test_tabular_write_style_override():
     fd = StringIO()
     out = Tabular(["name"],

@@ -25,7 +25,9 @@ class Tabular(object):
     columns : list of str, optional.
         Column names.  If not given, the keys will be extracted from
         the first row of data that the object is called with, which is
-        particularly useful if the row is an OrderedDict.
+        particularly useful if the row is an OrderedDict.  This
+        argument must be given if this instance will be called with a
+        sequence rather than a dictionary.
     style : dict, optional
         Each top-level key should be a column name and the value
         should be a style dict that overrides the `default_style`
@@ -114,21 +116,35 @@ class Tabular(object):
         elif key == "color":
             return value
 
+    _preformat_method = lambda self, x: x
+
+    def _seq_to_dict(self, row):
+        return dict(zip(self._columns, row))
+
     def _writerow(self, row, style=None):
         if self._format is not None and style is None:
             fmt = self._format
         else:
             fmt = self._build_format(_adopt(self._style, style))
-        self.term.stream.write(fmt.format(**row))
+
+        try:
+            self.term.stream.write(fmt.format(**self._preformat_method(row)))
+        except TypeError:
+            if self._preformat_method == self._seq_to_dict:
+                raise
+            self._preformat_method = self._seq_to_dict
+            self._writerow(row, style)
 
     def __call__(self, row, style=None):
         """Write styled `row` to the terminal.
 
         Parameters
         ----------
-        row : dict
+        row : dict or sequence
             A dictionary where keys are the column names and values
-            are the data to write.
+            are the data to write.  Otherwise, row is treated as a
+            sequence that follows the same order as the constructor's
+            `columns` argument.
         style : dict, optional
             Each top-level key should be a column name and the value
             should be a style dict that overrides the class instance
