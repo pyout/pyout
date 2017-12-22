@@ -116,7 +116,7 @@ class Tabular(object):
         if key in ["bold", "underline"]:
             if value:
                 return key
-        if key == "color":
+        elif key == "color":
             return value
 
     def _writerow(self, row, style=None):
