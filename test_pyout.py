@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from curses import tigetstr, tparm
 from functools import partial
 from six.moves import StringIO
@@ -83,6 +84,24 @@ def test_tabular_write_color():
     expected = unicode_parm("setaf", COLORNUMS["green"]) + "foo" + \
                unicode_cap("sgr0") + "\n"
     assert eq_repr(fd.getvalue(), expected)
+
+
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_orderdict_columns():
+    fd = StringIO()
+    out = Tabular(style={"name": {"width": 3},
+                         "id": {"width": 3},
+                         "status": {"width": 9},
+                         "path": {"width": 8}},
+                  stream=fd)
+
+    row = OrderedDict([("name", "foo"),
+                       ("id", "001"),
+                       ("status", "installed"),
+                       ("path", "/tmp/foo")])
+    out(row)
+
+    assert eq_repr(fd.getvalue(), "foo 001 installed /tmp/foo\n")
 
 
 @patch("pyout.Terminal", TestTerminal)

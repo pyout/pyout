@@ -22,8 +22,10 @@ class Tabular(object):
 
     Parameters
     ----------
-    columns : list of str
-        Column names
+    columns : list of str, optional.
+        Column names.  If not given, the keys will be extracted from
+        the first row of data that the object is called with, which is
+        particularly useful if the row is an OrderedDict.
     style : dict, optional
         Each top-level key should be a column name and the value
         should be a style dict that overrides the `default_style`
@@ -64,15 +66,21 @@ class Tabular(object):
     default_style = {"align": "<",
                      "width": 10}
 
-    def __init__(self, columns, style=None, stream=None, force_styling=False):
+    def __init__(self, columns=None, style=None, stream=None, force_styling=False):
         self.term = Terminal(stream=stream, force_styling=force_styling)
 
         self._rows = []
-        ## TODO: Allow columns to be infered from data or style.
         self._columns = columns
-        self._style = _adopt({c: self.default_style for c in columns},
-                             style)
-        self._format = self._build_format(self._style)
+
+        self._init_style = style
+        self._style = None
+        if columns is not None:
+            self._setup_style()
+        self._format = None
+
+    def _setup_style(self):
+        self._style = _adopt({c: self.default_style for c in self._columns},
+                             self._init_style)
 
     def _build_format(self, style):
         fields = []
@@ -107,7 +115,7 @@ class Tabular(object):
             return value
 
     def _writerow(self, row, style=None):
-        if style is None:
+        if self._format is not None and style is None:
             fmt = self._format
         else:
             fmt = self._build_format(_adopt(self._style, style))
@@ -126,8 +134,18 @@ class Tabular(object):
             should be a style dict that overrides the class instance
             style.
         """
+        if self._columns is None:
+            self._columns = self._infer_columns(row)
+            self._setup_style()
+
         self._rows.append(row)
         self._writerow(row, style=style)
+
+    def _infer_columns(self, row):
+        try:
+            return list(row.keys())
+        except AttributeError:
+            raise ValueError("Can't infer columns from data")
 
     def _repaint(self):
         ## TODO: I don't think this is a good approach.  Destroys any
