@@ -65,8 +65,7 @@ class Tabular(object):
 
     # TODO: Support things like auto-width, value-based coloring, etc.
     default_style = {"align": "<",
-                     "width": 10,
-                     "attrs": []}
+                     "width": 10}
 
     def __init__(self, columns, id_column=None, style=None, stream=None,
                  force_styling=False):
@@ -88,15 +87,9 @@ class Tabular(object):
 
             attrs = (self._map_to_blessings(k, v) for k, v in cstyle.items())
             attrs = list(filter(None, attrs))
-            for attr in attrs:
-                if attr in cstyle["attrs"]:
-                    # TODO: As styles get more complicated, we should
-                    # probably add a dedicated error.
-                    raise ValueError(
-                        "'{}' is specified more than once".format(attr))
 
             field = "{{{}:{align}{width}}}".format(column, **cstyle)
-            for attr in cstyle["attrs"] + attrs:
+            for attr in attrs:
                 field = getattr(self.term, attr) + field + self.term.normal
             fields.append(field)
         return " ".join(fields) + "\n"

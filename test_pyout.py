@@ -76,7 +76,7 @@ def eq_repr(a, b):
 def test_tabular_write_color():
     fd = StringIO()
     out = Tabular(["name"],
-                  style={"name": {"attrs": ["green"], "width": 3}},
+                  style={"name": {"color": "green", "width": 3}},
                   stream=fd, force_styling=True)
     out({"name": "foo"})
 
@@ -85,61 +85,14 @@ def test_tabular_write_color():
     assert eq_repr(fd.getvalue(), expected)
 
 
-@pytest.mark.parametrize("attr,cap",
-                         [("underline", "smul"),
-                          ("bold", "bold")])
-@patch("pyout.Terminal", TestTerminal)
-def test_tabular_write_via_attrs_cap(attr, cap):
-    fd = StringIO()
-    out = Tabular(["name"],
-                  style={"name": {"attrs": [attr], "width": 3}},
-                  stream=fd, force_styling=True)
-    out({"name": "foo"})
-
-    expected = unicode_cap(cap) + "foo" + unicode_cap("sgr0") + "\n"
-    assert eq_repr(fd.getvalue(), expected)
-
-
-@pytest.mark.parametrize("attr,key",
-                         [({"color": "green"}, {"attrs": ["green"]}),
-                          ({"underline": True}, {"attrs": ["underline"]}),
-                          ({"bold": True}, {"attrs": ["bold"]}),
-                          ({"color": False}, {"attrs": []}),
-                          ({"underline": False}, {"attrs": []}),
-                          ({"bold": False}, {"attrs": []})])
-@patch("pyout.Terminal", TestTerminal)
-def test_tabular_write_test_attr_key_eqiv(attr, key):
-    fd_attr = StringIO()
-    out_attr = Tabular(["name"],
-                       style={"name": attr},
-                       stream=fd_attr, force_styling=True)
-    out_attr({"name": "foo"})
-
-    fd_key = StringIO()
-    out_key = Tabular(["name"],
-                       style={"name": key},
-                      stream=fd_key, force_styling=True)
-    out_key({"name": "foo"})
-
-    assert eq_repr(fd_attr.getvalue(), fd_key.getvalue())
-
-
-@patch("pyout.Terminal", TestTerminal)
-def test_tabular_write_test_attr_key_conflict():
-    with pytest.raises(ValueError):
-        Tabular(["name"],
-                style={"name": {"attrs": ["green"],
-                                "color": "green"}})
-
-
 @patch("pyout.Terminal", TestTerminal)
 def test_tabular_write_style_override():
     fd = StringIO()
     out = Tabular(["name"],
-                  style={"name": {"attrs": ["green"], "width": 3}},
+                  style={"name": {"color": "green", "width": 3}},
                   stream=fd, force_styling=True)
     out({"name": "foo"},
-        style={"name": {"attrs": ["black"], "width": 3}})
+        style={"name": {"color": "black", "width": 3}})
 
     expected = unicode_parm("setaf", COLORNUMS["black"]) + "foo" + \
                unicode_cap("sgr0") + "\n"
@@ -150,8 +103,8 @@ def test_tabular_write_style_override():
 def test_tabular_write_multicolor():
     fd = StringIO()
     out = Tabular(["name", "status"],
-                  style={"name": {"attrs": ["green"], "width": 3},
-                         "status": {"attrs": ["white"], "width": 7}},
+                  style={"name": {"color": "green", "width": 3},
+                         "status": {"color": "white", "width": 7}},
                   stream=fd, force_styling=True)
     out({"name": "foo", "status": "unknown"})
 
