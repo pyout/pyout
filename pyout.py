@@ -177,7 +177,7 @@ class Tabular(object):
                 nback = rev_idx
                 break
         if nback is None:
-            raise ValueError("Could not find row with '{}' id")
+            raise ValueError("Could not find row with '{}' id".format(label))
 
         idx = len(self._rows) - nback
         self._rows[idx][column] = new_value
