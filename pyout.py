@@ -93,9 +93,10 @@ class Tabular(object):
             attrs = list(filter(None, attrs))
 
             field = "{{{}:{align}{width}}}".format(column, **cstyle)
-            for attr in attrs:
-                field = getattr(self.term, attr) + field + self.term.normal
-            fields.append(field)
+            pre = "".join(getattr(self.term, a) for a in attrs)
+            post = self.term.normal if pre else ""
+
+            fields.append(pre + field + post)
         return " ".join(fields) + "\n"
 
     def _map_to_blessings(self, key, value):
