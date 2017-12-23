@@ -7,6 +7,7 @@ style declaration.
 __version__ = "0.1.0"
 __all__ = ["Tabular"]
 
+from collections import OrderedDict
 from contextlib import contextmanager
 from blessings import Terminal
 
@@ -22,12 +23,16 @@ class Tabular(object):
 
     Parameters
     ----------
-    columns : list of str, optional.
-        Column names.  If not given, the keys will be extracted from
-        the first row of data that the object is called with, which is
-        particularly useful if the row is an OrderedDict.  This
-        argument must be given if this instance will be called with a
-        sequence rather than a dictionary.
+    columns : list of str or OrderedDict, optional
+        Column names.  An OrderedDict can be used instead of a
+        sequence to provide a map of short names to the displayed
+        column names.
+
+        If not given, the keys will be extracted from the first row of
+        data that the object is called with, which is particularly
+        useful if the row is an OrderedDict.  This argument must be
+        given if this instance will be called with a sequence rather
+        than a dictionary.
     style : dict, optional
         Each top-level key should be a column name and the value
         should be a style dict that overrides the `default_style`
@@ -155,7 +160,10 @@ class Tabular(object):
             if self._preformat_method == self._seq_to_dict:
                 row = self._columns
             else:
-                row = dict(zip(self._columns, self._columns))
+                if isinstance(self._columns, OrderedDict):
+                    row = self._columns
+                else:
+                    row = dict(zip(self._columns, self._columns))
             self._writerow(row, style=self._header_style, adopt=False)
 
     def __call__(self, row, style=None):

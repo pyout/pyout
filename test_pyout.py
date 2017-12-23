@@ -104,6 +104,24 @@ def test_tabular_write_columns_from_orderdict_row():
     assert eq_repr(fd.getvalue(), "foo 001 installed /tmp/foo\n")
 
 
+@pytest.mark.parametrize("row", [["foo", "ok"],
+                                 {"name": "foo", "status": "ok"}],
+                         ids=["sequence", "dict"])
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_columns_orderdict_mapping(row):
+    fd = StringIO()
+    out = Tabular(OrderedDict([("name", "Long name"),
+                               ("status", "Status")]),
+                  style={"header_": {}},
+                  stream=fd)
+
+    out(row)
+
+    expected = ("Long name  Status    \n"
+                "foo        ok        \n")
+    assert eq_repr(fd.getvalue(), expected)
+
+
 @patch("pyout.Terminal", TestTerminal)
 def test_tabular_write_data_as_list():
     fd = StringIO()
