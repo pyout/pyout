@@ -68,6 +68,8 @@ class Tabular(object):
     default_style = {"align": "<",
                      "width": 10}
 
+    _header_attributes = {"align", "width"}
+
     def __init__(self, columns=None, style=None, stream=None, force_styling=False):
         self.term = Terminal(stream=stream, force_styling=force_styling)
 
@@ -76,6 +78,7 @@ class Tabular(object):
 
         self._init_style = style
         self._style = None
+        self._header_style = None
         if columns is not None:
             self._setup_style()
         self._format = None
@@ -83,6 +86,14 @@ class Tabular(object):
     def _setup_style(self):
         self._style = _adopt({c: self.default_style for c in self._columns},
                              self._init_style)
+
+        if self._init_style is not None and "header_" in self._init_style:
+            self._header_style = {}
+            for col in self._columns:
+                cstyle = {k: v for k, v in self._style[col].items()
+                          if k in self._header_attributes}
+                self._header_style[col] = dict(cstyle,
+                                               **self._init_style["header_"])
 
     def _build_format(self, style):
         fields = []
@@ -122,11 +133,14 @@ class Tabular(object):
     def _seq_to_dict(self, row):
         return dict(zip(self._columns, row))
 
-    def _writerow(self, row, style=None):
+    def _writerow(self, row, style=None, adopt=True):
         if self._format is not None and style is None:
             fmt = self._format
         else:
-            fmt = self._build_format(_adopt(self._style, style))
+            if adopt:
+                fmt = self._build_format(_adopt(self._style, style))
+            else:
+                fmt = self._build_format(style)
 
         try:
             self.term.stream.write(fmt.format(**self._preformat_method(row)))
@@ -135,6 +149,14 @@ class Tabular(object):
                 raise
             self._preformat_method = self._seq_to_dict
             self._writerow(row, style)
+
+    def _maybe_write_header(self):
+        if self._header_style is not None:
+            if self._preformat_method == self._seq_to_dict:
+                row = self._columns
+            else:
+                row = dict(zip(self._columns, self._columns))
+            self._writerow(row, style=self._header_style, adopt=False)
 
     def __call__(self, row, style=None):
         """Write styled `row` to the terminal.
@@ -155,6 +177,8 @@ class Tabular(object):
             self._columns = self._infer_columns(row)
             self._setup_style()
 
+        if not self._rows:
+            self._maybe_write_header()
         self._rows.append(row)
         self._writerow(row, style=style)
 
@@ -168,6 +192,7 @@ class Tabular(object):
         ## TODO: I don't think this is a good approach.  Destroys any
         ## scroll back.
         self.term.stream.write(self.term.clear)
+        self._maybe_write_header()
         for row in self._rows:
             self._writerow(row)
         self.term.stream.flush()

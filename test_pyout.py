@@ -119,6 +119,42 @@ def test_tabular_write_data_as_list():
 
 
 @patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_header():
+    fd = StringIO()
+    out = Tabular(["name", "status"],
+                  style={"header_": {}},
+                  stream=fd, force_styling=True)
+    out({"name": "foo",
+         "status": "installed"})
+    out({"name": "bar",
+         "status": "installed"})
+
+    expected = ("name       status    \n"
+                "foo        installed \n"
+                "bar        installed \n"    )
+    assert eq_repr(fd.getvalue(), expected)
+
+
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_header_with_style():
+    fd = StringIO()
+    out = Tabular(["name", "status"],
+                  style={"header_": {"underline": True},
+                         "name": {"width": 4},
+                         "status": {"width": 9,
+                                    "color": "green"}},
+                  stream=fd, force_styling=True)
+    out({"name": "foo",
+         "status": "installed"})
+
+    expected = unicode_cap("smul") + "name" + unicode_cap("sgr0") + " " + \
+               unicode_cap("smul") + "status   " + unicode_cap("sgr0") + \
+               "\nfoo  " + unicode_parm("setaf", COLORNUMS["green"]) + \
+               "installed" + unicode_cap("sgr0") + "\n"
+    assert eq_repr(fd.getvalue(), expected)
+
+
+@patch("pyout.Terminal", TestTerminal)
 def test_tabular_write_data_as_list_no_columns():
     fd = StringIO()
     out = Tabular(style={"name": {"width": 3},
@@ -238,6 +274,25 @@ def test_tabular_repaint():
     out._repaint()
 
     msg = ("foo        unknown   \n"
+           "bar        installed \n")
+    expected = msg + unicode_cap("clear") + msg
+    assert eq_repr(fd.getvalue(), expected)
+
+
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_repaint_with_header():
+    fd = StringIO()
+    out = Tabular(["name", "status"],
+                  style={"header_": {}},
+                  stream=fd, force_styling=True)
+    data = [{"name": "foo", "status": "unknown"},
+            {"name": "bar", "status": "installed"}]
+    for row in data:
+        out(row)
+    out._repaint()
+
+    msg = ("name       status    \n"
+           "foo        unknown   \n"
            "bar        installed \n")
     expected = msg + unicode_cap("clear") + msg
     assert eq_repr(fd.getvalue(), expected)
