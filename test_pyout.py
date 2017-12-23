@@ -87,7 +87,7 @@ def test_tabular_write_color():
 
 
 @patch("pyout.Terminal", TestTerminal)
-def test_tabular_write_orderdict_columns():
+def test_tabular_write_columns_from_orderdict_row():
     fd = StringIO()
     out = Tabular(style={"name": {"width": 3},
                          "id": {"width": 3},
