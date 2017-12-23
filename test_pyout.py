@@ -216,7 +216,7 @@ def test_tabular_write_multicolor():
 def test_tabular_write_align():
     fd = StringIO()
     out = Tabular(["name"],
-                  style={"name": {"align": ">", "width": 10}},
+                  style={"name": {"align": "right", "width": 10}},
                   stream=fd, force_styling=True)
     out({"name": "foo"})
 

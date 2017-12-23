@@ -70,10 +70,12 @@ class Tabular(object):
     """
 
     # TODO: Support things like auto-width, value-based coloring, etc.
-    default_style = {"align": "<",
+    default_style = {"align": "left",
                      "width": 10}
 
     _header_attributes = {"align", "width"}
+
+    _align_values = {"left": "<", "right": ">", "center": "^"}
 
     def __init__(self, columns=None, style=None, stream=None, force_styling=False):
         self.term = Terminal(stream=stream, force_styling=force_styling)
@@ -108,7 +110,8 @@ class Tabular(object):
             attrs = (self._map_to_blessings(k, v) for k, v in cstyle.items())
             attrs = filter(None, attrs)
 
-            field = "{{{}:{align}{width}}}".format(column, **cstyle)
+            field = "".join(["{", column, ":", self._align_values[cstyle["align"]],
+                             str(cstyle["width"]), "}"])
             pre = "".join(getattr(self.term, a) for a in attrs)
             post = self.term.normal if pre else ""
 
