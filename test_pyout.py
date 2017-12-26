@@ -136,31 +136,11 @@ def test_tabular_write_update():
     for row in data:
         out(row)
 
-    out.rewrite("foo", "status", "installed",
+    out.rewrite({"name": "foo"}, "status", "installed",
                 style = {"name": {"width": 3},
                          "status": {"width": 9}})
 
     expected = unicode_cap("cuu1") * 2 + unicode_cap("el") + "foo installed"
-    assert eq_repr(fd.getvalue().strip().splitlines()[-1],
-                   expected)
-
-
-@patch("pyout.Terminal", TestTerminal)
-def test_tabular_write_update_nondefault_id():
-    fd = StringIO()
-    out = Tabular(["name", "id", "status"], id_column="id",
-                  stream=fd, force_styling=True)
-    data = [{"name": "foo", "id": "0", "status": "unknown"},
-            {"name": "bar", "id": "1", "status": "installed"}]
-    for row in data:
-        out(row)
-
-    out.rewrite("0", "status", "installed",
-                style = {"name": {"width": 3},
-                         "id": {"width": 1},
-                         "status": {"width": 9}})
-
-    expected = unicode_cap("cuu1") * 2 + unicode_cap("el") + "foo 0 installed"
     assert eq_repr(fd.getvalue().strip().splitlines()[-1],
                    expected)
 
@@ -176,9 +156,31 @@ def test_tabular_write_update_notfound():
         out(row)
 
     with pytest.raises(ValueError):
-        out.rewrite("not here", "status", "installed",
+        out.rewrite({"name": "not here"}, "status", "installed",
                     style = {"name": {"width": 3},
                              "status": {"width": 9}})
+
+
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_update_multi_id():
+    fd = StringIO()
+    out = Tabular(["name", "type", "status"],
+                  stream=fd, force_styling=True)
+    data = [{"name": "foo", "type": "0", "status": "unknown"},
+            {"name": "foo", "type": "1", "status": "unknown"},
+            {"name": "bar", "type": "2", "status": "installed"}]
+    for row in data:
+        out(row)
+
+    out.rewrite({"name": "foo", "type": "0"},
+                "status", "installed",
+                style = {"name": {"width": 3},
+                         "type": {"width": 1},
+                         "status": {"width": 9}})
+
+    expected = unicode_cap("cuu1") * 3 + unicode_cap("el") + "foo 0 installed"
+    assert eq_repr(fd.getvalue().strip().splitlines()[-1],
+                   expected)
 
 
 @patch("pyout.Terminal", TestTerminal)

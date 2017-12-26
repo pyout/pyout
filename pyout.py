@@ -24,9 +24,6 @@ class Tabular(object):
     ----------
     columns : list of str
         Column names
-    id_column : str, optional
-        Column that contains unique labels that can be used to
-        reference rows.
     style : dict, optional
         Each top-level key should be a column name and the value
         should be a style dict that overrides the `default_style`
@@ -67,15 +64,12 @@ class Tabular(object):
     default_style = {"align": "<",
                      "width": 10}
 
-    def __init__(self, columns, id_column=None, style=None, stream=None,
-                 force_styling=False):
+    def __init__(self, columns, style=None, stream=None, force_styling=False):
         self.term = Terminal(stream=stream, force_styling=force_styling)
 
         self._rows = []
         ## TODO: Allow columns to be infered from data or style.
         self._columns = columns
-        self.id = columns[0] if id_column is None else id_column
-
         self._style = _adopt({c: self.default_style for c in columns},
                              style)
         self._format = self._build_format(self._style)
@@ -154,14 +148,14 @@ class Tabular(object):
 
     ## FIXME: This will break with stderr and when the output scrolls.
     ## Maybe we could check term height and repaint?
-    def rewrite(self, label, column, new_value, style=None):
+    def rewrite(self, ids, column, new_value, style=None):
         """Rewrite a row.
 
         Parameters
         ----------
-        label : str
-            A label that identifies the row.  It should be a unique
-            value in the ID column.
+        ids : dict
+            The keys are the column names that in combination uniquely
+            identify a row when matched for the values.
         column : str
             The name of the column whose value should be updated to
             `new_value`.
@@ -173,11 +167,11 @@ class Tabular(object):
         """
         nback = None
         for rev_idx, row in enumerate(reversed(self._rows), 1):
-            if row[self.id] == label:
+            if all(row[k] == v for k, v in ids.items()):
                 nback = rev_idx
                 break
         if nback is None:
-            raise ValueError("Could not find row with '{}' id".format(label))
+            raise ValueError("Could not find row for {}".format(ids))
 
         idx = len(self._rows) - nback
         self._rows[idx][column] = new_value
