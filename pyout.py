@@ -106,7 +106,7 @@ class Tabular(object):
             cstyle = style[column]
 
             attrs = (self._map_to_blessings(k, v) for k, v in cstyle.items())
-            attrs = list(filter(None, attrs))
+            attrs = filter(None, attrs)
 
             field = "{{{}:{align}{width}}}".format(column, **cstyle)
             pre = "".join(getattr(self.term, a) for a in attrs)
