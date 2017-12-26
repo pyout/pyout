@@ -12,6 +12,177 @@ from contextlib import contextmanager
 from blessings import Terminal
 
 
+class Field(object):
+    """Format, process, and render tabular fields.
+
+    A Field instance is a template for a string that is defined by its
+    width, text alignment, and a list of "processors".  When a field
+    is called with a value, it renders the value as a string with the
+    specified width and text alignment.  Before this string is
+    returned, it is passed through the chain of processors.  The
+    rendered string is the result returned by the last processor.
+
+    Parameters
+    ----------
+    width : int
+    align : {'left', 'right', 'center'}
+
+    Attributes
+    ----------
+    width : int
+    align : str
+    processors : list of callable objects
+        A processor should take two positional arguments, the value
+        that is being rendered and the current result.  Its return
+        value will be passed to the next processor as the current
+        result.
+    """
+
+    _align_values = {"left": "<", "right": ">", "center": "^"}
+
+    def __init__(self, width=10, align="left"):
+        self._width = width
+        self._align = align
+        self._fmt = self._build_format()
+
+        self.processors = []
+
+    @property
+    def width(self):
+        return self._width
+
+    @width.setter
+    def width(self, value):
+        self._width = value
+        self._fmt = self._build_format()
+
+    @property
+    def align(self):
+        return self._align
+
+    @align.setter
+    def align(self, value):
+        self._align = value
+        self._fmt = self._build_format()
+
+    def _build_format(self):
+        align = self._align_values[self.align]
+        return "".join(["{:", align, str(self.width), "}"])
+
+    def __call__(self, value):
+        result = self._fmt.format(value)
+        for fn in self.processors:
+            result = fn(value, result)
+        return result
+
+
+class StyleProcessors(object):
+    """A base class for generating Field.processors for styled output.
+
+    Attributes
+    ----------
+    style_keys : list of tuples
+        Each pair consists of a style attribute (e.g., "bold") and the
+        expected type.
+    """
+
+    style_keys = [("bold", bool),
+                  ("underline", bool),
+                  ("color", str)]
+
+    def translate(self, name):
+        """Translate a style key for a given output type.
+
+        Parameters
+        ----------
+        name : str
+            A style key (e.g., "bold").
+
+        Returns
+        -------
+        An output-specific translation of `name`.
+        """
+        raise NotImplementedError
+
+    def by_key(self, key):
+        """Return a processor for the style given by `key`.
+
+        Parameters
+        ----------
+        key : str
+            A style key to be translated.
+
+        Returns
+        -------
+        A function.
+        """
+        def by_key_fn(_, result):
+            return self.translate(key) + result
+        return by_key_fn
+
+    def from_style(self, column_style):
+        """Yield processors based on `column_style`.
+
+        Parameters
+        ----------
+        column_style : dict
+            A style where the top-level keys correspond to style
+            attributes such as "bold" or "color".
+
+        Returns
+        -------
+        A generator object.
+        """
+        for key, key_type in self.style_keys:
+            if key not in column_style:
+                continue
+            if key_type is bool:
+                if column_style[key]:
+                    yield self.by_key(key)
+            elif key_type is str:
+                yield self.by_key(column_style[key])
+
+
+class TermProcessors(StyleProcessors):
+    """Generate Field.processors for styled Terminal output.
+
+    Parameters
+    ----------
+    term : blessings.Terminal
+    """
+
+    def __init__(self, term):
+        self.term = term
+
+    def translate(self, name):
+        """Translate a style key into a Terminal code.
+
+        Parameters
+        ----------
+        name : str
+            A style key (e.g., "bold").
+
+        Returns
+        -------
+        An output-specific translation of `name` (e.g., "\x1b[1m").
+        """
+        return str(getattr(self.term, name))
+
+    def _maybe_reset(self):
+        def maybe_reset_fn(value, result):
+            if value != result.strip():
+                return result + self.term.normal
+            return result
+        return maybe_reset_fn
+
+    def from_style(self, column_style):
+        """Call StyleProcessors.from_style, adding a Terminal-specific reset.
+        """
+        for proc in super(TermProcessors, self).from_style(column_style):
+            yield proc
+        yield self._maybe_reset()
+
+
 def _adopt(style, new_style):
     if new_style is None:
         return style
@@ -75,10 +246,9 @@ class Tabular(object):
 
     _header_attributes = {"align", "width"}
 
-    _align_values = {"left": "<", "right": ">", "center": "^"}
-
     def __init__(self, columns=None, style=None, stream=None, force_styling=False):
         self.term = Terminal(stream=stream, force_styling=force_styling)
+        self._tproc = TermProcessors(self.term)
 
         self._rows = []
         self._columns = columns
@@ -88,7 +258,7 @@ class Tabular(object):
         self._header_style = None
         if columns is not None:
             self._setup_style()
-        self._format = None
+        self._fields = None
 
     def _setup_style(self):
         self._style = _adopt({c: self.default_style for c in self._columns},
@@ -102,39 +272,14 @@ class Tabular(object):
                 self._header_style[col] = dict(cstyle,
                                                **self._init_style["header_"])
 
-    def _build_format(self, style):
-        fields = []
+    def _setup_fields(self, style):
+        fields = {}
         for column in self._columns:
             cstyle = style[column]
-
-            attrs = (self._map_to_blessings(k, v) for k, v in cstyle.items())
-            attrs = filter(None, attrs)
-
-            field = "".join(["{", column, ":", self._align_values[cstyle["align"]],
-                             str(cstyle["width"]), "}"])
-            pre = "".join(getattr(self.term, a) for a in attrs)
-            post = self.term.normal if pre else ""
-
-            fields.append(pre + field + post)
-        return " ".join(fields) + "\n"
-
-    def _map_to_blessings(self, key, value):
-        """Convert a key-value pair into a `blessings.Terminal` attribute.
-
-        Parameters
-        ----------
-        key, value : str
-            Attribute key (e.g., "color") and value (e.g., "green")
-
-        Returns
-        -------
-        str (attribute value) or None
-        """
-        if key in ["bold", "underline"]:
-            if value:
-                return key
-        elif key == "color":
-            return value
+            field = Field(width=cstyle["width"], align=cstyle["align"])
+            field.processors = list(self._tproc.from_style(cstyle))
+            fields[column] = field
+        return fields
 
     _preformat_method = lambda self, x: x
 
@@ -142,21 +287,24 @@ class Tabular(object):
         return dict(zip(self._columns, row))
 
     def _writerow(self, row, style=None, adopt=True):
-        if self._format is not None and style is None:
-            fmt = self._format
+        if self._fields is not None and style is None:
+            fields = self._fields
         else:
             if adopt:
-                fmt = self._build_format(_adopt(self._style, style))
+                fields = self._setup_fields(_adopt(self._style, style))
             else:
-                fmt = self._build_format(style)
+                fields = self._setup_fields(style)
 
+        row = self._preformat_method(row)
         try:
-            self.term.stream.write(fmt.format(**self._preformat_method(row)))
+            rendered_fields = [fields[c](row[c]) for c in self._columns]
         except TypeError:
             if self._preformat_method == self._seq_to_dict:
                 raise
             self._preformat_method = self._seq_to_dict
             self._writerow(row, style)
+        else:
+            self.term.stream.write(" ".join(rendered_fields) + "\n")
 
     def _maybe_write_header(self):
         if self._header_style is not None:

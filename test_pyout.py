@@ -7,7 +7,7 @@ import blessings
 from mock import patch
 import pytest
 
-from pyout import _adopt, Tabular
+from pyout import _adopt, Field, Tabular
 
 
 def test_adopt_noop():
@@ -44,6 +44,31 @@ def test_adopt():
             assert newstyle[key] == expected
         else:
             assert newstyle[key] == value
+
+
+def test_field_base():
+    assert Field()("ok") == "ok        "
+    assert Field(width=5, align="right")("ok") == "   ok"
+
+
+def test_field_update():
+    field = Field()
+    field.width = 2
+    assert field("ok") == "ok"
+
+
+def test_field_processors():
+    field = Field(width=6, align="center")
+
+    def proc1(_, result):
+        return "AAA" + result
+
+    def proc2(_, result):
+        return result + "ZZZ"
+
+    field.processors = [proc1, proc2]
+
+    assert field("ok") == "AAA  ok  ZZZ"
 
 ### Tabular tests
 
