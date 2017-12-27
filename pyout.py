@@ -163,6 +163,33 @@ class StyleProcessors(object):
             return result
         return by_lookup_cond_fn
 
+    def by_interval_lookup(self, intervals):
+        """Return a processor that extracts the style from `intervals`.
+
+        Parameters
+        ----------
+        intervals : sequence of tuples
+            Each tuple should have the form `(start, end, key)`, where
+            start is the start of the interval (inclusive) , end is
+            the end of the interval, and key is a style key.
+
+        Returns
+        -------
+        A function.
+        """
+        def by_interval_lookup_fn(value, result):
+            value = float(value)
+            for start, end, key in intervals:
+                if start is None:
+                    start = float("-inf")
+                elif end is None:
+                    end = float("inf")
+
+                if start <= value < end:
+                    return self.translate(key) + result
+            return result
+        return by_interval_lookup_fn
+
     def from_style(self, column_style):
         """Yield processors based on `column_style`.
 
@@ -192,6 +219,8 @@ class StyleProcessors(object):
             elif key_type is str:
                 if column_style[key][0] == "label":
                     yield self.by_lookup(column_style[key][1])
+                elif column_style[key][0] == "interval":
+                    yield self.by_interval_lookup(column_style[key][1])
                 else:
                     yield self.by_key(column_style[key])
 
@@ -223,7 +252,7 @@ class TermProcessors(StyleProcessors):
 
     def _maybe_reset(self):
         def maybe_reset_fn(value, result):
-            if value != result.strip():
+            if str(value) != result.strip():
                 return result + self.term.normal
             return result
         return maybe_reset_fn
