@@ -339,3 +339,39 @@ def test_tabular_repaint_with_header():
            "bar        installed \n")
     expected = msg + unicode_cap("clear") + msg
     assert eq_repr(fd.getvalue(), expected)
+
+
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_label_color():
+    fd = StringIO()
+    out = Tabular(style={"name": {"width": 3},
+                         "status": {"color": ("label", {"BAD": "red"}),
+                                    "width": 6}},
+                  stream=fd, force_styling=True)
+    out(OrderedDict([("name", "foo"),
+                     ("status", "OK")]))
+    out(OrderedDict([("name", "bar"),
+                     ("status", "BAD")]))
+
+    expected = "foo " + "OK    \n" + \
+               "bar " + unicode_parm("setaf", COLORNUMS["red"]) + \
+               "BAD   " + unicode_cap("sgr0") + "\n"
+    assert eq_repr(fd.getvalue(), expected)
+
+
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_label_bold():
+    fd = StringIO()
+    out = Tabular(style={"name": {"width": 3},
+                         "status": {"bold": ("label", {"BAD": True}),
+                                    "width": 6}},
+                  stream=fd, force_styling=True)
+    out(OrderedDict([("name", "foo"),
+                     ("status", "OK")]))
+    out(OrderedDict([("name", "bar"),
+                     ("status", "BAD")]))
+
+    expected = "foo " + "OK    \n" + \
+               "bar " + unicode_cap("bold") + \
+               "BAD   " + unicode_cap("sgr0") + "\n"
+    assert eq_repr(fd.getvalue(), expected)
