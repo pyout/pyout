@@ -377,7 +377,6 @@ class Tabular(object):
     ...     style={"status": {"color": "red", "bold": True}})
     """
 
-    # TODO: Support things like auto-width, value-based coloring, etc.
     default_style = {"align": "left",
                      "width": 10}
 
