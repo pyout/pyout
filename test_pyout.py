@@ -7,7 +7,7 @@ import blessings
 from mock import patch
 import pytest
 
-from pyout import _adopt, Tabular
+from pyout import _adopt, Field, Tabular
 
 
 def test_adopt_noop():
@@ -44,6 +44,31 @@ def test_adopt():
             assert newstyle[key] == expected
         else:
             assert newstyle[key] == value
+
+
+def test_field_base():
+    assert Field()("ok") == "ok        "
+    assert Field(width=5, align="right")("ok") == "   ok"
+
+
+def test_field_update():
+    field = Field()
+    field.width = 2
+    assert field("ok") == "ok"
+
+
+def test_field_processors():
+    field = Field(width=6, align="center")
+
+    def proc1(_, result):
+        return "AAA" + result
+
+    def proc2(_, result):
+        return result + "ZZZ"
+
+    field.processors = [proc1, proc2]
+
+    assert field("ok") == "AAA  ok  ZZZ"
 
 ### Tabular tests
 
@@ -313,4 +338,102 @@ def test_tabular_repaint_with_header():
            "foo        unknown   \n"
            "bar        installed \n")
     expected = msg + unicode_cap("clear") + msg
+    assert eq_repr(fd.getvalue(), expected)
+
+
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_label_color():
+    fd = StringIO()
+    out = Tabular(style={"name": {"width": 3},
+                         "status": {"color": ("label", {"BAD": "red"}),
+                                    "width": 6}},
+                  stream=fd, force_styling=True)
+    out(OrderedDict([("name", "foo"),
+                     ("status", "OK")]))
+    out(OrderedDict([("name", "bar"),
+                     ("status", "BAD")]))
+
+    expected = "foo " + "OK    \n" + \
+               "bar " + unicode_parm("setaf", COLORNUMS["red"]) + \
+               "BAD   " + unicode_cap("sgr0") + "\n"
+    assert eq_repr(fd.getvalue(), expected)
+
+
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_label_bold():
+    fd = StringIO()
+    out = Tabular(style={"name": {"width": 3},
+                         "status": {"bold": ("label", {"BAD": True}),
+                                    "width": 6}},
+                  stream=fd, force_styling=True)
+    out(OrderedDict([("name", "foo"),
+                     ("status", "OK")]))
+    out(OrderedDict([("name", "bar"),
+                     ("status", "BAD")]))
+
+    expected = "foo " + "OK    \n" + \
+               "bar " + unicode_cap("bold") + \
+               "BAD   " + unicode_cap("sgr0") + "\n"
+    assert eq_repr(fd.getvalue(), expected)
+
+
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_intervals_color():
+    fd = StringIO()
+    out = Tabular(style={"name": {"width": 3},
+                         "percent": {"color": ("interval",
+                                               [(0, 50, "red"),
+                                                (50, 80, "yellow"),
+                                                (80, 100, "green")]),
+                                     "width": 7}},
+                  stream=fd, force_styling=True)
+    out(OrderedDict([("name", "foo"),
+                     ("percent", 88)]))
+    out(OrderedDict([("name", "bar"),
+                     ("percent", 33)]))
+
+    expected = "foo " + unicode_parm("setaf", COLORNUMS["green"]) + \
+               "88     " + unicode_cap("sgr0") + "\n" + \
+               "bar " + unicode_parm("setaf", COLORNUMS["red"]) + \
+               "33     " + unicode_cap("sgr0") + "\n"
+    assert eq_repr(fd.getvalue(), expected)
+
+
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_intervals_color_open_ended():
+    fd = StringIO()
+    out = Tabular(style={"name": {"width": 3},
+                         "percent": {"color": ("interval",
+                                               [(None, 50, "red"),
+                                                (80, None, "green")]),
+                                     "width": 7}},
+                  stream=fd, force_styling=True)
+    out(OrderedDict([("name", "foo"),
+                     ("percent", 88)]))
+    out(OrderedDict([("name", "bar"),
+                     ("percent", 33)]))
+
+    expected = "foo " + unicode_parm("setaf", COLORNUMS["green"]) + \
+               "88     " + unicode_cap("sgr0") + "\n" + \
+               "bar " + unicode_parm("setaf", COLORNUMS["red"]) + \
+               "33     " + unicode_cap("sgr0") + "\n"
+    assert eq_repr(fd.getvalue(), expected)
+
+
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_intervals_color_outside_intervals():
+    fd = StringIO()
+    out = Tabular(style={"name": {"width": 3},
+                         "percent": {"color": ("interval",
+                                               [(0, 50, "red")]),
+                                     "width": 7}},
+                  stream=fd, force_styling=True)
+    out(OrderedDict([("name", "foo"),
+                     ("percent", 88)]))
+    out(OrderedDict([("name", "bar"),
+                     ("percent", 33)]))
+
+    expected = "foo 88     \n" + \
+               "bar " + unicode_parm("setaf", COLORNUMS["red"]) + \
+               "33     " + unicode_cap("sgr0") + "\n"
     assert eq_repr(fd.getvalue(), expected)
