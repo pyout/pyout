@@ -435,3 +435,38 @@ def test_tabular_write_intervals_color_outside_intervals():
                "bar " + unicode_parm("setaf", COLORNUMS["red"]) + \
                "33     " + unicode_cap("sgr0") + "\n"
     assert eq_repr(fd.getvalue(), expected)
+
+
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_autowidth():
+    fd = StringIO()
+    out = Tabular(style={"name": {"width": "auto"},
+                         "status": {"width": "auto"},
+                         "path": {"width": 6}},
+                  stream=fd, force_styling=True)
+    out(OrderedDict([("name", "fooab"),
+                     ("status", "OK"),
+                     ("path", "/tmp/a")]))
+    out(OrderedDict([("name", "bar"),
+                     ("status", "BAD"),
+                     ("path", "/tmp/b")]))
+
+    lines = fd.getvalue().splitlines()
+    assert "bar   BAD /tmp/b" in lines
+    assert len([ln for ln in lines if ln.endswith("fooab OK  /tmp/a")]) == 1
+
+
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_autowidth_with_header():
+    fd = StringIO()
+    out = Tabular(style={"header_": {},
+                         "name": {"width": "auto"},
+                         "status": {"width": "auto"}},
+                  stream=fd, force_styling=True)
+    out(OrderedDict([("name", "foobar"),
+                     ("status", "OK")]))
+    out(OrderedDict([("name", "baz"),
+                     ("status", "OK")]))
+
+    lines = fd.getvalue().splitlines()
+    assert len([ln for ln in lines if ln.endswith("name   status")]) == 1

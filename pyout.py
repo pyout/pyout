@@ -355,6 +355,10 @@ class Tabular(object):
         self._init_style = style
         self._style = None
         self._header_style = None
+
+        self._autowidth_columns = set()
+        self._update_previous = False
+
         if columns is not None:
             self._setup_style()
             self._setup_fields()
@@ -376,7 +380,13 @@ class Tabular(object):
         for column in self._columns:
             cstyle = self._style[column]
 
-            width = cstyle["width"]
+            style_width = cstyle["width"]
+            if style_width == "auto":
+                width = 1
+                self._autowidth_columns.add(column)
+            else:
+                width = style_width
+
             field = Field(width=width, align=cstyle["align"])
             field.processors["default"] = list(self._tproc.from_style(cstyle))
 
@@ -400,6 +410,13 @@ class Tabular(object):
             proc_key = "default"
 
         row = self._preformat_method(row)
+
+        for column in self._columns:
+            if column in self._autowidth_columns:
+                value_width = len(str(row[column]))
+                if value_width > self._fields[column].width:
+                    self._fields[column].width = value_width
+                    self._update_previous = True
 
         try:
             proc_fields = [fields[c](row[c], proc_key) for c in self._columns]
@@ -447,6 +464,20 @@ class Tabular(object):
         self._rows.append(row)
         self._writerow(row, style=style)
 
+        if self._update_previous:
+            ## TODO: Try to make this code clearer by moving terminal
+            ## logic into helpers.
+            previous = self._rows[:-1]
+            if previous or self._header_style is not None:
+                self._move_to_firstrow()
+                self.term.stream.write(self.term.clear_eol)
+                self._maybe_write_header()
+                for prev_row in previous:
+                    self.term.stream.write(self.term.clear_eol)
+                    self._writerow(prev_row)
+                self.term.stream.write(self.term.move_down)
+            self._update_previous = False
+
     @staticmethod
     def _infer_columns(row):
         try:
@@ -462,6 +493,10 @@ class Tabular(object):
         for row in self._rows:
             self._writerow(row)
         self.term.stream.flush()
+
+    def _move_to_firstrow(self):
+        ntimes = len(self._rows) + (self._header_style is not None)
+        self.term.stream.write(self.term.move_up * ntimes)
 
     @contextmanager
     def _moveback(self, n):
