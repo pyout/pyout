@@ -7,7 +7,7 @@ import blessings
 from mock import patch
 import pytest
 
-from pyout import _adopt, Field, Tabular
+from pyout import _adopt, Field, StyleProcessors, Tabular
 
 
 def test_adopt_noop():
@@ -69,6 +69,28 @@ def test_field_processors():
     field.processors["default"] = [proc1, proc2]
 
     assert field("ok") == "AAA  ok  ZZZ"
+
+
+def test_truncate_mark():
+    fn = StyleProcessors.truncate(7, marker=True)
+
+    assert fn(None, "abc") == "abc"
+    assert fn(None, "abcdefg") == "abcdefg"
+    assert fn(None, "abcdefgh") == "abcd..."
+
+
+def test_truncate_mark_short():
+    fn = StyleProcessors.truncate(2, marker=True)
+    assert fn(None, "abc") == ".."
+
+
+def test_truncate_nomark():
+    fn = StyleProcessors.truncate(7, marker=False)
+
+    assert fn(None, "abc") == "abc"
+    assert fn(None, "abcdefg") == "abcdefg"
+    assert fn(None, "abcdefgh") == "abcdefg"
+
 
 ### Tabular tests
 
@@ -489,3 +511,58 @@ def test_tabular_write_autowidth_min():
     lines = fd.getvalue().splitlines()
     assert "bar   BAD   /tmp/b" in lines
     assert len([ln for ln in lines if ln.endswith("fooab OK    /tmp/a")]) == 1
+
+
+@pytest.mark.parametrize("marker", [[True], [False]],
+                         ids=["marker=True", "marker=False"])
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_autowidth_min_max(marker):
+    fd = StringIO()
+    out = Tabular(style={"name": {"width": 3},
+                         "status": {"width":
+                                    {"auto": True, "min": 2, "max": 7}},
+                         "path": {"width": {"auto": True, "max": 5,
+                                            "marker": marker}}},
+                  stream=fd, force_styling=True)
+    out(OrderedDict([("name", "foo"),
+                     ("status", "U"),
+                     ("path", "/tmp/a")]))
+
+    if marker:
+        assert fd.getvalue() == "foo U  /t...\n"
+    else:
+        assert fd.getvalue() == "foo U  /tmp/a\n"
+
+    out(OrderedDict([("name", "bar"),
+                     ("status", "BAD!!!!!!!!!!!"),
+                     ("path", "/tmp/b")]))
+
+    lines = fd.getvalue().splitlines()
+    if marker:
+        assert len([ln for ln in lines if ln.endswith("foo U       /t...")]) == 1
+        assert len([ln for ln in lines if ln.endswith("bar BAD!... /t...")]) == 1
+    else:
+        assert len([ln for ln in lines if ln.endswith("foo U       /tmp/a")]) == 1
+        assert len([ln for ln in lines if ln.endswith("bar BAD!... /tmp/b")]) == 1
+
+
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_autowidth_min_max_with_header():
+    fd = StringIO()
+    out = Tabular(style={"header_": {},
+                         "name": {"width": 4},
+                         "status": {"width":
+                                    {"auto": True, "min": 2, "max": 8}}},
+                  stream=fd, force_styling=True)
+    out(OrderedDict([("name", "foo"),
+                     ("status", "U")]))
+
+    lines0 = fd.getvalue().splitlines()
+    assert len([ln for ln in lines0 if ln.endswith("name status")]) == 2
+    assert len([ln for ln in lines0 if ln.endswith("foo  U     ")]) == 1
+
+    out(OrderedDict([("name", "bar"),
+                     ("status", "BAD!!!!!!!!!!!")]))
+
+    lines1 = fd.getvalue().splitlines()
+    assert len([ln for ln in lines1 if ln.endswith("bar  BAD!!...")]) == 1

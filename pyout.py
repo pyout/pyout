@@ -120,6 +120,38 @@ class StyleProcessors(object):
         """
         raise NotImplementedError
 
+    @staticmethod
+    def truncate(length, marker=True):
+        """Return a processor that truncates the result to `length`.
+
+        Note: You probably want to place this function at the
+        beginning of the processor list so that the truncation is
+        based on the length of the original value.
+
+        Parameters
+        ----------
+        length : int
+        marker : bool
+            Whether to indicate truncation by replacing the last three
+            characters of a truncated string with '...'.
+
+        Returns
+        -------
+        A function.
+        """
+        ## TODO: Add an option to center the truncation marker?
+        def truncate_fn(_, result):
+            if len(result) <= length:
+                return result
+            if marker:
+                marker_beg = max(length - 3, 0)
+                if result[marker_beg:].strip():
+                    if marker_beg == 0:
+                        return "..."[:length]
+                    return result[:marker_beg] + "..."
+            return result[:length]
+        return truncate_fn
+
     def by_key(self, key):
         """Return a processor for the style given by `key`.
 
@@ -387,18 +419,25 @@ class Tabular(object):
         for column in self._columns:
             cstyle = self._style[column]
 
+            procs = []
             style_width = cstyle["width"]
             is_auto = style_width == "auto" or _safe_get(style_width, "auto")
 
             if is_auto:
                 width = _safe_get(style_width, "min", 1)
                 self._autowidth_columns.add(column)
+
+                wmax = _safe_get(style_width, "max")
+                if wmax is not None:
+                    marker = _safe_get(style_width, "marker", True)
+                    procs = [self._tproc.truncate(wmax, marker)]
             elif is_auto is False:
                 raise ValueError("No 'width' specified")
             else:
                 width = style_width
 
             field = Field(width=width, align=cstyle["align"])
+            field.processors["core"] = procs
             field.processors["default"] = list(self._tproc.from_style(cstyle))
 
             self._fields[column] = field
