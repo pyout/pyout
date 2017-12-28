@@ -388,9 +388,13 @@ class Tabular(object):
             cstyle = self._style[column]
 
             style_width = cstyle["width"]
-            if style_width == "auto":
-                width = 1
+            is_auto = style_width == "auto" or _safe_get(style_width, "auto")
+
+            if is_auto:
+                width = _safe_get(style_width, "min", 1)
                 self._autowidth_columns.add(column)
+            elif is_auto is False:
+                raise ValueError("No 'width' specified")
             else:
                 width = style_width
 

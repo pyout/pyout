@@ -470,3 +470,22 @@ def test_tabular_write_autowidth_with_header():
 
     lines = fd.getvalue().splitlines()
     assert len([ln for ln in lines if ln.endswith("name   status")]) == 1
+
+
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_autowidth_min():
+    fd = StringIO()
+    out = Tabular(style={"name": {"width": "auto"},
+                         "status": {"width": {"auto": True, "min": 5}},
+                         "path": {"width": 6}},
+                  stream=fd, force_styling=True)
+    out(OrderedDict([("name", "fooab"),
+                     ("status", "OK"),
+                     ("path", "/tmp/a")]))
+    out(OrderedDict([("name", "bar"),
+                     ("status", "BAD"),
+                     ("path", "/tmp/b")]))
+
+    lines = fd.getvalue().splitlines()
+    assert "bar   BAD   /tmp/b" in lines
+    assert len([ln for ln in lines if ln.endswith("fooab OK    /tmp/a")]) == 1
