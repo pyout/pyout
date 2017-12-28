@@ -252,7 +252,7 @@ class TermProcessors(StyleProcessors):
 
     def _maybe_reset(self):
         def maybe_reset_fn(value, result):
-            if str(value) != result.strip():
+            if "\x1b" in result:
                 return result + self.term.normal
             return result
         return maybe_reset_fn
