@@ -7,7 +7,7 @@ import blessings
 from mock import patch
 import pytest
 
-from pyout import _adopt, Field, Tabular
+from pyout import _adopt, Field, StyleProcessors, Tabular
 
 
 def test_adopt_noop():
@@ -66,9 +66,31 @@ def test_field_processors():
     def proc2(_, result):
         return result + "ZZZ"
 
-    field.processors = [proc1, proc2]
+    field.processors["default"] = [proc1, proc2]
 
     assert field("ok") == "AAA  ok  ZZZ"
+
+
+def test_truncate_mark():
+    fn = StyleProcessors.truncate(7, marker=True)
+
+    assert fn(None, "abc") == "abc"
+    assert fn(None, "abcdefg") == "abcdefg"
+    assert fn(None, "abcdefgh") == "abcd..."
+
+
+def test_truncate_mark_short():
+    fn = StyleProcessors.truncate(2, marker=True)
+    assert fn(None, "abc") == ".."
+
+
+def test_truncate_nomark():
+    fn = StyleProcessors.truncate(7, marker=False)
+
+    assert fn(None, "abc") == "abc"
+    assert fn(None, "abcdefg") == "abcdefg"
+    assert fn(None, "abcdefgh") == "abcdefg"
+
 
 ### Tabular tests
 
@@ -137,13 +159,15 @@ def test_tabular_write_columns_orderdict_mapping(row):
     fd = StringIO()
     out = Tabular(OrderedDict([("name", "Long name"),
                                ("status", "Status")]),
-                  style={"header_": {}},
+                  style={"header_": {},
+                         "name": {"width": 10},
+                         "status": {"width": 6}},
                   stream=fd)
 
     out(row)
 
-    expected = ("Long name  Status    \n"
-                "foo        ok        \n")
+    expected = ("Long name  Status\n"
+                "foo        ok    \n")
     assert eq_repr(fd.getvalue(), expected)
 
 
@@ -165,7 +189,9 @@ def test_tabular_write_data_as_list():
 def test_tabular_write_header():
     fd = StringIO()
     out = Tabular(["name", "status"],
-                  style={"header_": {}},
+                  style={"header_": {},
+                         "name": {"width": 10},
+                         "status": {"width": 10}},
                   stream=fd, force_styling=True)
     out({"name": "foo",
          "status": "installed"})
@@ -252,15 +278,14 @@ def test_tabular_write_align():
 def test_tabular_write_update():
     fd = StringIO()
     out = Tabular(["name", "status"],
+                  style={"name": {"width": 3}, "status": {"width": 9}},
                   stream=fd, force_styling=True)
     data = [{"name": "foo", "status": "unknown"},
             {"name": "bar", "status": "installed"}]
     for row in data:
         out(row)
 
-    out.rewrite({"name": "foo"}, "status", "installed",
-                style = {"name": {"width": 3},
-                         "status": {"width": 9}})
+    out.rewrite({"name": "foo"}, "status", "installed")
 
     expected = unicode_cap("cuu1") * 2 + unicode_cap("el") + "foo installed"
     assert eq_repr(fd.getvalue().strip().splitlines()[-1],
@@ -287,6 +312,9 @@ def test_tabular_write_update_notfound():
 def test_tabular_write_update_multi_id():
     fd = StringIO()
     out = Tabular(["name", "type", "status"],
+                  style={"name": {"width": 3},
+                         "type": {"width": 1},
+                         "status": {"width": 9}},
                   stream=fd, force_styling=True)
     data = [{"name": "foo", "type": "0", "status": "unknown"},
             {"name": "foo", "type": "1", "status": "unknown"},
@@ -294,11 +322,7 @@ def test_tabular_write_update_multi_id():
     for row in data:
         out(row)
 
-    out.rewrite({"name": "foo", "type": "0"},
-                "status", "installed",
-                style = {"name": {"width": 3},
-                         "type": {"width": 1},
-                         "status": {"width": 9}})
+    out.rewrite({"name": "foo", "type": "0"}, "status", "installed")
 
     expected = unicode_cap("cuu1") * 3 + unicode_cap("el") + "foo 0 installed"
     assert eq_repr(fd.getvalue().strip().splitlines()[-1],
@@ -309,6 +333,8 @@ def test_tabular_write_update_multi_id():
 def test_tabular_repaint():
     fd = StringIO()
     out = Tabular(["name", "status"],
+                  style={"name": {"width": 10},
+                         "status": {"width": 10}},
                   stream=fd, force_styling=True)
     data = [{"name": "foo", "status": "unknown"},
             {"name": "bar", "status": "installed"}]
@@ -326,7 +352,9 @@ def test_tabular_repaint():
 def test_tabular_repaint_with_header():
     fd = StringIO()
     out = Tabular(["name", "status"],
-                  style={"header_": {}},
+                  style={"header_": {},
+                         "name": {"width": 10},
+                         "status": {"width": 10}},
                   stream=fd, force_styling=True)
     data = [{"name": "foo", "status": "unknown"},
             {"name": "bar", "status": "installed"}]
@@ -437,3 +465,128 @@ def test_tabular_write_intervals_color_outside_intervals():
                "bar " + unicode_parm("setaf", COLORNUMS["red"]) + \
                "33     " + unicode_cap("sgr0") + "\n"
     assert eq_repr(fd.getvalue(), expected)
+
+
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_width_truncate_long():
+    fd = StringIO()
+    out = Tabular(style={"name": {"width": 8},
+                         "status": {"width": 3}},
+                  stream=fd)
+    out(OrderedDict([("name", "abcdefghijklmnop"),
+                     ("status", "OK"),]))
+    out(OrderedDict([("name", "bar"),
+                     ("status", "BAD"),]))
+
+    expected = ("abcde... OK \n"
+                "bar      BAD\n")
+    assert fd.getvalue() == expected
+
+
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_autowidth():
+    fd = StringIO()
+    out = Tabular(style={"name": {"width": "auto"},
+                         "status": {"width": "auto"},
+                         "path": {"width": 6}},
+                  stream=fd, force_styling=True)
+    out(OrderedDict([("name", "fooab"),
+                     ("status", "OK"),
+                     ("path", "/tmp/a")]))
+    out(OrderedDict([("name", "bar"),
+                     ("status", "BAD"),
+                     ("path", "/tmp/b")]))
+
+    lines = fd.getvalue().splitlines()
+    assert "bar   BAD /tmp/b" in lines
+    assert len([ln for ln in lines if ln.endswith("fooab OK  /tmp/a")]) == 1
+
+
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_autowidth_with_header():
+    fd = StringIO()
+    out = Tabular(style={"header_": {},
+                         "name": {"width": "auto"},
+                         "status": {"width": "auto"}},
+                  stream=fd, force_styling=True)
+    out(OrderedDict([("name", "foobar"),
+                     ("status", "OK")]))
+    out(OrderedDict([("name", "baz"),
+                     ("status", "OK")]))
+
+    lines = fd.getvalue().splitlines()
+    assert len([ln for ln in lines if ln.endswith("name   status")]) == 1
+
+
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_autowidth_min():
+    fd = StringIO()
+    out = Tabular(style={"name": {"width": "auto"},
+                         "status": {"width": {"auto": True, "min": 5}},
+                         "path": {"width": 6}},
+                  stream=fd, force_styling=True)
+    out(OrderedDict([("name", "fooab"),
+                     ("status", "OK"),
+                     ("path", "/tmp/a")]))
+    out(OrderedDict([("name", "bar"),
+                     ("status", "BAD"),
+                     ("path", "/tmp/b")]))
+
+    lines = fd.getvalue().splitlines()
+    assert "bar   BAD   /tmp/b" in lines
+    assert len([ln for ln in lines if ln.endswith("fooab OK    /tmp/a")]) == 1
+
+
+@pytest.mark.parametrize("marker", [[True], [False]],
+                         ids=["marker=True", "marker=False"])
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_autowidth_min_max(marker):
+    fd = StringIO()
+    out = Tabular(style={"name": {"width": 3},
+                         "status": {"width":
+                                    {"auto": True, "min": 2, "max": 7}},
+                         "path": {"width": {"auto": True, "max": 5,
+                                            "marker": marker}}},
+                  stream=fd, force_styling=True)
+    out(OrderedDict([("name", "foo"),
+                     ("status", "U"),
+                     ("path", "/tmp/a")]))
+
+    if marker:
+        assert fd.getvalue() == "foo U  /t...\n"
+    else:
+        assert fd.getvalue() == "foo U  /tmp/a\n"
+
+    out(OrderedDict([("name", "bar"),
+                     ("status", "BAD!!!!!!!!!!!"),
+                     ("path", "/tmp/b")]))
+
+    lines = fd.getvalue().splitlines()
+    if marker:
+        assert len([ln for ln in lines if ln.endswith("foo U       /t...")]) == 1
+        assert len([ln for ln in lines if ln.endswith("bar BAD!... /t...")]) == 1
+    else:
+        assert len([ln for ln in lines if ln.endswith("foo U       /tmp/a")]) == 1
+        assert len([ln for ln in lines if ln.endswith("bar BAD!... /tmp/b")]) == 1
+
+
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_autowidth_min_max_with_header():
+    fd = StringIO()
+    out = Tabular(style={"header_": {},
+                         "name": {"width": 4},
+                         "status": {"width":
+                                    {"auto": True, "min": 2, "max": 8}}},
+                  stream=fd, force_styling=True)
+    out(OrderedDict([("name", "foo"),
+                     ("status", "U")]))
+
+    lines0 = fd.getvalue().splitlines()
+    assert len([ln for ln in lines0 if ln.endswith("name status")]) == 2
+    assert len([ln for ln in lines0 if ln.endswith("foo  U     ")]) == 1
+
+    out(OrderedDict([("name", "bar"),
+                     ("status", "BAD!!!!!!!!!!!")]))
+
+    lines1 = fd.getvalue().splitlines()
+    assert len([ln for ln in lines1 if ln.endswith("bar  BAD!!...")]) == 1

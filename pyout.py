@@ -16,8 +16,8 @@ class Field(object):
     """Format, process, and render tabular fields.
 
     A Field instance is a template for a string that is defined by its
-    width, text alignment, and a list of "processors".  When a field
-    is called with a value, it renders the value as a string with the
+    width, text alignment, and its "processors".  When a field is
+    called with a value, it renders the value as a string with the
     specified width and text alignment.  Before this string is
     returned, it is passed through the chain of processors.  The
     rendered string is the result returned by the last processor.
@@ -31,7 +31,14 @@ class Field(object):
     ----------
     width : int
     align : str
-    processors : list of callable objects
+    processors : dict
+        Each key maps to a list of processors.  The keys "core" and
+        "default" must always be present.  When an instance object is
+        called, the rendered result is always sent through the "core"
+        processors.  It will then be sent through the "default"
+        processors unless another key is provided as the optional
+        `which` argument.
+
         A processor should take two positional arguments, the value
         that is being rendered and the current result.  Its return
         value will be passed to the next processor as the current
@@ -45,7 +52,7 @@ class Field(object):
         self._align = align
         self._fmt = self._build_format()
 
-        self.processors = []
+        self.processors = {"core": [], "default": []}
 
     @property
     def width(self):
@@ -69,9 +76,18 @@ class Field(object):
         align = self._align_values[self.align]
         return "".join(["{:", align, str(self.width), "}"])
 
-    def __call__(self, value):
+    def __call__(self, value, which="default"):
+        """Render `value` by feeding it through the processors.
+
+        Parameters
+        ----------
+        value : str
+        which : str, optional
+            A key for the `processors` attribute that indicates the
+            list of processors to use in addition to the "core" list.
+        """
         result = self._fmt.format(value)
-        for fn in self.processors:
+        for fn in self.processors["core"] + self.processors[which]:
             result = fn(value, result)
         return result
 
@@ -103,6 +119,38 @@ class StyleProcessors(object):
         An output-specific translation of `name`.
         """
         raise NotImplementedError
+
+    @staticmethod
+    def truncate(length, marker=True):
+        """Return a processor that truncates the result to `length`.
+
+        Note: You probably want to place this function at the
+        beginning of the processor list so that the truncation is
+        based on the length of the original value.
+
+        Parameters
+        ----------
+        length : int
+        marker : bool
+            Whether to indicate truncation by replacing the last three
+            characters of a truncated string with '...'.
+
+        Returns
+        -------
+        A function.
+        """
+        ## TODO: Add an option to center the truncation marker?
+        def truncate_fn(_, result):
+            if len(result) <= length:
+                return result
+            if marker:
+                marker_beg = max(length - 3, 0)
+                if result[marker_beg:].strip():
+                    if marker_beg == 0:
+                        return "..."[:length]
+                    return result[:marker_beg] + "..."
+            return result[:length]
+        return truncate_fn
 
     def by_key(self, key):
         """Return a processor for the style given by `key`.
@@ -251,8 +299,8 @@ class TermProcessors(StyleProcessors):
         return str(getattr(self.term, name))
 
     def _maybe_reset(self):
-        def maybe_reset_fn(value, result):
-            if str(value) != result.strip():
+        def maybe_reset_fn(_, result):
+            if "\x1b" in result:
                 return result + self.term.normal
             return result
         return maybe_reset_fn
@@ -269,6 +317,13 @@ def _adopt(style, new_style):
     if new_style is None:
         return style
     return {key: dict(style[key], **new_style.get(key, {})) for key in style}
+
+
+def _safe_get(mapping, key, default=None):
+    try:
+        return mapping.get(key, default)
+    except AttributeError:
+        return default
 
 
 class Tabular(object):
@@ -322,9 +377,8 @@ class Tabular(object):
     ...     style={"status": {"color": "red", "bold": True}})
     """
 
-    # TODO: Support things like auto-width, value-based coloring, etc.
     default_style = {"align": "left",
-                     "width": 10}
+                     "width": "auto"}
 
     _header_attributes = {"align", "width"}
 
@@ -334,13 +388,18 @@ class Tabular(object):
 
         self._rows = []
         self._columns = columns
+        self._fields = None
 
         self._init_style = style
         self._style = None
         self._header_style = None
+
+        self._autowidth_columns = set()
+        self._update_previous = False
+
         if columns is not None:
             self._setup_style()
-        self._fields = None
+            self._setup_fields()
 
     def _setup_style(self):
         self._style = _adopt({c: self.default_style for c in self._columns},
@@ -354,14 +413,34 @@ class Tabular(object):
                 self._header_style[col] = dict(cstyle,
                                                **self._init_style["header_"])
 
-    def _setup_fields(self, style):
-        fields = {}
+    def _setup_fields(self):
+        self._fields = {}
         for column in self._columns:
-            cstyle = style[column]
-            field = Field(width=cstyle["width"], align=cstyle["align"])
-            field.processors = list(self._tproc.from_style(cstyle))
-            fields[column] = field
-        return fields
+            cstyle = self._style[column]
+
+            procs = []
+            style_width = cstyle["width"]
+            is_auto = style_width == "auto" or _safe_get(style_width, "auto")
+
+            if is_auto:
+                width = _safe_get(style_width, "min", 1)
+                self._autowidth_columns.add(column)
+
+                wmax = _safe_get(style_width, "max")
+                if wmax is not None:
+                    marker = _safe_get(style_width, "marker", True)
+                    procs = [self._tproc.truncate(wmax, marker)]
+            elif is_auto is False:
+                raise ValueError("No 'width' specified")
+            else:
+                width = style_width
+                procs = [self._tproc.truncate(width)]
+
+            field = Field(width=width, align=cstyle["align"])
+            field.processors["core"] = procs
+            field.processors["default"] = list(self._tproc.from_style(cstyle))
+
+            self._fields[column] = field
 
     _preformat_method = lambda self, x: x
 
@@ -369,24 +448,35 @@ class Tabular(object):
         return dict(zip(self._columns, row))
 
     def _writerow(self, row, style=None, adopt=True):
-        if self._fields is not None and style is None:
-            fields = self._fields
+        fields = self._fields
+
+        if style is not None:
+            rowstyle = _adopt(self._style, style) if adopt else style
+            for column, cstyle in rowstyle.items():
+                fields[column].processors["row"] = list(
+                    self._tproc.from_style(cstyle))
+            proc_key = "row"
         else:
-            if adopt:
-                fields = self._setup_fields(_adopt(self._style, style))
-            else:
-                fields = self._setup_fields(style)
+            proc_key = "default"
 
         row = self._preformat_method(row)
+
+        for column in self._columns:
+            if column in self._autowidth_columns:
+                value_width = len(str(row[column]))
+                if value_width > self._fields[column].width:
+                    self._fields[column].width = value_width
+                    self._update_previous = True
+
         try:
-            rendered_fields = [fields[c](row[c]) for c in self._columns]
+            proc_fields = [fields[c](row[c], proc_key) for c in self._columns]
         except TypeError:
             if self._preformat_method == self._seq_to_dict:
                 raise
             self._preformat_method = self._seq_to_dict
-            self._writerow(row, style)
+            self._writerow(row, style, adopt=False)
         else:
-            self.term.stream.write(" ".join(rendered_fields) + "\n")
+            self.term.stream.write(" ".join(proc_fields) + "\n")
 
     def _maybe_write_header(self):
         if self._header_style is not None:
@@ -417,11 +507,26 @@ class Tabular(object):
         if self._columns is None:
             self._columns = self._infer_columns(row)
             self._setup_style()
+            self._setup_fields()
 
         if not self._rows:
             self._maybe_write_header()
         self._rows.append(row)
         self._writerow(row, style=style)
+
+        if self._update_previous:
+            ## TODO: Try to make this code clearer by moving terminal
+            ## logic into helpers.
+            previous = self._rows[:-1]
+            if previous or self._header_style is not None:
+                self._move_to_firstrow()
+                self.term.stream.write(self.term.clear_eol)
+                self._maybe_write_header()
+                for prev_row in previous:
+                    self.term.stream.write(self.term.clear_eol)
+                    self._writerow(prev_row)
+                self.term.stream.write(self.term.move_down)
+            self._update_previous = False
 
     @staticmethod
     def _infer_columns(row):
@@ -438,6 +543,10 @@ class Tabular(object):
         for row in self._rows:
             self._writerow(row)
         self.term.stream.flush()
+
+    def _move_to_firstrow(self):
+        ntimes = len(self._rows) + (self._header_style is not None)
+        self.term.stream.write(self.term.move_up * ntimes)
 
     @contextmanager
     def _moveback(self, n):
