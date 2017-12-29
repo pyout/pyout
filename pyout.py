@@ -423,7 +423,8 @@ class Tabular(object):
         self._rows.append(row)
         self._writerow(row, style=style)
 
-    def _infer_columns(self, row):
+    @staticmethod
+    def _infer_columns(row):
         try:
             return list(row.keys())
         except AttributeError:
