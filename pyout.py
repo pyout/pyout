@@ -435,6 +435,7 @@ class Tabular(object):
                 raise ValueError("No 'width' specified")
             else:
                 width = style_width
+                procs = [self._tproc.truncate(width)]
 
             field = Field(width=width, align=cstyle["align"])
             field.processors["core"] = procs

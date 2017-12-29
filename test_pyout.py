@@ -460,6 +460,22 @@ def test_tabular_write_intervals_color_outside_intervals():
 
 
 @patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_width_truncate_long():
+    fd = StringIO()
+    out = Tabular(style={"name": {"width": 8},
+                         "status": {"width": 3}},
+                  stream=fd)
+    out(OrderedDict([("name", "abcdefghijklmnop"),
+                     ("status", "OK"),]))
+    out(OrderedDict([("name", "bar"),
+                     ("status", "BAD"),]))
+
+    expected = ("abcde... OK \n"
+                "bar      BAD\n")
+    assert fd.getvalue() == expected
+
+
+@patch("pyout.Terminal", TestTerminal)
 def test_tabular_write_autowidth():
     fd = StringIO()
     out = Tabular(style={"name": {"width": "auto"},
