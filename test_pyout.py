@@ -66,7 +66,7 @@ def test_field_processors():
     def proc2(_, result):
         return result + "ZZZ"
 
-    field.processors = [proc1, proc2]
+    field.processors["default"] = [proc1, proc2]
 
     assert field("ok") == "AAA  ok  ZZZ"
 
@@ -252,15 +252,14 @@ def test_tabular_write_align():
 def test_tabular_write_update():
     fd = StringIO()
     out = Tabular(["name", "status"],
+                  style={"name": {"width": 3}, "status": {"width": 9}},
                   stream=fd, force_styling=True)
     data = [{"name": "foo", "status": "unknown"},
             {"name": "bar", "status": "installed"}]
     for row in data:
         out(row)
 
-    out.rewrite({"name": "foo"}, "status", "installed",
-                style = {"name": {"width": 3},
-                         "status": {"width": 9}})
+    out.rewrite({"name": "foo"}, "status", "installed")
 
     expected = unicode_cap("cuu1") * 2 + unicode_cap("el") + "foo installed"
     assert eq_repr(fd.getvalue().strip().splitlines()[-1],
@@ -287,6 +286,9 @@ def test_tabular_write_update_notfound():
 def test_tabular_write_update_multi_id():
     fd = StringIO()
     out = Tabular(["name", "type", "status"],
+                  style={"name": {"width": 3},
+                         "type": {"width": 1},
+                         "status": {"width": 9}},
                   stream=fd, force_styling=True)
     data = [{"name": "foo", "type": "0", "status": "unknown"},
             {"name": "foo", "type": "1", "status": "unknown"},
@@ -294,11 +296,7 @@ def test_tabular_write_update_multi_id():
     for row in data:
         out(row)
 
-    out.rewrite({"name": "foo", "type": "0"},
-                "status", "installed",
-                style = {"name": {"width": 3},
-                         "type": {"width": 1},
-                         "status": {"width": 9}})
+    out.rewrite({"name": "foo", "type": "0"}, "status", "installed")
 
     expected = unicode_cap("cuu1") * 3 + unicode_cap("el") + "foo 0 installed"
     assert eq_repr(fd.getvalue().strip().splitlines()[-1],

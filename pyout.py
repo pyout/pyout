@@ -16,8 +16,8 @@ class Field(object):
     """Format, process, and render tabular fields.
 
     A Field instance is a template for a string that is defined by its
-    width, text alignment, and a list of "processors".  When a field
-    is called with a value, it renders the value as a string with the
+    width, text alignment, and its "processors".  When a field is
+    called with a value, it renders the value as a string with the
     specified width and text alignment.  Before this string is
     returned, it is passed through the chain of processors.  The
     rendered string is the result returned by the last processor.
@@ -31,7 +31,14 @@ class Field(object):
     ----------
     width : int
     align : str
-    processors : list of callable objects
+    processors : dict
+        Each key maps to a list of processors.  The keys "core" and
+        "default" must always be present.  When an instance object is
+        called, the rendered result is always sent through the "core"
+        processors.  It will then be sent through the "default"
+        processors unless another key is provided as the optional
+        `which` argument.
+
         A processor should take two positional arguments, the value
         that is being rendered and the current result.  Its return
         value will be passed to the next processor as the current
@@ -45,7 +52,7 @@ class Field(object):
         self._align = align
         self._fmt = self._build_format()
 
-        self.processors = []
+        self.processors = {"core": [], "default": []}
 
     @property
     def width(self):
@@ -69,9 +76,18 @@ class Field(object):
         align = self._align_values[self.align]
         return "".join(["{:", align, str(self.width), "}"])
 
-    def __call__(self, value):
+    def __call__(self, value, which="default"):
+        """Render `value` by feeding it through the processors.
+
+        Parameters
+        ----------
+        value : str
+        which : str, optional
+            A key for the `processors` attribute that indicates the
+            list of processors to use in addition to the "core" list.
+        """
         result = self._fmt.format(value)
-        for fn in self.processors:
+        for fn in self.processors["core"] + self.processors[which]:
             result = fn(value, result)
         return result
 
@@ -334,13 +350,14 @@ class Tabular(object):
 
         self._rows = []
         self._columns = columns
+        self._fields = None
 
         self._init_style = style
         self._style = None
         self._header_style = None
         if columns is not None:
             self._setup_style()
-        self._fields = None
+            self._setup_fields()
 
     def _setup_style(self):
         self._style = _adopt({c: self.default_style for c in self._columns},
@@ -354,14 +371,16 @@ class Tabular(object):
                 self._header_style[col] = dict(cstyle,
                                                **self._init_style["header_"])
 
-    def _setup_fields(self, style):
-        fields = {}
+    def _setup_fields(self):
+        self._fields = {}
         for column in self._columns:
-            cstyle = style[column]
-            field = Field(width=cstyle["width"], align=cstyle["align"])
-            field.processors = list(self._tproc.from_style(cstyle))
-            fields[column] = field
-        return fields
+            cstyle = self._style[column]
+
+            width = cstyle["width"]
+            field = Field(width=width, align=cstyle["align"])
+            field.processors["default"] = list(self._tproc.from_style(cstyle))
+
+            self._fields[column] = field
 
     _preformat_method = lambda self, x: x
 
@@ -369,24 +388,28 @@ class Tabular(object):
         return dict(zip(self._columns, row))
 
     def _writerow(self, row, style=None, adopt=True):
-        if self._fields is not None and style is None:
-            fields = self._fields
+        fields = self._fields
+
+        if style is not None:
+            rowstyle = _adopt(self._style, style) if adopt else style
+            for column, cstyle in rowstyle.items():
+                fields[column].processors["row"] = list(
+                    self._tproc.from_style(cstyle))
+            proc_key = "row"
         else:
-            if adopt:
-                fields = self._setup_fields(_adopt(self._style, style))
-            else:
-                fields = self._setup_fields(style)
+            proc_key = "default"
 
         row = self._preformat_method(row)
+
         try:
-            rendered_fields = [fields[c](row[c]) for c in self._columns]
+            proc_fields = [fields[c](row[c], proc_key) for c in self._columns]
         except TypeError:
             if self._preformat_method == self._seq_to_dict:
                 raise
             self._preformat_method = self._seq_to_dict
-            self._writerow(row, style)
+            self._writerow(row, style, adopt=False)
         else:
-            self.term.stream.write(" ".join(rendered_fields) + "\n")
+            self.term.stream.write(" ".join(proc_fields) + "\n")
 
     def _maybe_write_header(self):
         if self._header_style is not None:
@@ -417,6 +440,7 @@ class Tabular(object):
         if self._columns is None:
             self._columns = self._infer_columns(row)
             self._setup_style()
+            self._setup_fields()
 
         if not self._rows:
             self._maybe_write_header()
