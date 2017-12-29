@@ -251,7 +251,7 @@ class TermProcessors(StyleProcessors):
         return str(getattr(self.term, name))
 
     def _maybe_reset(self):
-        def maybe_reset_fn(value, result):
+        def maybe_reset_fn(_, result):
             if "\x1b" in result:
                 return result + self.term.normal
             return result
