@@ -378,7 +378,7 @@ class Tabular(object):
     """
 
     default_style = {"align": "left",
-                     "width": 10}
+                     "width": "auto"}
 
     _header_attributes = {"align", "width"}
 

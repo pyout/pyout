@@ -159,13 +159,15 @@ def test_tabular_write_columns_orderdict_mapping(row):
     fd = StringIO()
     out = Tabular(OrderedDict([("name", "Long name"),
                                ("status", "Status")]),
-                  style={"header_": {}},
+                  style={"header_": {},
+                         "name": {"width": 10},
+                         "status": {"width": 6}},
                   stream=fd)
 
     out(row)
 
-    expected = ("Long name  Status    \n"
-                "foo        ok        \n")
+    expected = ("Long name  Status\n"
+                "foo        ok    \n")
     assert eq_repr(fd.getvalue(), expected)
 
 
@@ -187,7 +189,9 @@ def test_tabular_write_data_as_list():
 def test_tabular_write_header():
     fd = StringIO()
     out = Tabular(["name", "status"],
-                  style={"header_": {}},
+                  style={"header_": {},
+                         "name": {"width": 10},
+                         "status": {"width": 10}},
                   stream=fd, force_styling=True)
     out({"name": "foo",
          "status": "installed"})
@@ -329,6 +333,8 @@ def test_tabular_write_update_multi_id():
 def test_tabular_repaint():
     fd = StringIO()
     out = Tabular(["name", "status"],
+                  style={"name": {"width": 10},
+                         "status": {"width": 10}},
                   stream=fd, force_styling=True)
     data = [{"name": "foo", "status": "unknown"},
             {"name": "bar", "status": "installed"}]
@@ -346,7 +352,9 @@ def test_tabular_repaint():
 def test_tabular_repaint_with_header():
     fd = StringIO()
     out = Tabular(["name", "status"],
-                  style={"header_": {}},
+                  style={"header_": {},
+                         "name": {"width": 10},
+                         "status": {"width": 10}},
                   stream=fd, force_styling=True)
     data = [{"name": "foo", "status": "unknown"},
             {"name": "bar", "status": "installed"}]
