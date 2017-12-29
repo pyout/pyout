@@ -287,6 +287,13 @@ def _adopt(style, new_style):
     return {key: dict(style[key], **new_style.get(key, {})) for key in style}
 
 
+def _safe_get(mapping, key, default=None):
+    try:
+        return mapping.get(key, default)
+    except AttributeError:
+        return default
+
+
 class Tabular(object):
     """Interface for writing and updating styled terminal output.
 
