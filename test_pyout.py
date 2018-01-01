@@ -333,8 +333,8 @@ def test_tabular_write_update_multi_id():
 def test_tabular_repaint():
     fd = StringIO()
     out = Tabular(["name", "status"],
-                  style={"name": {"width": 10},
-                         "status": {"width": 10}},
+                  style={"name": {"width": 3},
+                         "status": {"width": 9}},
                   stream=fd, force_styling=True)
     data = [{"name": "foo", "status": "unknown"},
             {"name": "bar", "status": "installed"}]
@@ -342,10 +342,9 @@ def test_tabular_repaint():
         out(row)
     out._repaint()
 
-    msg = ("foo        unknown   \n"
-           "bar        installed \n")
-    expected = msg + unicode_cap("clear") + msg
-    assert eq_repr(fd.getvalue(), expected)
+    lines = fd.getvalue().splitlines()
+    assert len(lines) == 2 * len(data)
+    assert unicode_cap("el") + "bar installed" in lines
 
 
 @patch("pyout.Terminal", TestTerminal)
@@ -353,8 +352,8 @@ def test_tabular_repaint_with_header():
     fd = StringIO()
     out = Tabular(["name", "status"],
                   style={"header_": {},
-                         "name": {"width": 10},
-                         "status": {"width": 10}},
+                         "name": {"width": 4},
+                         "status": {"width": 9}},
                   stream=fd, force_styling=True)
     data = [{"name": "foo", "status": "unknown"},
             {"name": "bar", "status": "installed"}]
@@ -362,11 +361,13 @@ def test_tabular_repaint_with_header():
         out(row)
     out._repaint()
 
-    msg = ("name       status    \n"
-           "foo        unknown   \n"
-           "bar        installed \n")
-    expected = msg + unicode_cap("clear") + msg
-    assert eq_repr(fd.getvalue(), expected)
+    lines = fd.getvalue().splitlines()
+
+    assert len(lines) == 2 * (len(data) + 1)
+    assert unicode_cap("el") + "bar  installed" in lines
+
+    header = unicode_cap("cuu1") * 3 + unicode_cap("el") + "name status   "
+    assert header in lines
 
 
 @patch("pyout.Terminal", TestTerminal)

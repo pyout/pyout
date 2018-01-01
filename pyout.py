@@ -536,13 +536,13 @@ class Tabular(object):
             raise ValueError("Can't infer columns from data")
 
     def _repaint(self):
-        ## TODO: I don't think this is a good approach.  Destroys any
-        ## scroll back.
-        self.term.stream.write(self.term.clear)
-        self._maybe_write_header()
-        for row in self._rows:
-            self._writerow(row)
-        self.term.stream.flush()
+        if self._rows or self._header_style is not None:
+            self._move_to_firstrow()
+            self.term.stream.write(self.term.clear_eol)
+            self._maybe_write_header()
+            for row in self._rows:
+                self.term.stream.write(self.term.clear_eol)
+                self._writerow(row)
 
     def _move_to_firstrow(self):
         ntimes = len(self._rows) + (self._header_style is not None)
