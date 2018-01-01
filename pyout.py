@@ -447,6 +447,20 @@ class Tabular(object):
     def _seq_to_dict(self, row):
         return dict(zip(self._columns, row))
 
+    def _set_widths(self, row):
+        """Update auto-width Fields based on `row`.
+
+        Parameters
+        ----------
+        row : dict
+        """
+        for column in self._columns:
+            if column in self._autowidth_columns:
+                value_width = len(str(row[column]))
+                if value_width > self._fields[column].width:
+                    self._fields[column].width = value_width
+                    self._update_previous = True
+
     def _writerow(self, row, style=None, adopt=True):
         fields = self._fields
 
@@ -460,13 +474,7 @@ class Tabular(object):
             proc_key = "default"
 
         row = self._preformat_method(row)
-
-        for column in self._columns:
-            if column in self._autowidth_columns:
-                value_width = len(str(row[column]))
-                if value_width > self._fields[column].width:
-                    self._fields[column].width = value_width
-                    self._update_previous = True
+        self._set_widths(row)
 
         try:
             proc_fields = [fields[c](row[c], proc_key) for c in self._columns]
