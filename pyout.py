@@ -326,6 +326,12 @@ def _safe_get(mapping, key, default=None):
         return default
 
 
+class RewritePrevious(Exception):
+    """Signal that the previous output needs to be updated.
+    """
+    pass
+
+
 class Tabular(object):
     """Interface for writing and updating styled terminal output.
 
@@ -394,8 +400,7 @@ class Tabular(object):
         self._style = None
         self._header_style = None
 
-        self._autowidth_columns = set()
-        self._update_previous = False
+        self._autowidth_columns = {}
 
         if columns is not None:
             self._setup_style()
@@ -424,9 +429,10 @@ class Tabular(object):
 
             if is_auto:
                 width = _safe_get(style_width, "min", 1)
-                self._autowidth_columns.add(column)
-
                 wmax = _safe_get(style_width, "max")
+
+                self._autowidth_columns[column] = {"max": wmax}
+
                 if wmax is not None:
                     marker = _safe_get(style_width, "marker", True)
                     procs = [self._tproc.truncate(wmax, marker)]
@@ -453,13 +459,24 @@ class Tabular(object):
         Parameters
         ----------
         row : dict
+
+
+        Raises
+        ------
+        RewritePrevious to signal that previously written rows, if
+        any, may be stale.
         """
+        rewrite = False
         for column in self._columns:
             if column in self._autowidth_columns:
                 value_width = len(str(row[column]))
+                wmax = self._autowidth_columns[column]["max"]
                 if value_width > self._fields[column].width:
+                    if wmax is None or self._fields[column].width < wmax:
+                        rewrite = True
                     self._fields[column].width = value_width
-                    self._update_previous = True
+        if rewrite:
+            raise RewritePrevious
 
     def _writerow(self, row, style=None, adopt=True):
         fields = self._fields
@@ -495,6 +512,12 @@ class Tabular(object):
                     row = self._columns
                 else:
                     row = dict(zip(self._columns, self._columns))
+            try:
+                self._set_widths(row)
+            except RewritePrevious:
+                ## We're at the header, so there aren't any previous
+                ## lines to update.
+                pass
             self._writerow(row, style=self._header_style, adopt=False)
 
     def __call__(self, row, style=None):
@@ -519,22 +542,13 @@ class Tabular(object):
 
         if not self._rows:
             self._maybe_write_header()
-        self._rows.append(row)
-        self._writerow(row, style=style)
 
-        if self._update_previous:
-            ## TODO: Try to make this code clearer by moving terminal
-            ## logic into helpers.
-            previous = self._rows[:-1]
-            if previous or self._header_style is not None:
-                self._move_to_firstrow()
-                self.term.stream.write(self.term.clear_eol)
-                self._maybe_write_header()
-                for prev_row in previous:
-                    self.term.stream.write(self.term.clear_eol)
-                    self._writerow(prev_row)
-                self.term.stream.write(self.term.move_down)
-            self._update_previous = False
+        try:
+            self._set_widths(row)
+        except RewritePrevious:
+            self._repaint()
+        self._writerow(row, style=style)
+        self._rows.append(row)
 
     @staticmethod
     def _infer_columns(row):

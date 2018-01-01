@@ -583,7 +583,7 @@ def test_tabular_write_autowidth_min_max_with_header():
                      ("status", "U")]))
 
     lines0 = fd.getvalue().splitlines()
-    assert len([ln for ln in lines0 if ln.endswith("name status")]) == 2
+    assert len([ln for ln in lines0 if ln.endswith("name status")]) == 1
     assert len([ln for ln in lines0 if ln.endswith("foo  U     ")]) == 1
 
     out(OrderedDict([("name", "bar"),
