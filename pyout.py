@@ -389,7 +389,8 @@ class Tabular(object):
     """
 
     base_style = {"default_": {"align": "left",
-                               "width": "auto"}}
+                               "width": "auto"},
+                  "separator_": " "}
 
     _header_attributes = {"align", "width"}
 
@@ -406,12 +407,15 @@ class Tabular(object):
         self._header_style = None
 
         self._autowidth_columns = {}
+        self._sep = None
 
         if columns is not None:
             self._setup_style()
             self._setup_fields()
 
     def _setup_style(self):
+        self._sep = _safe_get(self._init_style, "separator_",
+                              self.base_style["separator_"])
         default = dict(self.base_style["default_"],
                        **_safe_get(self._init_style, "default_", {}))
         self._style = _adopt({c: default for c in self._columns},
@@ -507,7 +511,7 @@ class Tabular(object):
             self._preformat_method = self._seq_to_dict
             self._writerow(row, style, adopt=False)
         else:
-            self.term.stream.write(" ".join(proc_fields) + "\n")
+            self.term.stream.write(self._sep.join(proc_fields) + "\n")
 
     def _maybe_write_header(self):
         if self._header_style is not None:
