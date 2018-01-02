@@ -214,6 +214,36 @@ def test_tabular_write_header():
 
 
 @patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_different_data_types_same_output():
+    style = {"header_": {},
+             "name": {"width": 10},
+             "status": {"width": 10}}
+
+    fd_list = StringIO()
+    out_list = Tabular(["name", "status"], style=style, stream=fd_list)
+
+    fd_dict = StringIO()
+    out_dict = Tabular(["name", "status"], style=style, stream=fd_dict)
+
+    fd_od = StringIO()
+    out_od = Tabular(style=style, stream=fd_od)
+
+    out_list(["foo", "installed"])
+    out_list(["bar", "installed"])
+
+    out_dict({"name": "foo", "status": "installed"})
+    out_dict({"name": "bar", "status": "installed"})
+
+    out_od(OrderedDict([("name", "foo"),
+                        ("status", "installed")]))
+    out_od(OrderedDict([("name", "bar"),
+                        ("status", "installed")]))
+
+    assert fd_dict.getvalue() == fd_list.getvalue()
+    assert fd_dict.getvalue() == fd_od.getvalue()
+
+
+@patch("pyout.Terminal", TestTerminal)
 def test_tabular_write_header_with_style():
     fd = StringIO()
     out = Tabular(["name", "status"],
