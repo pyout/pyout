@@ -459,7 +459,7 @@ class Tabular(object):
 
             self._fields[column] = field
 
-    _preformat_method = lambda self, x: x
+    _transform_method = lambda self, x: x
 
     def _seq_to_dict(self, row):
         return dict(zip(self._columns, row))
@@ -501,21 +501,21 @@ class Tabular(object):
         else:
             proc_key = "default"
 
-        row = self._preformat_method(row)
+        row = self._transform_method(row)
 
         try:
             proc_fields = [fields[c](row[c], proc_key) for c in self._columns]
         except TypeError:
-            if self._preformat_method == self._seq_to_dict:
+            if self._transform_method == self._seq_to_dict:
                 raise
-            self._preformat_method = self._seq_to_dict
+            self._transform_method = self._seq_to_dict
             self._writerow(row, style, adopt=False)
         else:
             self.term.stream.write(self._sep.join(proc_fields) + "\n")
 
     def _maybe_write_header(self):
         if self._header_style is not None:
-            if self._preformat_method == self._seq_to_dict:
+            if self._transform_method == self._seq_to_dict:
                 row = self._columns
             else:
                 if isinstance(self._columns, OrderedDict):
