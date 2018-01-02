@@ -520,25 +520,27 @@ class Tabular(object):
         self.term.stream.write(self._sep.join(proc_fields) + "\n")
 
     def _maybe_write_header(self):
-        if self._header_style is not None:
-            transform = False
+        if self._header_style is None:
+            return
 
-            if isinstance(self._columns, OrderedDict):
-                row = self._columns
-            elif self._transform_method == self._seq_to_dict:
-                row = self._columns
-                transform = True
-            else:
-                row = dict(zip(self._columns, self._columns))
+        transform = False
 
-            try:
-                self._set_widths(row)
-            except RewritePrevious:
-                ## We're at the header, so there aren't any previous
-                ## lines to update.
-                pass
-            self._writerow(row, style=self._header_style, adopt=False,
-                           transform=transform)
+        if isinstance(self._columns, OrderedDict):
+            row = self._columns
+        elif self._transform_method == self._seq_to_dict:
+            row = self._columns
+            transform = True
+        else:
+            row = dict(zip(self._columns, self._columns))
+
+        try:
+            self._set_widths(row)
+        except RewritePrevious:
+            ## We're at the header, so there aren't any previous
+            ## lines to update.
+            pass
+        self._writerow(row, style=self._header_style, adopt=False,
+                       transform=transform)
 
     def __call__(self, row, style=None):
         """Write styled `row` to the terminal.
