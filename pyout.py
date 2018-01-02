@@ -613,5 +613,10 @@ class Tabular(object):
         idx = len(self._rows) - nback
         self._rows[idx][column] = new_value
 
-        with self._moveback(nback):
-            self._writerow(self._rows[idx], style)
+        try:
+            self._set_widths(self._rows[idx])
+        except RewritePrevious:
+            self._repaint()
+        else:
+            with self._moveback(nback):
+                self._writerow(self._rows[idx], style)

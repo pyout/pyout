@@ -339,6 +339,25 @@ def test_tabular_write_update_multi_id():
 
 
 @patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_update_auto_width():
+    fd = StringIO()
+    out = Tabular(["name", "status"],
+                  style={"name": {"width": 3}, "status": {"width": "auto"}},
+                  stream=fd, force_styling=True)
+    data = [{"name": "foo", "status": "unknown"},
+            {"name": "bar", "status": "unknown"},
+            {"name": "baz", "status": "unknown"}]
+    for row in data:
+        out(row)
+
+    out.rewrite({"name": "bar"}, "status", "installed")
+
+    lines = fd.getvalue().splitlines()
+    assert len([ln for ln in lines if ln.endswith("foo unknown  ")]) == 1
+    assert len([ln for ln in lines if ln.endswith("baz unknown  ")]) == 1
+
+
+@patch("pyout.Terminal", TestTerminal)
 def test_tabular_repaint():
     fd = StringIO()
     out = Tabular(["name", "status"],
