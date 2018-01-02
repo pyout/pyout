@@ -350,8 +350,7 @@ class Tabular(object):
         If not given, the keys will be extracted from the first row of
         data that the object is called with, which is particularly
         useful if the row is an OrderedDict.  This argument must be
-        given if this instance will be called with a sequence rather
-        than a dictionary.
+        given if this instance will not be called with a mapping.
     style : dict, optional
         Each top-level key should be a column name and the value
         should be a style dict that overrides the `default_style`
@@ -548,11 +547,13 @@ class Tabular(object):
 
         Parameters
         ----------
-        row : dict or sequence
-            A dictionary where keys are the column names and values
-            are the data to write.  Otherwise, row is treated as a
-            sequence that follows the same order as the constructor's
-            `columns` argument.
+        row : mapping, sequence, or other
+            If a mapping is given, the keys are the column names and
+            values are the data to write.  For a sequence, the items
+            represent the values and are taken to be in the same order
+            as the constructor's `columns` argument.  Any other object
+            type should have an attribute for each column in specified
+            via `columns`.
         style : dict, optional
             Each top-level key should be a column name and the value
             should be a style dict that overrides the class instance
