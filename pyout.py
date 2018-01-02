@@ -131,24 +131,29 @@ class StyleProcessors(object):
         Parameters
         ----------
         length : int
-        marker : bool
-            Whether to indicate truncation by replacing the last three
-            characters of a truncated string with '...'.
+        marker : str or bool
+            Indicate truncation with this string.  If True, indicate
+            truncation by replacing the last three characters of a
+            truncated string with '...'.  If False, no truncation
+            marker is added to a truncated string.
 
         Returns
         -------
         A function.
         """
+        if marker is True:
+            marker = "..."
+
         ## TODO: Add an option to center the truncation marker?
         def truncate_fn(_, result):
             if len(result) <= length:
                 return result
             if marker:
-                marker_beg = max(length - 3, 0)
+                marker_beg = max(length - len(marker), 0)
                 if result[marker_beg:].strip():
                     if marker_beg == 0:
-                        return "..."[:length]
-                    return result[:marker_beg] + "..."
+                        return marker[:length]
+                    return result[:marker_beg] + marker
             return result[:length]
         return truncate_fn
 

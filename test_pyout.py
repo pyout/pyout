@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from collections import OrderedDict
 from curses import tigetstr, tparm
 from functools import partial
@@ -71,12 +72,20 @@ def test_field_processors():
     assert field("ok") == "AAA  ok  ZZZ"
 
 
-def test_truncate_mark():
+def test_truncate_mark_true():
     fn = StyleProcessors.truncate(7, marker=True)
 
     assert fn(None, "abc") == "abc"
     assert fn(None, "abcdefg") == "abcdefg"
     assert fn(None, "abcdefgh") == "abcd..."
+
+
+def test_truncate_mark_string():
+    fn = StyleProcessors.truncate(7, marker=u"…")
+
+    assert fn(None, "abc") == "abc"
+    assert fn(None, "abcdefg") == "abcdefg"
+    assert fn(None, "abcdefgh") == u"abcdef…"
 
 
 def test_truncate_mark_short():
@@ -538,8 +547,8 @@ def test_tabular_write_autowidth_min():
     assert len([ln for ln in lines if ln.endswith("fooab OK    /tmp/a")]) == 1
 
 
-@pytest.mark.parametrize("marker", [True, False],
-                         ids=["marker=True", "marker=False"])
+@pytest.mark.parametrize("marker", [True, False, u"…"],
+                         ids=["marker=True", "marker=False", u"marker=…"])
 @patch("pyout.Terminal", TestTerminal)
 def test_tabular_write_autowidth_min_max(marker):
     fd = StringIO()
@@ -553,8 +562,10 @@ def test_tabular_write_autowidth_min_max(marker):
                      ("status", "U"),
                      ("path", "/tmp/a")]))
 
-    if marker:
+    if marker is True:
         assert fd.getvalue() == "foo U  /t...\n"
+    elif marker:
+        assert fd.getvalue() == u"foo U  /tmp…\n"
     else:
         assert fd.getvalue() == "foo U  /tmp/\n"
 
@@ -563,9 +574,12 @@ def test_tabular_write_autowidth_min_max(marker):
                      ("path", "/tmp/b")]))
 
     lines = fd.getvalue().splitlines()
-    if marker:
+    if marker is True:
         assert len([ln for ln in lines if ln.endswith("foo U       /t...")]) == 1
         assert len([ln for ln in lines if ln.endswith("bar BAD!... /t...")]) == 1
+    elif marker:
+        assert len([ln for ln in lines if ln.endswith(u"foo U       /tmp…")]) == 1
+        assert len([ln for ln in lines if ln.endswith(u"bar BAD!... /tmp…")]) == 1
     else:
         assert len([ln for ln in lines if ln.endswith("foo U       /tmp/")]) == 1
         assert len([ln for ln in lines if ln.endswith("bar BAD!... /tmp/")]) == 1
