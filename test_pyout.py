@@ -257,6 +257,20 @@ def test_tabular_write_style_override():
 
 
 @patch("pyout.Terminal", TestTerminal)
+def test_tabular_default_style():
+    fd = StringIO()
+    out = Tabular(["name", "status"],
+                  style={"default_": {"width": 3}},
+                  stream=fd)
+    out({"name": "foo", "status": "OK"})
+    out({"name": "bar", "status": "OK"})
+
+    expected = ("foo OK \n"
+                "bar OK \n")
+    assert fd.getvalue() == expected
+
+
+@patch("pyout.Terminal", TestTerminal)
 def test_tabular_write_multicolor():
     fd = StringIO()
     out = Tabular(["name", "status"],

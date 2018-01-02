@@ -388,8 +388,8 @@ class Tabular(object):
     ...     style={"status": {"color": "red", "bold": True}})
     """
 
-    default_style = {"align": "left",
-                     "width": "auto"}
+    base_style = {"default_": {"align": "left",
+                               "width": "auto"}}
 
     _header_attributes = {"align", "width"}
 
@@ -412,7 +412,9 @@ class Tabular(object):
             self._setup_fields()
 
     def _setup_style(self):
-        self._style = _adopt({c: self.default_style for c in self._columns},
+        default = dict(self.base_style["default_"],
+                       **_safe_get(self._init_style, "default_", {}))
+        self._style = _adopt({c: default for c in self._columns},
                              self._init_style)
 
         if self._init_style is not None and "header_" in self._init_style:
