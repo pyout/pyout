@@ -467,12 +467,15 @@ class Tabular(object):
     def _seq_to_dict(self, row):
         return dict(zip(self._columns, row))
 
+    def _attrs_to_dict(self, row):
+        return {c: getattr(row, c) for c in self._columns}
+
     def _choose_transform_method(self, row):
         if isinstance(row, Mapping):
             return self._identity
         if isinstance(row, Sequence):
             return self._seq_to_dict
-        raise ValueError("Cannot determine transform method from row")
+        return self._attrs_to_dict
 
     def _set_widths(self, row):
         """Update auto-width Fields based on `row`.

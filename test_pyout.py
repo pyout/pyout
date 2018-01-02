@@ -214,6 +214,29 @@ def test_tabular_write_header():
 
 
 @patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_data_as_object():
+    class Data(object):
+        def __init__(self, data):
+            self._data = data
+
+        def __getattr__(self, name):
+            return self._data[name]
+
+
+    fd = StringIO()
+    out = Tabular(["name", "status"],
+                  style={"name": {"width": 3},
+                         "status": {"width": 9}},
+                  stream=fd)
+
+    out(Data({"name": "foo", "status": "installed"}))
+    out(Data({"name": "bar", "status": "unknown"}))
+
+    expected = "foo installed\nbar unknown  \n"
+    assert fd.getvalue() == expected
+
+
+@patch("pyout.Terminal", TestTerminal)
 def test_tabular_write_different_data_types_same_output():
     style = {"header_": {},
              "name": {"width": 10},
