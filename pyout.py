@@ -496,7 +496,6 @@ class Tabular(object):
             proc_key = "default"
 
         row = self._preformat_method(row)
-        self._set_widths(row)
 
         try:
             proc_fields = [fields[c](row[c], proc_key) for c in self._columns]
