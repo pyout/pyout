@@ -173,13 +173,18 @@ class StyleProcessors(object):
             return self.translate(key) + result
         return by_key_fn
 
-    def by_lookup(self, mapping):
+    def by_lookup(self, mapping, key=None):
         """Return a processor that extracts the style from `mapping`.
 
         Parameters
         ----------
         mapping : mapping
-            A map from the field value to a style key.
+            A map from the field value to a style key, or, if `key` is
+            given, a map from the field value to a value that
+            indicates whether the processor should style its result.
+        key : str, optional
+            A style key to be translated.  If not given, the value
+            from `mapping` is used.
 
         Returns
         -------
@@ -187,34 +192,14 @@ class StyleProcessors(object):
         """
         def by_lookup_fn(value, result):
             try:
-                return self.translate(mapping[value]) + result
+                lookup_value = mapping[value]
             except KeyError:
                 return result
+
+            if not lookup_value:
+                return result
+            return self.translate(key or lookup_value) + result
         return by_lookup_fn
-
-    def by_lookup_cond(self, mapping, key):
-        """Conditionally return a processor for the style given by `key`.
-
-        Parameters
-        ----------
-        mapping : mapping
-            A map from the field value to a value that indicates
-            whether the processor should style its result.
-        key : str
-            A style key to be translated.
-
-        Returns
-        -------
-        A function.
-        """
-        def by_lookup_cond_fn(value, result):
-            try:
-                if mapping[value]:
-                    return self.translate(key) + result
-            except KeyError:
-                return result
-            return result
-        return by_lookup_cond_fn
 
     def by_interval_lookup(self, intervals):
         """Return a processor that extracts the style from `intervals`.
@@ -268,7 +253,7 @@ class StyleProcessors(object):
                     except TypeError:
                         continue
                     else:
-                        yield self.by_lookup_cond(column_style[key][1], key)
+                        yield self.by_lookup(column_style[key][1], key)
             elif key_type is str:
                 if column_style[key][0] == "label":
                     yield self.by_lookup(column_style[key][1])
