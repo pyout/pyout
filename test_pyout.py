@@ -233,6 +233,26 @@ def test_tabular_write_header_with_style():
 
 
 @patch("pyout.Terminal", TestTerminal)
+def test_tabular_nondefault_separator():
+    fd = StringIO()
+    out = Tabular(["name", "status"],
+                  style={"header_": {},
+                         "separator_": " | ",
+                         "name": {"width": 4},
+                         "status": {"width": 9}},
+                  stream=fd)
+    out({"name": "foo",
+         "status": "installed"})
+    out({"name": "bar",
+         "status": "installed"})
+
+    expected = ("name | status   \n"
+                "foo  | installed\n"
+                "bar  | installed\n")
+    assert eq_repr(fd.getvalue(), expected)
+
+
+@patch("pyout.Terminal", TestTerminal)
 def test_tabular_write_data_as_list_no_columns():
     fd = StringIO()
     out = Tabular(style={"name": {"width": 3},
