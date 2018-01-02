@@ -7,7 +7,7 @@ style declaration.
 __version__ = "0.1.0"
 __all__ = ["Tabular"]
 
-from collections import OrderedDict
+from collections import Mapping, OrderedDict, Sequence
 from contextlib import contextmanager
 from blessings import Terminal
 
@@ -468,13 +468,11 @@ class Tabular(object):
         return dict(zip(self._columns, row))
 
     def _choose_transform_method(self, row):
-        try:
-            row[next(iter(self._columns))]
-        except TypeError:
-            if self._transform_method == self._seq_to_dict:
-                raise
+        if isinstance(row, Mapping):
+            return self._identity
+        if isinstance(row, Sequence):
             return self._seq_to_dict
-        return self._identity
+        raise ValueError("Cannot determine transform method from row")
 
     def _set_widths(self, row):
         """Update auto-width Fields based on `row`.
