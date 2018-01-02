@@ -401,6 +401,7 @@ class Tabular(object):
         self._rows = []
         self._columns = columns
         self._fields = None
+        self._transform_method = None
 
         self._init_style = style
         self._style = None
@@ -459,10 +460,21 @@ class Tabular(object):
 
             self._fields[column] = field
 
-    _transform_method = lambda self, x: x
+    @staticmethod
+    def _identity(row):
+        return row
 
     def _seq_to_dict(self, row):
         return dict(zip(self._columns, row))
+
+    def _choose_transform_method(self, row):
+        try:
+            row[next(iter(self._columns))]
+        except TypeError:
+            if self._transform_method == self._seq_to_dict:
+                raise
+            return self._seq_to_dict
+        return self._identity
 
     def _set_widths(self, row):
         """Update auto-width Fields based on `row`.
@@ -489,7 +501,7 @@ class Tabular(object):
         if rewrite:
             raise RewritePrevious
 
-    def _writerow(self, row, style=None, adopt=True):
+    def _writerow(self, row, style=None, adopt=True, transform=True):
         fields = self._fields
 
         if style is not None:
@@ -501,34 +513,32 @@ class Tabular(object):
         else:
             proc_key = "default"
 
-        row = self._transform_method(row)
+        if transform:
+            row = self._transform_method(row)
 
-        try:
-            proc_fields = [fields[c](row[c], proc_key) for c in self._columns]
-        except TypeError:
-            if self._transform_method == self._seq_to_dict:
-                raise
-            self._transform_method = self._seq_to_dict
-            self._writerow(row, style, adopt=False)
-        else:
-            self.term.stream.write(self._sep.join(proc_fields) + "\n")
+        proc_fields = [fields[c](row[c], proc_key) for c in self._columns]
+        self.term.stream.write(self._sep.join(proc_fields) + "\n")
 
     def _maybe_write_header(self):
         if self._header_style is not None:
-            if self._transform_method == self._seq_to_dict:
+            transform = False
+
+            if isinstance(self._columns, OrderedDict):
                 row = self._columns
+            elif self._transform_method == self._seq_to_dict:
+                row = self._columns
+                transform = True
             else:
-                if isinstance(self._columns, OrderedDict):
-                    row = self._columns
-                else:
-                    row = dict(zip(self._columns, self._columns))
+                row = dict(zip(self._columns, self._columns))
+
             try:
                 self._set_widths(row)
             except RewritePrevious:
                 ## We're at the header, so there aren't any previous
                 ## lines to update.
                 pass
-            self._writerow(row, style=self._header_style, adopt=False)
+            self._writerow(row, style=self._header_style, adopt=False,
+                           transform=transform)
 
     def __call__(self, row, style=None):
         """Write styled `row` to the terminal.
@@ -549,6 +559,9 @@ class Tabular(object):
             self._columns = self._infer_columns(row)
             self._setup_style()
             self._setup_fields()
+
+        if self._transform_method is None:
+            self._transform_method = self._choose_transform_method(row)
 
         if not self._rows:
             self._maybe_write_header()
