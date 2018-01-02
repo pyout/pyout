@@ -538,7 +538,7 @@ def test_tabular_write_autowidth_min():
     assert len([ln for ln in lines if ln.endswith("fooab OK    /tmp/a")]) == 1
 
 
-@pytest.mark.parametrize("marker", [[True], [False]],
+@pytest.mark.parametrize("marker", [True, False],
                          ids=["marker=True", "marker=False"])
 @patch("pyout.Terminal", TestTerminal)
 def test_tabular_write_autowidth_min_max(marker):
@@ -556,7 +556,7 @@ def test_tabular_write_autowidth_min_max(marker):
     if marker:
         assert fd.getvalue() == "foo U  /t...\n"
     else:
-        assert fd.getvalue() == "foo U  /tmp/a\n"
+        assert fd.getvalue() == "foo U  /tmp/\n"
 
     out(OrderedDict([("name", "bar"),
                      ("status", "BAD!!!!!!!!!!!"),
@@ -567,8 +567,8 @@ def test_tabular_write_autowidth_min_max(marker):
         assert len([ln for ln in lines if ln.endswith("foo U       /t...")]) == 1
         assert len([ln for ln in lines if ln.endswith("bar BAD!... /t...")]) == 1
     else:
-        assert len([ln for ln in lines if ln.endswith("foo U       /tmp/a")]) == 1
-        assert len([ln for ln in lines if ln.endswith("bar BAD!... /tmp/b")]) == 1
+        assert len([ln for ln in lines if ln.endswith("foo U       /tmp/")]) == 1
+        assert len([ln for ln in lines if ln.endswith("bar BAD!... /tmp/")]) == 1
 
 
 @patch("pyout.Terminal", TestTerminal)
