@@ -688,3 +688,28 @@ def test_tabular_write_autowidth_min_max_with_header():
 
     lines1 = fd.getvalue().splitlines()
     assert len([ln for ln in lines1 if ln.endswith("bar  BAD!!...")]) == 1
+
+
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_autowidth_different_data_types_same_output():
+    fd_dict = StringIO()
+    out_dict = Tabular(["name", "status"],
+                  style={"header_": {},
+                         "name": {"width": 4},
+                         "status": {"width":
+                                    {"auto": True, "min": 2, "max": 8}}},
+                  stream=fd_dict)
+    out_dict({"name": "foo", "status": "U"})
+    out_dict({"name": "bar", "status": "BAD!!!!!!!!!!!"})
+
+    fd_list = StringIO()
+    out_list = Tabular(["name", "status"],
+                  style={"header_": {},
+                         "name": {"width": 4},
+                         "status": {"width":
+                                    {"auto": True, "min": 2, "max": 8}}},
+                  stream=fd_list)
+    out_list(["foo", "U"])
+    out_list(["bar", "BAD!!!!!!!!!!!"])
+
+    assert fd_dict.getvalue() == fd_list.getvalue()

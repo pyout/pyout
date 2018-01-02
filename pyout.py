@@ -492,7 +492,7 @@ class Tabular(object):
         rewrite = False
         for column in self._columns:
             if column in self._autowidth_columns:
-                value_width = len(str(row[column]))
+                value_width = len(str(self._transform_method(row)[column]))
                 wmax = self._autowidth_columns[column]["max"]
                 if value_width > self._fields[column].width:
                     if wmax is None or self._fields[column].width < wmax:
