@@ -233,6 +233,26 @@ class StyleProcessors(object):
             return result
         return by_interval_lookup_fn
 
+    @staticmethod
+    def value_type(value):
+        """Classify `value` of bold, color, and underline keys.
+
+        Parameters
+        ----------
+        value : style value
+
+        Returns
+        -------
+        str, {"simple", "label", "interval"}
+        """
+        try:
+            kind = value[0]
+        except TypeError:
+            return "simple"
+        if kind in ["label", "interval"]:
+            return kind
+        return "simple"
+
     def from_style(self, column_style):
         """Yield processors based on `column_style`.
 
@@ -249,26 +269,20 @@ class StyleProcessors(object):
         for key, key_type in self.style_keys:
             if key not in column_style:
                 continue
-            if key_type is bool:
-                if column_style[key] is True:
-                    yield self.by_key(key)
-                else:
-                    try:
-                        kind = column_style[key][0]
-                    except TypeError:
-                        continue
-                    else:
-                        if kind == "label":
-                            yield self.by_lookup(column_style[key][1], key)
-                        elif kind == "interval":
-                            yield self.by_interval_lookup(column_style[key][1], key)
-            elif key_type is str:
-                if column_style[key][0] == "label":
-                    yield self.by_lookup(column_style[key][1])
-                elif column_style[key][0] == "interval":
-                    yield self.by_interval_lookup(column_style[key][1])
-                else:
+
+            vtype = self.value_type(column_style[key])
+            attr_key = key if key_type is bool else None
+
+            if vtype == "simple":
+                if key_type is bool:
+                    if column_style[key] is True:
+                        yield self.by_key(key)
+                elif key_type is str:
                     yield self.by_key(column_style[key])
+            elif vtype == "label":
+                yield self.by_lookup(column_style[key][1], attr_key)
+            elif vtype == "interval":
+                yield self.by_interval_lookup(column_style[key][1], attr_key)
 
 
 class TermProcessors(StyleProcessors):

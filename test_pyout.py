@@ -101,6 +101,17 @@ def test_truncate_nomark():
     assert fn(None, "abcdefgh") == "abcdefg"
 
 
+def test_style_value_typle():
+    fn = StyleProcessors.value_type
+
+    assert fn(True) == "simple"
+    assert fn("red") == "simple"
+    assert fn(("label", {"BAD": "red"})) == "label"
+
+    interval = ("interval", [(0, 50, "red"), (50, 80, "yellow")])
+    assert fn(interval) == "interval"
+
+
 ### Tabular tests
 
 ## TestTerminal, unicode_cap, and unicode_parm are copied from
