@@ -201,7 +201,7 @@ class StyleProcessors(object):
             return self.translate(key or lookup_value) + result
         return by_lookup_fn
 
-    def by_interval_lookup(self, intervals):
+    def by_interval_lookup(self, intervals, key=None):
         """Return a processor that extracts the style from `intervals`.
 
         Parameters
@@ -210,6 +210,9 @@ class StyleProcessors(object):
             Each tuple should have the form `(start, end, key)`, where
             start is the start of the interval (inclusive) , end is
             the end of the interval, and key is a style key.
+        key : str, optional
+            A style key to be translated.  If not given, the value
+            from `mapping` is used.
 
         Returns
         -------
@@ -217,14 +220,16 @@ class StyleProcessors(object):
         """
         def by_interval_lookup_fn(value, result):
             value = float(value)
-            for start, end, key in intervals:
+            for start, end, lookup_value in intervals:
                 if start is None:
                     start = float("-inf")
                 elif end is None:
                     end = float("inf")
 
                 if start <= value < end:
-                    return self.translate(key) + result
+                    if not lookup_value:
+                        return result
+                    return self.translate(key or lookup_value) + result
             return result
         return by_interval_lookup_fn
 
@@ -249,11 +254,14 @@ class StyleProcessors(object):
                     yield self.by_key(key)
                 else:
                     try:
-                        column_style[key][0] == "label"
+                        kind = column_style[key][0]
                     except TypeError:
                         continue
                     else:
-                        yield self.by_lookup(column_style[key][1], key)
+                        if kind == "label":
+                            yield self.by_lookup(column_style[key][1], key)
+                        elif kind == "interval":
+                            yield self.by_interval_lookup(column_style[key][1], key)
             elif key_type is str:
                 if column_style[key][0] == "label":
                     yield self.by_lookup(column_style[key][1])

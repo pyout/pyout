@@ -584,6 +584,26 @@ def test_tabular_write_intervals_color_outside_intervals():
 
 
 @patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_intervals_bold():
+    fd = StringIO()
+    out = Tabular(style={"name": {"width": 3},
+                         "percent": {"bold": ("interval",
+                                              [(30, 50, False),
+                                               (50, 80, True)]),
+                                     "width": 2}},
+                  stream=fd, force_styling=True)
+    out(OrderedDict([("name", "foo"),
+                     ("percent", 78)]))
+    out(OrderedDict([("name", "bar"),
+                     ("percent", 33)]))
+
+    expected = "foo " + unicode_cap("bold") + \
+               "78" + unicode_cap("sgr0") + "\n" + \
+               "bar 33\n"
+    assert eq_repr(fd.getvalue(), expected)
+
+
+@patch("pyout.Terminal", TestTerminal)
 def test_tabular_write_width_truncate_long():
     fd = StringIO()
     out = Tabular(style={"name": {"width": 8},
