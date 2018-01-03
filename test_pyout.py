@@ -101,7 +101,7 @@ def test_truncate_nomark():
     assert fn(None, "abcdefgh") == "abcdefg"
 
 
-def test_style_value_typle():
+def test_style_value_type():
     fn = StyleProcessors.value_type
 
     assert fn(True) == "simple"
