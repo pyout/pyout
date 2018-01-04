@@ -11,6 +11,11 @@ from collections import Mapping, OrderedDict, Sequence
 from contextlib import contextmanager
 from blessings import Terminal
 
+try:
+    from jsonschema import validate
+except ImportError:
+    validate = lambda *_: None
+
 
 ### Schema definition
 
@@ -546,6 +551,7 @@ class Tabular(object):
                           if k in self._header_attributes}
                 self._header_style[col] = dict(cstyle,
                                                **self._init_style["header_"])
+        validate(self._style, SCHEMA)
 
     def _setup_fields(self):
         self._fields = {}
@@ -623,6 +629,8 @@ class Tabular(object):
         fields = self._fields
 
         if style is not None:
+            validate(style, SCHEMA)
+
             rowstyle = _adopt(self._style, style) if adopt else style
             for column, cstyle in rowstyle.items():
                 fields[column].processors["row"] = list(
