@@ -7,7 +7,7 @@ python:
 
 install:
   - pip install -U pip
-  - pip install .[tests]
+  - pip install .[full]
 
 script:
   - py.test --doctest-modules -v pyout.py test_pyout.py

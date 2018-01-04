@@ -5,6 +5,8 @@ requires = {
     "tests": ["pytest", "mock"],
 }
 
+requires["full"] = list(requires.values())
+
 setup(
     name="pyout",
     version="0.1.0",
