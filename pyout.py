@@ -440,7 +440,14 @@ class TermProcessors(StyleProcessors):
 def _adopt(style, new_style):
     if new_style is None:
         return style
-    return {key: dict(style[key], **new_style.get(key, {})) for key in style}
+
+    combined = {}
+    for key, value in style.items():
+        if isinstance(value, Mapping):
+            combined[key] = dict(value, **new_style.get(key, {}))
+        else:
+            combined[key] = new_style.get(key, value)
+    return combined
 
 
 def _safe_get(mapping, key, default=None):
@@ -631,9 +638,9 @@ class Tabular(object):
             validate(style, SCHEMA)
 
             rowstyle = _adopt(self._style, style) if adopt else style
-            for column, cstyle in rowstyle.items():
+            for column in self._columns:
                 fields[column].processors["row"] = list(
-                    self._tproc.from_style(cstyle))
+                    self._tproc.from_style(rowstyle[column]))
             proc_key = "row"
         else:
             proc_key = "default"

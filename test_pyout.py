@@ -32,10 +32,12 @@ def test_adopt():
 
     style = {"name": default_value,
              "path": default_value,
-             "status": default_value}
+             "status": default_value,
+             "sep_": "non-mapping"}
 
     newstyle = _adopt(style, {"path": {"width": 99},
-                              "status": {"attrs": ["foo"]}})
+                              "status": {"attrs": ["foo"]},
+                              "sep_": "non-mapping update"})
     for key, value in style.items():
         if key == "path":
             expected = {"align": "<", "width": 99, "attrs": []}
@@ -43,6 +45,8 @@ def test_adopt():
         elif key == "status":
             expected = {"align": "<", "width": 10, "attrs": ["foo"]}
             assert newstyle[key] == expected
+        elif key == "sep_":
+            assert newstyle[key] == "non-mapping update"
         else:
             assert newstyle[key] == value
 
