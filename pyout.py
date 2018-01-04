@@ -12,6 +12,109 @@ from contextlib import contextmanager
 from blessings import Terminal
 
 
+SCHEMA = {
+    "definitions": {
+        ## Styles
+        "align": {
+            "description": "Alignment of text",
+            "type": "string",
+            "enum": ["left", "right", "center"],
+            "default": "left",
+            "scope": "table"},
+        "bold": {
+            "description": "Whether text is bold",
+            "oneOf": [{"type": "boolean"},
+                      {"$ref": "#/definitions/label"},
+                      {"$ref": "#/definitions/interval"}],
+            "default": False,
+            "scope": "field"},
+        "color": {
+            "description": "Foreground color of text",
+            "oneOf": [{"type": "string",
+                       "enum": ["black", "red", "green", "yellow",
+                                "blue", "magenta", "cyan", "white"]},
+                      {"$ref": "#/definitions/label"},
+                      {"$ref": "#/definitions/interval"}],
+            "default": "black",
+            "scope": "field"},
+        "underline": {
+            "description": "Whether text is underlined",
+            "oneOf": [{"type": "boolean"},
+                      {"$ref": "#/definitions/label"},
+                      {"$ref": "#/definitions/interval"}],
+            "default": False,
+            "scope": "field"},
+        "width": {
+            "description": "Width of field",
+            "oneOf": [{"type": "integer"},
+                      {"type": "string",
+                       "enum": ["auto"]},
+                      {"type": "object",
+                       "properties": {
+                           "auto": {"type": "boolean"},
+                           "max": {"type": ["integer", "null"]},
+                           "min": {"type": ["integer", "null"]}}}],
+            "default": "auto",
+            "scope": "table"},
+        "styles": {
+            "type": "object",
+            "properties": {"align": {"$ref": "#/definitions/align"},
+                           "bold": {"$ref": "#/definitions/bold"},
+                           "color": {"$ref": "#/definitions/color"},
+                           "underline": {"$ref": "#/definitions/underline"},
+                           "width": {"$ref": "#/definitions/width"}},
+            "additionalProperties": False},
+        ## Mapping types
+        "interval": {
+            "description": "Map a value within an interval to a style",
+            "type": "array",
+            "items": [
+                {"type": "string",
+                 "enum": ["interval"]},
+                {"type": "array",
+                 "items": [{"type": "array",
+                            "items": [{"type": ["number", "null"]},
+                                      {"type": ["number", "null"]},
+                                      {"type": ["string", "boolean"]}]}]}],
+            "additionalItems": False},
+        "label": {
+            "description": "Map a value to a style",
+            "type": "array",
+            "items": [{"type": "string",
+                       "enum": ["label"]},
+                      {"type": "object"}],
+            "additionalItems": False}
+    },
+    "type": "object",
+    "properties": {
+        "default_": {
+            "description": "Default style of columns",
+            "oneOf": [{"$ref": "#/definitions/styles"},
+                      {"type": "null"}],
+            "default": {"align": "left",
+                        "width": "auto"},
+            "scope": "table"},
+        "header_": {
+            "description": "Attributes for the header row",
+            "oneOf": [{"type": "object",
+                       "properties":
+                       {"color": {"$ref": "#/definitions/color"},
+                        "bold": {"$ref": "#/definitions/bold"},
+                        "underline": {"$ref": "#/definitions/underline"}}},
+                      {"type": "null"}],
+            "default": None,
+            "scope": "table"},
+        "separator_": {
+            "description": "Separator used between fields",
+            "type": "string",
+            "default": " ",
+            "scope": "table"}
+    },
+    ## All other keys are column names.
+    "additionalProperties": {"$ref": "#/definitions/styles"}
+}
+
+
 class Field(object):
     """Format, process, and render tabular fields.
 
