@@ -74,23 +74,21 @@ SCHEMA = {
         ## Mapping types
         "interval": {
             "description": "Map a value within an interval to a style",
-            "type": "array",
-            "items": [
-                {"type": "string",
-                 "enum": ["interval"]},
-                {"type": "array",
-                 "items": [{"type": "array",
-                            "items": [{"type": ["number", "null"]},
-                                      {"type": ["number", "null"]},
-                                      {"type": ["string", "boolean"]}]}]}],
-            "additionalItems": False},
+            "type": "object",
+            "properties": {"interval":
+                           {"type": "array",
+                            "items": [
+                                {"type": "array",
+                                 "items": [{"type": ["number", "null"]},
+                                           {"type": ["number", "null"]},
+                                           {"type": ["string", "boolean"]}],
+                                 "additionalItems": False}]}},
+            "additionalProperties": False},
         "label": {
             "description": "Map a value to a style",
-            "type": "array",
-            "items": [{"type": "string",
-                       "enum": ["label"]},
-                      {"type": "object"}],
-            "additionalItems": False}
+            "type": "object",
+            "properties": {"label": {"type": "object"}},
+            "additionalProperties": False}
     },
     "type": "object",
     "properties": {
@@ -359,12 +357,12 @@ class StyleProcessors(object):
         str, {"simple", "label", "interval"}
         """
         try:
-            kind = value[0]
-        except TypeError:
+            keys = list(value.keys())
+        except AttributeError:
             return "simple"
-        if kind in ["label", "interval"]:
-            return kind
-        return "simple"
+        if keys in [["label"], ["interval"]]:
+            return keys[0]
+        raise ValueError("Type of `value` could not be determined")
 
     def from_style(self, column_style):
         """Yield processors based on `column_style`.
@@ -393,9 +391,10 @@ class StyleProcessors(object):
                 elif key_type is str:
                     yield self.by_key(column_style[key])
             elif vtype == "label":
-                yield self.by_lookup(column_style[key][1], attr_key)
+                yield self.by_lookup(column_style[key][vtype], attr_key)
             elif vtype == "interval":
-                yield self.by_interval_lookup(column_style[key][1], attr_key)
+                yield self.by_interval_lookup(column_style[key][vtype],
+                                              attr_key)
 
 
 class TermProcessors(StyleProcessors):
