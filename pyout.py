@@ -11,6 +11,8 @@ from collections import Mapping, OrderedDict, Sequence
 from contextlib import contextmanager
 from blessings import Terminal
 
+
+### Schema definition
 
 SCHEMA = {
     "definitions": {
@@ -113,6 +115,9 @@ SCHEMA = {
     ## All other keys are column names.
     "additionalProperties": {"$ref": "#/definitions/styles"}
 }
+
+
+### Helper classes and functions
 
 
 class Field(object):
@@ -445,6 +450,9 @@ class RewritePrevious(Exception):
     """Signal that the previous output needs to be updated.
     """
     pass
+
+
+### Tabular interface
 
 
 class Tabular(object):
