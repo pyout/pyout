@@ -388,7 +388,7 @@ def test_tabular_write_align():
 
 
 @patch("pyout.Terminal", TestTerminal)
-def test_tabular_write_update():
+def test_tabular_rewrite():
     fd = StringIO()
     out = Tabular(["name", "status"],
                   style={"name": {"width": 3}, "status": {"width": 9}},
@@ -406,7 +406,7 @@ def test_tabular_write_update():
 
 
 @patch("pyout.Terminal", TestTerminal)
-def test_tabular_write_update_notfound():
+def test_tabular_rewrite_notfound():
     fd = StringIO()
     out = Tabular(["name", "status"],
                   stream=fd, force_styling=True)
@@ -422,7 +422,7 @@ def test_tabular_write_update_notfound():
 
 
 @patch("pyout.Terminal", TestTerminal)
-def test_tabular_write_update_multi_id():
+def test_tabular_rewrite_multi_id():
     fd = StringIO()
     out = Tabular(["name", "type", "status"],
                   style={"name": {"width": 3},
@@ -443,7 +443,7 @@ def test_tabular_write_update_multi_id():
 
 
 @patch("pyout.Terminal", TestTerminal)
-def test_tabular_write_update_auto_width():
+def test_tabular_rewrite_auto_width():
     fd = StringIO()
     out = Tabular(["name", "status"],
                   style={"name": {"width": 3}, "status": {"width": "auto"}},
