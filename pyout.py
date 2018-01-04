@@ -616,7 +616,6 @@ class Tabular(object):
         ----------
         row : dict
 
-
         Raises
         ------
         RewritePrevious to signal that previously written rows, if
