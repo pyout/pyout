@@ -3,6 +3,7 @@ from collections import OrderedDict
 from curses import tigetstr, tparm
 from functools import partial
 from six.moves import StringIO
+import time
 
 import blessings
 from mock import patch
@@ -845,3 +846,30 @@ def test_tabular_write_autowidth_different_data_types_same_output():
     out_list(["bar", "BAD!!!!!!!!!!!"])
 
     assert fd_dict.getvalue() == fd_list.getvalue()
+
+
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_callable_values():
+    update = False
+    def delay(value):
+        def fn():
+            while not update:
+                time.sleep(0.01)
+            return value
+        return fn
+
+    fd = StringIO()
+    with Tabular(["name", "status"], stream=fd, force_styling=True) as out:
+        out({"name": "foo", "status": ("thinking", delay("done"))})
+        out({"name": "bar", "status": "ok"})
+        out({"name": "baz", "status": ("waiting", delay("over"))})
+
+        expected = ("foo thinking\n"
+                    "bar ok      \n"
+                    "baz waiting \n")
+        assert eq_repr(fd.getvalue(), expected)
+
+        update = True
+    lines = fd.getvalue().splitlines()
+    assert len([ln for ln in lines if ln.endswith("foo done    ")]) == 1
+    assert len([ln for ln in lines if ln.endswith("baz over    ")]) == 1

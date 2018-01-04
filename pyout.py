@@ -9,6 +9,10 @@ __all__ = ["Tabular"]
 
 from collections import Mapping, OrderedDict, Sequence
 from contextlib import contextmanager
+from functools import partial
+import multiprocessing
+from multiprocessing.dummy import Pool
+
 from blessings import Terminal
 
 try:
@@ -541,6 +545,18 @@ class Tabular(object):
             self._setup_style()
             self._setup_fields()
 
+        self._pool = None
+        self._lock = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        if self._pool is None:
+            return
+        self._pool.close()
+        self._pool.join()
+
     def _setup_style(self):
         default = dict(_schema_default("default_"),
                        **_safe_get(self._init_style, "default_", {}))
@@ -646,6 +662,23 @@ class Tabular(object):
         if rewrite:
             raise RewritePrevious
 
+    @contextmanager
+    def _write_lock(self):
+        """Acquire and release the lock around output calls.
+
+        This should allow multiple threads or processes to write
+        output reliably.  Code that modifies the `_rows` attribute
+        should also do so within this context.
+        """
+        lock = self._lock is not None
+        if lock:
+            self._lock.acquire()
+        try:
+            yield
+        finally:
+            if lock:
+                self._lock.release()
+
     def _writerow(self, row, style=None, adopt=True):
         fields = self._fields
 
@@ -685,6 +718,41 @@ class Tabular(object):
             pass
         self._writerow(row, style=self._style["header_"], adopt=False)
 
+    def _strip_callables(self, row):
+        """Replace (initial_value, callable) form in `row` with inital value.
+
+        Returns
+        -------
+        list of (columns, callable)
+        """
+        callables = []
+        for column, value in row.items():
+            try:
+                initial, fn = value
+            except (ValueError, TypeError):
+                continue
+            else:
+                if callable(fn):
+                    row[column] = initial
+                    callables.append([column, fn])
+        return callables
+
+    def _start_callables(self, row, callables):
+        """Start running `callables` asynchronously.
+        """
+        id_vals = [row[c] for c in self.ids]
+        def callback(tab, col, result):
+            tab.rewrite(id_vals, {col: result})
+
+        if self._pool is None:
+            self._pool = Pool()
+        if self._lock is None:
+            self._lock = multiprocessing.Lock()
+
+        for col, fn in callables:
+            self._pool.apply_async(fn,
+                                   callback=partial(callback, self, col))
+
     def __call__(self, row, style=None):
         """Write styled `row` to the terminal.
 
@@ -697,6 +765,17 @@ class Tabular(object):
             as the constructor's `columns` argument.  Any other object
             type should have an attribute for each column in specified
             via `columns`.
+
+            Instead of a plain value, a column's value can be a tuple
+            of the form (initial_value, callable).  The callable will
+            be called asynchronously with no arguments and should
+            return the value with which to replace `initial_value`.
+
+            Using callable values requires some additional steps.  The
+            `ids` property should be set unless the first column
+            happens to be a suitable id.  The instance should also be
+            used as a context manager so that the program waits at the
+            end of the block for the return values.
         style : dict, optional
             Each top-level key should be a column name and the value
             should be a style dict that overrides the class instance
@@ -710,16 +789,20 @@ class Tabular(object):
         if self._transform_method is None:
             self._transform_method = self._choose_transform_method(row)
         row = self._transform_method(row)
+        callables = self._strip_callables(row)
 
-        if not self._rows:
-            self._maybe_write_header()
+        with self._write_lock():
+            if not self._rows:
+                self._maybe_write_header()
 
-        try:
-            self._set_widths(row)
-        except RewritePrevious:
-            self._repaint()
-        self._writerow(row, style=style)
-        self._rows.append(row)
+            try:
+                self._set_widths(row)
+            except RewritePrevious:
+                self._repaint()
+            self._writerow(row, style=style)
+            self._rows.append(row)
+        if callables:
+            self._start_callables(row, callables)
 
     @staticmethod
     def _infer_columns(row):
@@ -774,21 +857,22 @@ class Tabular(object):
         if isinstance(ids, Sequence):
             ids = dict(zip(self.ids, ids))
 
-        nback = None
-        for rev_idx, row in enumerate(reversed(self._rows), 1):
-            if all(row[k] == v for k, v in ids.items()):
-                nback = rev_idx
-                break
-        if nback is None:
-            raise ValueError("Could not find row for {}".format(ids))
+        with self._write_lock():
+            nback = None
+            for rev_idx, row in enumerate(reversed(self._rows), 1):
+                if all(row[k] == v for k, v in ids.items()):
+                    nback = rev_idx
+                    break
+            if nback is None:
+                raise ValueError("Could not find row for {}".format(ids))
 
-        idx = len(self._rows) - nback
-        self._rows[idx].update(values)
+            idx = len(self._rows) - nback
+            self._rows[idx].update(values)
 
-        try:
-            self._set_widths(self._rows[idx])
-        except RewritePrevious:
-            self._repaint()
-        else:
-            with self._moveback(nback):
-                self._writerow(self._rows[idx], style)
+            try:
+                self._set_widths(self._rows[idx])
+            except RewritePrevious:
+                self._repaint()
+            else:
+                with self._moveback(nback):
+                    self._writerow(self._rows[idx], style)
