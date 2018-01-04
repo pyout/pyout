@@ -3,6 +3,7 @@ from setuptools import setup
 requires = {
     "core": ["blessings", "six"],
     "tests": ["pytest", "mock"],
+    "validation": ["jsonschema"],
 }
 
 requires["full"] = list(requires.values())
