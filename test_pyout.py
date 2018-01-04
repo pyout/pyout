@@ -32,10 +32,12 @@ def test_adopt():
 
     style = {"name": default_value,
              "path": default_value,
-             "status": default_value}
+             "status": default_value,
+             "sep_": "non-mapping"}
 
     newstyle = _adopt(style, {"path": {"width": 99},
-                              "status": {"attrs": ["foo"]}})
+                              "status": {"attrs": ["foo"]},
+                              "sep_": "non-mapping update"})
     for key, value in style.items():
         if key == "path":
             expected = {"align": "<", "width": 99, "attrs": []}
@@ -43,6 +45,8 @@ def test_adopt():
         elif key == "status":
             expected = {"align": "<", "width": 10, "attrs": ["foo"]}
             assert newstyle[key] == expected
+        elif key == "sep_":
+            assert newstyle[key] == "non-mapping update"
         else:
             assert newstyle[key] == value
 
@@ -106,11 +110,13 @@ def test_style_value_type():
 
     assert fn(True) == "simple"
     assert fn("red") == "simple"
-    assert fn(("label", {"BAD": "red"})) == "label"
+    assert fn({"label": {"BAD": "red"}}) == "label"
 
-    interval = ("interval", [(0, 50, "red"), (50, 80, "yellow")])
+    interval = {"interval": [(0, 50, "red"), (50, 80, "yellow")]}
     assert fn(interval) == "interval"
 
+    with pytest.raises(ValueError):
+        fn({"unknown": 1})
 
 ### Tabular tests
 
@@ -500,7 +506,7 @@ def test_tabular_repaint_with_header():
 def test_tabular_write_label_color():
     fd = StringIO()
     out = Tabular(style={"name": {"width": 3},
-                         "status": {"color": ("label", {"BAD": "red"}),
+                         "status": {"color": {"label": {"BAD": "red"}},
                                     "width": 6}},
                   stream=fd, force_styling=True)
     out(OrderedDict([("name", "foo"),
@@ -518,7 +524,7 @@ def test_tabular_write_label_color():
 def test_tabular_write_label_bold():
     fd = StringIO()
     out = Tabular(style={"name": {"width": 3},
-                         "status": {"bold": ("label", {"BAD": True}),
+                         "status": {"bold": {"label": {"BAD": True}},
                                     "width": 6}},
                   stream=fd, force_styling=True)
     out(OrderedDict([("name", "foo"),
@@ -536,10 +542,10 @@ def test_tabular_write_label_bold():
 def test_tabular_write_intervals_color():
     fd = StringIO()
     out = Tabular(style={"name": {"width": 3},
-                         "percent": {"color": ("interval",
-                                               [(0, 50, "red"),
-                                                (50, 80, "yellow"),
-                                                (80, 100, "green")]),
+                         "percent": {"color": {"interval":
+                                               [[0, 50, "red"],
+                                                [50, 80, "yellow"],
+                                                [80, 100, "green"]]},
                                      "width": 7}},
                   stream=fd, force_styling=True)
     out(OrderedDict([("name", "foo"),
@@ -558,9 +564,9 @@ def test_tabular_write_intervals_color():
 def test_tabular_write_intervals_color_open_ended():
     fd = StringIO()
     out = Tabular(style={"name": {"width": 3},
-                         "percent": {"color": ("interval",
-                                               [(None, 50, "red"),
-                                                (80, None, "green")]),
+                         "percent": {"color": {"interval":
+                                               [[None, 50, "red"],
+                                                [80, None, "green"]]},
                                      "width": 7}},
                   stream=fd, force_styling=True)
     out(OrderedDict([("name", "foo"),
@@ -579,8 +585,8 @@ def test_tabular_write_intervals_color_open_ended():
 def test_tabular_write_intervals_color_outside_intervals():
     fd = StringIO()
     out = Tabular(style={"name": {"width": 3},
-                         "percent": {"color": ("interval",
-                                               [(0, 50, "red")]),
+                         "percent": {"color": {"interval":
+                                               [[0, 50, "red"]]},
                                      "width": 7}},
                   stream=fd, force_styling=True)
     out(OrderedDict([("name", "foo"),
@@ -598,9 +604,9 @@ def test_tabular_write_intervals_color_outside_intervals():
 def test_tabular_write_intervals_bold():
     fd = StringIO()
     out = Tabular(style={"name": {"width": 3},
-                         "percent": {"bold": ("interval",
-                                              [(30, 50, False),
-                                               (50, 80, True)]),
+                         "percent": {"bold": {"interval":
+                                              [[30, 50, False],
+                                               [50, 80, True]]},
                                      "width": 2}},
                   stream=fd, force_styling=True)
     out(OrderedDict([("name", "foo"),

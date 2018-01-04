@@ -11,6 +11,121 @@ from collections import Mapping, OrderedDict, Sequence
 from contextlib import contextmanager
 from blessings import Terminal
 
+try:
+    from jsonschema import validate
+except ImportError:
+    validate = lambda *_: None
+
+
+### Schema definition
+
+SCHEMA = {
+    "definitions": {
+        ## Styles
+        "align": {
+            "description": "Alignment of text",
+            "type": "string",
+            "enum": ["left", "right", "center"],
+            "default": "left",
+            "scope": "table"},
+        "bold": {
+            "description": "Whether text is bold",
+            "oneOf": [{"type": "boolean"},
+                      {"$ref": "#/definitions/label"},
+                      {"$ref": "#/definitions/interval"}],
+            "default": False,
+            "scope": "field"},
+        "color": {
+            "description": "Foreground color of text",
+            "oneOf": [{"type": "string",
+                       "enum": ["black", "red", "green", "yellow",
+                                "blue", "magenta", "cyan", "white"]},
+                      {"$ref": "#/definitions/label"},
+                      {"$ref": "#/definitions/interval"}],
+            "default": "black",
+            "scope": "field"},
+        "underline": {
+            "description": "Whether text is underlined",
+            "oneOf": [{"type": "boolean"},
+                      {"$ref": "#/definitions/label"},
+                      {"$ref": "#/definitions/interval"}],
+            "default": False,
+            "scope": "field"},
+        "width": {
+            "description": "Width of field",
+            "oneOf": [{"type": "integer"},
+                      {"type": "string",
+                       "enum": ["auto"]},
+                      {"type": "object",
+                       "properties": {
+                           "auto": {"type": "boolean"},
+                           "max": {"type": ["integer", "null"]},
+                           "min": {"type": ["integer", "null"]}}}],
+            "default": "auto",
+            "scope": "table"},
+        "styles": {
+            "type": "object",
+            "properties": {"align": {"$ref": "#/definitions/align"},
+                           "bold": {"$ref": "#/definitions/bold"},
+                           "color": {"$ref": "#/definitions/color"},
+                           "underline": {"$ref": "#/definitions/underline"},
+                           "width": {"$ref": "#/definitions/width"}},
+            "additionalProperties": False},
+        ## Mapping types
+        "interval": {
+            "description": "Map a value within an interval to a style",
+            "type": "object",
+            "properties": {"interval":
+                           {"type": "array",
+                            "items": [
+                                {"type": "array",
+                                 "items": [{"type": ["number", "null"]},
+                                           {"type": ["number", "null"]},
+                                           {"type": ["string", "boolean"]}],
+                                 "additionalItems": False}]}},
+            "additionalProperties": False},
+        "label": {
+            "description": "Map a value to a style",
+            "type": "object",
+            "properties": {"label": {"type": "object"}},
+            "additionalProperties": False}
+    },
+    "type": "object",
+    "properties": {
+        "default_": {
+            "description": "Default style of columns",
+            "oneOf": [{"$ref": "#/definitions/styles"},
+                      {"type": "null"}],
+            "default": {"align": "left",
+                        "width": "auto"},
+            "scope": "table"},
+        "header_": {
+            "description": "Attributes for the header row",
+            "oneOf": [{"type": "object",
+                       "properties":
+                       {"color": {"$ref": "#/definitions/color"},
+                        "bold": {"$ref": "#/definitions/bold"},
+                        "underline": {"$ref": "#/definitions/underline"}}},
+                      {"type": "null"}],
+            "default": None,
+            "scope": "table"},
+        "separator_": {
+            "description": "Separator used between fields",
+            "type": "string",
+            "default": " ",
+            "scope": "table"}
+    },
+    ## All other keys are column names.
+    "additionalProperties": {"$ref": "#/definitions/styles"}
+}
+
+
+def _schema_default(prop):
+    return SCHEMA["properties"][prop]["default"]
+
+
+### Helper classes and functions
+
 
 class Field(object):
     """Format, process, and render tabular fields.
@@ -246,12 +361,12 @@ class StyleProcessors(object):
         str, {"simple", "label", "interval"}
         """
         try:
-            kind = value[0]
-        except TypeError:
+            keys = list(value.keys())
+        except AttributeError:
             return "simple"
-        if kind in ["label", "interval"]:
-            return kind
-        return "simple"
+        if keys in [["label"], ["interval"]]:
+            return keys[0]
+        raise ValueError("Type of `value` could not be determined")
 
     def from_style(self, column_style):
         """Yield processors based on `column_style`.
@@ -280,9 +395,10 @@ class StyleProcessors(object):
                 elif key_type is str:
                     yield self.by_key(column_style[key])
             elif vtype == "label":
-                yield self.by_lookup(column_style[key][1], attr_key)
+                yield self.by_lookup(column_style[key][vtype], attr_key)
             elif vtype == "interval":
-                yield self.by_interval_lookup(column_style[key][1], attr_key)
+                yield self.by_interval_lookup(column_style[key][vtype],
+                                              attr_key)
 
 
 class TermProcessors(StyleProcessors):
@@ -328,7 +444,14 @@ class TermProcessors(StyleProcessors):
 def _adopt(style, new_style):
     if new_style is None:
         return style
-    return {key: dict(style[key], **new_style.get(key, {})) for key in style}
+
+    combined = {}
+    for key, value in style.items():
+        if isinstance(value, Mapping):
+            combined[key] = dict(value, **new_style.get(key, {}))
+        else:
+            combined[key] = new_style.get(key, value)
+    return combined
 
 
 def _safe_get(mapping, key, default=None):
@@ -342,6 +465,9 @@ class RewritePrevious(Exception):
     """Signal that the previous output needs to be updated.
     """
     pass
+
+
+### Tabular interface
 
 
 class Tabular(object):
@@ -394,10 +520,6 @@ class Tabular(object):
     ...     style={"status": {"color": "red", "bold": True}})
     """
 
-    base_style = {"default_": {"align": "left",
-                               "width": "auto"},
-                  "separator_": " "}
-
     _header_attributes = {"align", "width"}
 
     def __init__(self, columns=None, style=None, stream=None, force_styling=False):
@@ -411,30 +533,34 @@ class Tabular(object):
 
         self._init_style = style
         self._style = None
-        self._header_style = None
 
         self._autowidth_columns = {}
-        self._sep = None
 
         if columns is not None:
             self._setup_style()
             self._setup_fields()
 
     def _setup_style(self):
-        self._sep = _safe_get(self._init_style, "separator_",
-                              self.base_style["separator_"])
-        default = dict(self.base_style["default_"],
+        default = dict(_schema_default("default_"),
                        **_safe_get(self._init_style, "default_", {}))
         self._style = _adopt({c: default for c in self._columns},
                              self._init_style)
 
+        hstyle = None
         if self._init_style is not None and "header_" in self._init_style:
-            self._header_style = {}
+            hstyle = {}
             for col in self._columns:
                 cstyle = {k: v for k, v in self._style[col].items()
                           if k in self._header_attributes}
-                self._header_style[col] = dict(cstyle,
-                                               **self._init_style["header_"])
+                hstyle[col] = dict(cstyle, **self._init_style["header_"])
+
+        ## Store special keys in _style so that they can be validated.
+        self._style["default_"] = default
+        self._style["header_"] = hstyle
+        self._style["separator_"] = _safe_get(self._init_style, "separator_",
+                                              _schema_default("separator_"))
+
+        validate(self._style, SCHEMA)
 
     def _setup_fields(self):
         self._fields = {}
@@ -512,10 +638,12 @@ class Tabular(object):
         fields = self._fields
 
         if style is not None:
+            validate(style, SCHEMA)
+
             rowstyle = _adopt(self._style, style) if adopt else style
-            for column, cstyle in rowstyle.items():
+            for column in self._columns:
                 fields[column].processors["row"] = list(
-                    self._tproc.from_style(cstyle))
+                    self._tproc.from_style(rowstyle[column]))
             proc_key = "row"
         else:
             proc_key = "default"
@@ -524,10 +652,11 @@ class Tabular(object):
             row = self._transform_method(row)
 
         proc_fields = [fields[c](row[c], proc_key) for c in self._columns]
-        self.term.stream.write(self._sep.join(proc_fields) + "\n")
+        self.term.stream.write(
+            self._style["separator_"].join(proc_fields) + "\n")
 
     def _maybe_write_header(self):
-        if self._header_style is None:
+        if self._style["header_"] is None:
             return
 
         transform = False
@@ -546,7 +675,7 @@ class Tabular(object):
             ## We're at the header, so there aren't any previous
             ## lines to update.
             pass
-        self._writerow(row, style=self._header_style, adopt=False,
+        self._writerow(row, style=self._style["header_"], adopt=False,
                        transform=transform)
 
     def __call__(self, row, style=None):
@@ -592,7 +721,7 @@ class Tabular(object):
             raise ValueError("Can't infer columns from data")
 
     def _repaint(self):
-        if self._rows or self._header_style is not None:
+        if self._rows or self._style["header_"] is not None:
             self._move_to_firstrow()
             self.term.stream.write(self.term.clear_eol)
             self._maybe_write_header()
@@ -601,7 +730,7 @@ class Tabular(object):
                 self._writerow(row)
 
     def _move_to_firstrow(self):
-        ntimes = len(self._rows) + (self._header_style is not None)
+        ntimes = len(self._rows) + (self._style["header_"] is not None)
         self.term.stream.write(self.term.move_up * ntimes)
 
     @contextmanager
