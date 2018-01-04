@@ -462,6 +462,29 @@ def test_tabular_rewrite_auto_width():
 
 
 @patch("pyout.Terminal", TestTerminal)
+def test_tabular_rewrite_data_as_list():
+    def init():
+        fd = StringIO()
+        out = Tabular(["name", "status"],
+                      style={"name": {"width": 3},
+                             "status": {"width": 9}},
+                      stream=fd)
+        return fd, out
+
+    fd_list, out_list = init()
+    out_list(["foo", "unknown"])
+    out_list(["bar", "installed"])
+    out_list.rewrite({"name": "foo"}, "status", "installed")
+
+    fd_dict, out_dict = init()
+    out_dict({"name": "foo", "status": "unknown"})
+    out_dict({"name": "bar", "status": "installed"})
+    out_dict.rewrite({"name": "foo"}, "status", "installed")
+
+    assert fd_list.getvalue() == fd_dict.getvalue()
+
+
+@patch("pyout.Terminal", TestTerminal)
 def test_tabular_repaint():
     fd = StringIO()
     out = Tabular(["name", "status"],

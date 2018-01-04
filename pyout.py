@@ -624,7 +624,7 @@ class Tabular(object):
         rewrite = False
         for column in self._columns:
             if column in self._autowidth_columns:
-                value_width = len(str(self._transform_method(row)[column]))
+                value_width = len(str(row[column]))
                 wmax = self._autowidth_columns[column]["max"]
                 if value_width > self._fields[column].width:
                     if wmax is None or self._fields[column].width < wmax:
@@ -633,7 +633,7 @@ class Tabular(object):
         if rewrite:
             raise RewritePrevious
 
-    def _writerow(self, row, style=None, adopt=True, transform=True):
+    def _writerow(self, row, style=None, adopt=True):
         fields = self._fields
 
         if style is not None:
@@ -646,9 +646,6 @@ class Tabular(object):
             proc_key = "row"
         else:
             proc_key = "default"
-
-        if transform:
-            row = self._transform_method(row)
 
         proc_fields = [fields[c](row[c], proc_key) for c in self._columns]
         self.term.stream.write(
@@ -663,8 +660,7 @@ class Tabular(object):
         if isinstance(self._columns, OrderedDict):
             row = self._columns
         elif self._transform_method == self._seq_to_dict:
-            row = self._columns
-            transform = True
+            row = self._transform_method(self._columns)
         else:
             row = dict(zip(self._columns, self._columns))
 
@@ -674,8 +670,7 @@ class Tabular(object):
             ## We're at the header, so there aren't any previous
             ## lines to update.
             pass
-        self._writerow(row, style=self._style["header_"], adopt=False,
-                       transform=transform)
+        self._writerow(row, style=self._style["header_"], adopt=False)
 
     def __call__(self, row, style=None):
         """Write styled `row` to the terminal.
@@ -701,6 +696,7 @@ class Tabular(object):
 
         if self._transform_method is None:
             self._transform_method = self._choose_transform_method(row)
+        row = self._transform_method(row)
 
         if not self._rows:
             self._maybe_write_header()
