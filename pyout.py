@@ -528,6 +528,7 @@ class Tabular(object):
 
         self._rows = []
         self._columns = columns
+        self._ids = None
         self._fields = None
         self._transform_method = None
 
@@ -591,6 +592,18 @@ class Tabular(object):
             field.processors["default"] = list(self._tproc.from_style(cstyle))
 
             self._fields[column] = field
+
+    @property
+    def ids(self):
+        if self._ids is None:
+            if self._columns:
+                return [self._columns[0]]
+        else:
+            return self._ids
+
+    @ids.setter
+    def ids(self, columns):
+        self._ids = columns
 
     @staticmethod
     def _identity(row):
@@ -744,9 +757,12 @@ class Tabular(object):
 
         Parameters
         ----------
-        ids : dict
+        ids : dict or sequence
             The keys are the column names that in combination uniquely
             identify a row when matched for the values.
+
+            If the id column names are set through the `ids` property,
+            a sequence of values can be passed instead of a dict.
         column : str
             The name of the column whose value should be updated to
             `new_value`.
@@ -756,6 +772,9 @@ class Tabular(object):
             unspecified style elements are taken from the instance's
             `style`.
         """
+        if isinstance(ids, Sequence):
+            ids = dict(zip(self.ids, ids))
+
         nback = None
         for rev_idx, row in enumerate(reversed(self._rows), 1):
             if all(row[k] == v for k, v in ids.items()):

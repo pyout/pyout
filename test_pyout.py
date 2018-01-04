@@ -443,6 +443,35 @@ def test_tabular_rewrite_multi_id():
 
 
 @patch("pyout.Terminal", TestTerminal)
+def test_tabular_rewrite_with_ids_property():
+    def write():
+        data = [{"name": "foo", "type": "0", "status": "unknown"},
+                {"name": "foo", "type": "1", "status": "unknown"},
+                {"name": "bar", "type": "2", "status": "installed"}]
+
+        fd = StringIO()
+        out = Tabular(["name", "type", "status"],
+                      style={"name": {"width": 3},
+                             "type": {"width": 1},
+                             "status": {"width": 9}},
+                      stream=fd, force_styling=True)
+        for row in data:
+            out(row)
+        return fd, out
+
+    fd_param, out_param = write()
+    fd_prop, out_prop = write()
+    out_prop.ids = ["name", "type"]
+
+    assert eq_repr(fd_param.getvalue(), fd_prop.getvalue())
+
+    out_param.rewrite({"name": "foo", "type": "0"}, "status", "installed")
+    out_prop.rewrite(["foo", "0"], "status", "installed")
+
+    assert eq_repr(fd_param.getvalue(), fd_prop.getvalue())
+
+
+@patch("pyout.Terminal", TestTerminal)
 def test_tabular_rewrite_auto_width():
     fd = StringIO()
     out = Tabular(["name", "status"],
