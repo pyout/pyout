@@ -1,5 +1,10 @@
 from setuptools import setup
 
+requires = {
+    "core": ["blessings", "six"],
+    "tests": ["pytest", "mock"],
+}
+
 setup(
     name="pyout",
     version="0.1.0",
@@ -9,8 +14,8 @@ setup(
     license="MIT",
     url="https://github.com/pyout/pyout.git",
     py_modules=["pyout"],
-    install_requires=["blessings", "six"],
-    extras_require={"tests": ["pytest", "mock"]},
+    install_requires=requires["core"],
+    extras_require=requires,
     long_description=open("README.rst").read(),
     classifiers=[
         "Intended Audience :: Developers",
