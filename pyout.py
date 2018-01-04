@@ -119,6 +119,10 @@ SCHEMA = {
     "additionalProperties": {"$ref": "#/definitions/styles"}
 }
 
+
+def _schema_default(prop):
+    return SCHEMA["properties"][prop]["default"]
+
 
 ### Helper classes and functions
 
