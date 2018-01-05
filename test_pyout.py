@@ -226,7 +226,7 @@ def test_tabular_write_header():
 
     expected = ("name       status    \n"
                 "foo        installed \n"
-                "bar        installed \n"    )
+                "bar        installed \n")
     assert eq_repr(fd.getvalue(), expected)
 
 
@@ -417,8 +417,8 @@ def test_tabular_write_update_notfound():
 
     with pytest.raises(ValueError):
         out.rewrite({"name": "not here"}, "status", "installed",
-                    style = {"name": {"width": 3},
-                             "status": {"width": 9}})
+                    style={"name": {"width": 3},
+                           "status": {"width": 9}})
 
 
 @patch("pyout.Terminal", TestTerminal)
@@ -754,21 +754,21 @@ def test_tabular_write_autowidth_min_max_with_header():
 def test_tabular_write_autowidth_different_data_types_same_output():
     fd_dict = StringIO()
     out_dict = Tabular(["name", "status"],
-                  style={"header_": {},
-                         "name": {"width": 4},
-                         "status": {"width":
-                                    {"auto": True, "min": 2, "max": 8}}},
-                  stream=fd_dict)
+                       style={"header_": {},
+                              "name": {"width": 4},
+                              "status": {"width":
+                                         {"auto": True, "min": 2, "max": 8}}},
+                       stream=fd_dict)
     out_dict({"name": "foo", "status": "U"})
     out_dict({"name": "bar", "status": "BAD!!!!!!!!!!!"})
 
     fd_list = StringIO()
     out_list = Tabular(["name", "status"],
-                  style={"header_": {},
-                         "name": {"width": 4},
-                         "status": {"width":
-                                    {"auto": True, "min": 2, "max": 8}}},
-                  stream=fd_list)
+                       style={"header_": {},
+                              "name": {"width": 4},
+                              "status": {"width":
+                                         {"auto": True, "min": 2, "max": 8}}},
+                       stream=fd_list)
     out_list(["foo", "U"])
     out_list(["bar", "BAD!!!!!!!!!!!"])
 
