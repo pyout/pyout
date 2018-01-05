@@ -752,7 +752,7 @@ class Tabular(object):
 
     ## FIXME: This will break with stderr and when the output scrolls.
     ## Maybe we could check term height and repaint?
-    def rewrite(self, ids, column, new_value, style=None):
+    def rewrite(self, ids, values, style=None):
         """Rewrite a row.
 
         Parameters
@@ -763,10 +763,9 @@ class Tabular(object):
 
             If the id column names are set through the `ids` property,
             a sequence of values can be passed instead of a dict.
-        column : str
-            The name of the column whose value should be updated to
-            `new_value`.
-        new_value : str
+        values : dict
+            The keys are that columns to be updated, and the values
+            are the new values.
         style : dict
             A new style dictionary to use for the new row.  All
             unspecified style elements are taken from the instance's
@@ -784,7 +783,7 @@ class Tabular(object):
             raise ValueError("Could not find row for {}".format(ids))
 
         idx = len(self._rows) - nback
-        self._rows[idx][column] = new_value
+        self._rows[idx].update(values)
 
         try:
             self._set_widths(self._rows[idx])

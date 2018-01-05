@@ -398,7 +398,7 @@ def test_tabular_rewrite():
     for row in data:
         out(row)
 
-    out.rewrite({"name": "foo"}, "status", "installed")
+    out.rewrite({"name": "foo"}, {"status": "installed"})
 
     expected = unicode_cap("cuu1") * 2 + unicode_cap("el") + "foo installed"
     assert eq_repr(fd.getvalue().strip().splitlines()[-1],
@@ -416,7 +416,7 @@ def test_tabular_rewrite_notfound():
         out(row)
 
     with pytest.raises(ValueError):
-        out.rewrite({"name": "not here"}, "status", "installed",
+        out.rewrite({"name": "not here"}, {"status": "installed"},
                     style={"name": {"width": 3},
                            "status": {"width": 9}})
 
@@ -435,9 +435,29 @@ def test_tabular_rewrite_multi_id():
     for row in data:
         out(row)
 
-    out.rewrite({"name": "foo", "type": "0"}, "status", "installed")
+    out.rewrite({"name": "foo", "type": "0"}, {"status": "installed"})
 
     expected = unicode_cap("cuu1") * 3 + unicode_cap("el") + "foo 0 installed"
+    assert eq_repr(fd.getvalue().strip().splitlines()[-1],
+                   expected)
+
+
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_rewrite_multi_value():
+    fd = StringIO()
+    out = Tabular(["name", "type", "status"],
+                  style={"name": {"width": 3},
+                         "type": {"width": 1},
+                         "status": {"width": 9}},
+                  stream=fd, force_styling=True)
+    data = [{"name": "foo", "type": "0", "status": "unknown"},
+            {"name": "bar", "type": "1", "status": "unknown"}]
+    for row in data:
+        out(row)
+
+    out.rewrite({"name": "foo"}, {"status": "installed", "type": "3"})
+
+    expected = unicode_cap("cuu1") * 2 + unicode_cap("el") + "foo 3 installed"
     assert eq_repr(fd.getvalue().strip().splitlines()[-1],
                    expected)
 
@@ -465,8 +485,8 @@ def test_tabular_rewrite_with_ids_property():
 
     assert eq_repr(fd_param.getvalue(), fd_prop.getvalue())
 
-    out_param.rewrite({"name": "foo", "type": "0"}, "status", "installed")
-    out_prop.rewrite(["foo", "0"], "status", "installed")
+    out_param.rewrite({"name": "foo", "type": "0"}, {"status": "installed"})
+    out_prop.rewrite(["foo", "0"], {"status": "installed"})
 
     assert eq_repr(fd_param.getvalue(), fd_prop.getvalue())
 
@@ -483,7 +503,7 @@ def test_tabular_rewrite_auto_width():
     for row in data:
         out(row)
 
-    out.rewrite({"name": "bar"}, "status", "installed")
+    out.rewrite({"name": "bar"}, {"status": "installed"})
 
     lines = fd.getvalue().splitlines()
     assert len([ln for ln in lines if ln.endswith("foo unknown  ")]) == 1
@@ -503,12 +523,12 @@ def test_tabular_rewrite_data_as_list():
     fd_list, out_list = init()
     out_list(["foo", "unknown"])
     out_list(["bar", "installed"])
-    out_list.rewrite({"name": "foo"}, "status", "installed")
+    out_list.rewrite({"name": "foo"}, {"status": "installed"})
 
     fd_dict, out_dict = init()
     out_dict({"name": "foo", "status": "unknown"})
     out_dict({"name": "bar", "status": "installed"})
-    out_dict.rewrite({"name": "foo"}, "status", "installed")
+    out_dict.rewrite({"name": "foo"}, {"status": "installed"})
 
     assert fd_list.getvalue() == fd_dict.getvalue()
 
