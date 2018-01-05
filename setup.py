@@ -2,7 +2,7 @@ from setuptools import setup
 
 requires = {
     "core": ["blessings", "six"],
-    "tests": ["pytest", "mock"],
+    "tests": ["pytest", "pytest-timeout", "mock"],
     "validation": ["jsonschema"],
 }
 

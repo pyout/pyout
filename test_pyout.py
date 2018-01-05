@@ -848,6 +848,7 @@ def test_tabular_write_autowidth_different_data_types_same_output():
     assert fd_dict.getvalue() == fd_list.getvalue()
 
 
+@pytest.mark.timeout(10)
 @patch("pyout.Terminal", TestTerminal)
 def test_tabular_write_callable_values():
     update = False
@@ -875,6 +876,7 @@ def test_tabular_write_callable_values():
     assert len([ln for ln in lines if ln.endswith("baz over    ")]) == 1
 
 
+@pytest.mark.timeout(10)
 @patch("pyout.Terminal", TestTerminal)
 def test_tabular_write_callable_values_multi_return():
     update = False
