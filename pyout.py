@@ -726,32 +726,52 @@ class Tabular(object):
         list of (columns, callable)
         """
         callables = []
-        for column, value in row.items():
+        to_delete = []
+        to_add = []
+        for columns, value in row.items():
             try:
                 initial, fn = value
             except (ValueError, TypeError):
                 continue
             else:
                 if callable(fn):
-                    row[column] = initial
-                    callables.append([column, fn])
+                    if not isinstance(columns, tuple):
+                        columns = columns,
+                    else:
+                        to_delete.append(columns)
+                    for column in columns:
+                        to_add.append((column, initial))
+                    callables.append((columns, fn))
+
+        for column, value in to_add:
+            row[column] = value
+        for multi_columns in to_delete:
+            del row[multi_columns]
+
         return callables
 
     def _start_callables(self, row, callables):
         """Start running `callables` asynchronously.
         """
         id_vals = [row[c] for c in self.ids]
-        def callback(tab, col, result):
-            tab.rewrite(id_vals, {col: result})
+        def callback(tab, cols, result):
+            if isinstance(result, Mapping):
+                tab.rewrite(id_vals, result)
+            elif isinstance(result, tuple):
+                tab.rewrite(id_vals, dict(zip(cols, result)))
+            else:
+                if len(cols) != 1:
+                    ValueError("Expected only one column")
+                tab.rewrite(id_vals, {cols[0]: result})
 
         if self._pool is None:
             self._pool = Pool()
         if self._lock is None:
             self._lock = multiprocessing.Lock()
 
-        for col, fn in callables:
+        for cols, fn in callables:
             self._pool.apply_async(fn,
-                                   callback=partial(callback, self, col))
+                                   callback=partial(callback, self, cols))
 
     def __call__(self, row, style=None):
         """Write styled `row` to the terminal.
@@ -807,9 +827,18 @@ class Tabular(object):
     @staticmethod
     def _infer_columns(row):
         try:
-            return list(row.keys())
+            columns = list(row.keys())
         except AttributeError:
             raise ValueError("Can't infer columns from data")
+        ## Make sure we don't have any multi-column keys.
+        flat = []
+        for column in columns:
+            if isinstance(column, tuple):
+                for c in column:
+                    flat.append(c)
+            else:
+                flat.append(column)
+        return flat
 
     def _repaint(self):
         if self._rows or self._style["header_"] is not None:

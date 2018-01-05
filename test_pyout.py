@@ -873,3 +873,53 @@ def test_tabular_write_callable_values():
     lines = fd.getvalue().splitlines()
     assert len([ln for ln in lines if ln.endswith("foo done    ")]) == 1
     assert len([ln for ln in lines if ln.endswith("baz over    ")]) == 1
+
+
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_callable_values_multi_return():
+    update = False
+    def delay():
+        while not update:
+            time.sleep(0.01)
+        return {"status": "done", "path": "/tmp/a"}
+
+    fd = StringIO()
+    out = Tabular(["name", "status", "path"], stream=fd, force_styling=True)
+    with out:
+        out({"name": "foo", ("status", "path"): ("...", delay)})
+        out({"name": "bar", "status": "ok", "path": "na"})
+
+        expected = ("foo ... ...\n"
+                    "bar ok  na \n")
+        assert eq_repr(fd.getvalue(), expected)
+
+        update = True
+    lines = fd.getvalue().splitlines()
+    assert len([ln for ln in lines if ln.endswith("foo done /tmp/a")]) == 1
+
+
+@pytest.mark.timeout(10)
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_callable_values_multicol_key_infer_column():
+    update = False
+    def delay():
+        while not update:
+            time.sleep(0.01)
+        return {"status": "done", "path": "/tmp/a"}
+
+    fd = StringIO()
+    out = Tabular(stream=fd, force_styling=True)
+    with out:
+        out(OrderedDict([("name", "foo"),
+                         (("status", "path"), ("...", delay))]))
+        out(OrderedDict([("name", "bar"),
+                         ("status", "ok"),
+                         ("path", "na")]))
+
+        expected = ("foo ... ...\n"
+                    "bar ok  na \n")
+        assert eq_repr(fd.getvalue(), expected)
+
+        update = True
+    lines = fd.getvalue().splitlines()
+    assert len([ln for ln in lines if ln.endswith("foo done /tmp/a")]) == 1
