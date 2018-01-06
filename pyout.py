@@ -709,8 +709,6 @@ class Tabular(object):
         if self._style["header_"] is None:
             return
 
-        transform = False
-
         if isinstance(self._columns, OrderedDict):
             row = self._columns
         elif self._transform_method == self._seq_to_dict:
