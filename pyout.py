@@ -718,12 +718,13 @@ class Tabular(object):
             pass
         self._writerow(row, style=self._style["header_"], adopt=False)
 
-    def _strip_callables(self, row):
-        """Replace (initial_value, callable) form in `row` with inital value.
+    @staticmethod
+    def _strip_callables(row):
+        """Replace (initial_value, callable) form in `row` with initial value.
 
         Returns
         -------
-        list of (columns, callable)
+        list of (column, callable)
         """
         callables = []
         to_delete = []
