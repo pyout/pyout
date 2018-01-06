@@ -10,7 +10,7 @@ install:
   - pip install .[full]
 
 script:
-  - py.test
+  - python setup.py test
 
 notifications:
   email:
