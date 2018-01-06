@@ -1,2 +1,4 @@
 [run]
-source=pyout
+source=
+    pyout
+    test_pyout
