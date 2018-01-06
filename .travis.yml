@@ -10,7 +10,7 @@ install:
   - pip install .[full]
 
 script:
-  - py.test --doctest-modules -v pyout.py test_pyout.py
+  - py.test
 
 notifications:
   email:
