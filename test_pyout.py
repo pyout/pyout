@@ -901,13 +901,17 @@ def test_tabular_write_callable_values_multi_return():
 
 
 @pytest.mark.timeout(10)
+@pytest.mark.parametrize("result",
+                         [{"status": "done", "path": "/tmp/a"},
+                          ("done", "/tmp/a")],
+                         ids=["result=tuple", "result=dict"])
 @patch("pyout.Terminal", TestTerminal)
-def test_tabular_write_callable_values_multicol_key_infer_column():
+def test_tabular_write_callable_values_multicol_key_infer_column(result):
     update = False
     def delay():
         while not update:
             time.sleep(0.01)
-        return {"status": "done", "path": "/tmp/a"}
+        return result
 
     fd = StringIO()
     out = Tabular(stream=fd, force_styling=True)
