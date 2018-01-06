@@ -552,10 +552,7 @@ class Tabular(object):
         return self
 
     def __exit__(self, *args):
-        if self._pool is None:
-            return
-        self._pool.close()
-        self._pool.join()
+        self.wait()
 
     def _setup_style(self):
         default = dict(_schema_default("default_"),
@@ -661,6 +658,14 @@ class Tabular(object):
                     self._fields[column].width = value_width
         if rewrite:
             raise RewritePrevious
+
+    def wait(self):
+        """Wait for asynchronous calls to return.
+        """
+        if self._pool is None:
+            return
+        self._pool.close()
+        self._pool.join()
 
     @contextmanager
     def _write_lock(self):
