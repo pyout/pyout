@@ -925,3 +925,15 @@ def test_tabular_write_callable_values_multicol_key_infer_column():
         update = True
     lines = fd.getvalue().splitlines()
     assert len([ln for ln in lines if ln.endswith("foo done /tmp/a")]) == 1
+
+
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_wait_noop_if_nothreads():
+    fd = StringIO()
+    with Tabular(["name", "status"], stream=fd, force_styling=True) as out:
+        out({"name": "foo", "status": "done"})
+        out({"name": "bar", "status": "ok"})
+
+        expected = ("foo done\n"
+                    "bar ok  \n")
+        assert eq_repr(fd.getvalue(), expected)
