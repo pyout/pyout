@@ -670,13 +670,12 @@ class Tabular(object):
         output reliably.  Code that modifies the `_rows` attribute
         should also do so within this context.
         """
-        lock = self._lock is not None
-        if lock:
+        if self._lock:
             self._lock.acquire()
         try:
             yield
         finally:
-            if lock:
+            if self._lock:
                 self._lock.release()
 
     def _writerow(self, row, style=None, adopt=True):
