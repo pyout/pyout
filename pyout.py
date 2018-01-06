@@ -9,6 +9,10 @@ __all__ = ["Tabular"]
 
 from collections import Mapping, OrderedDict, Sequence
 from contextlib import contextmanager
+from functools import partial
+import multiprocessing
+from multiprocessing.dummy import Pool
+
 from blessings import Terminal
 
 try:
@@ -528,6 +532,7 @@ class Tabular(object):
 
         self._rows = []
         self._columns = columns
+        self._ids = None
         self._fields = None
         self._transform_method = None
 
@@ -539,6 +544,15 @@ class Tabular(object):
         if columns is not None:
             self._setup_style()
             self._setup_fields()
+
+        self._pool = None
+        self._lock = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.wait()
 
     def _setup_style(self):
         default = dict(_schema_default("default_"),
@@ -592,6 +606,22 @@ class Tabular(object):
 
             self._fields[column] = field
 
+    @property
+    def ids(self):
+        """A list of unique IDs used to identify a row.
+
+        If not explicitly set, it defaults to the first column name.
+        """
+        if self._ids is None:
+            if self._columns:
+                return [self._columns[0]]
+        else:
+            return self._ids
+
+    @ids.setter
+    def ids(self, columns):
+        self._ids = columns
+
     @staticmethod
     def _identity(row):
         return row
@@ -624,7 +654,7 @@ class Tabular(object):
         rewrite = False
         for column in self._columns:
             if column in self._autowidth_columns:
-                value_width = len(str(self._transform_method(row)[column]))
+                value_width = len(str(row[column]))
                 wmax = self._autowidth_columns[column]["max"]
                 if value_width > self._fields[column].width:
                     if wmax is None or self._fields[column].width < wmax:
@@ -633,7 +663,31 @@ class Tabular(object):
         if rewrite:
             raise RewritePrevious
 
-    def _writerow(self, row, style=None, adopt=True, transform=True):
+    def wait(self):
+        """Wait for asynchronous calls to return.
+        """
+        if self._pool is None:
+            return
+        self._pool.close()
+        self._pool.join()
+
+    @contextmanager
+    def _write_lock(self):
+        """Acquire and release the lock around output calls.
+
+        This should allow multiple threads or processes to write
+        output reliably.  Code that modifies the `_rows` attribute
+        should also do so within this context.
+        """
+        if self._lock:
+            self._lock.acquire()
+        try:
+            yield
+        finally:
+            if self._lock:
+                self._lock.release()
+
+    def _writerow(self, row, style=None, adopt=True):
         fields = self._fields
 
         if style is not None:
@@ -646,9 +700,6 @@ class Tabular(object):
             proc_key = "row"
         else:
             proc_key = "default"
-
-        if transform:
-            row = self._transform_method(row)
 
         proc_fields = [fields[c](row[c], proc_key) for c in self._columns]
         self.term.stream.write(
@@ -663,8 +714,7 @@ class Tabular(object):
         if isinstance(self._columns, OrderedDict):
             row = self._columns
         elif self._transform_method == self._seq_to_dict:
-            row = self._columns
-            transform = True
+            row = self._transform_method(self._columns)
         else:
             row = dict(zip(self._columns, self._columns))
 
@@ -674,8 +724,63 @@ class Tabular(object):
             ## We're at the header, so there aren't any previous
             ## lines to update.
             pass
-        self._writerow(row, style=self._style["header_"], adopt=False,
-                       transform=transform)
+        self._writerow(row, style=self._style["header_"], adopt=False)
+
+    @staticmethod
+    def _strip_callables(row):
+        """Replace (initial_value, callable) form in `row` with initial value.
+
+        Returns
+        -------
+        list of (column, callable)
+        """
+        callables = []
+        to_delete = []
+        to_add = []
+        for columns, value in row.items():
+            try:
+                initial, fn = value
+            except (ValueError, TypeError):
+                continue
+            else:
+                if callable(fn):
+                    if not isinstance(columns, tuple):
+                        columns = columns,
+                    else:
+                        to_delete.append(columns)
+                    for column in columns:
+                        to_add.append((column, initial))
+                    callables.append((columns, fn))
+
+        for column, value in to_add:
+            row[column] = value
+        for multi_columns in to_delete:
+            del row[multi_columns]
+
+        return callables
+
+    def _start_callables(self, row, callables):
+        """Start running `callables` asynchronously.
+        """
+        id_vals = [row[c] for c in self.ids]
+        def callback(tab, cols, result):
+            if isinstance(result, Mapping):
+                tab.rewrite(id_vals, result)
+            elif isinstance(result, tuple):
+                tab.rewrite(id_vals, dict(zip(cols, result)))
+            else:
+                if len(cols) != 1:
+                    ValueError("Expected only one column")
+                tab.rewrite(id_vals, {cols[0]: result})
+
+        if self._pool is None:
+            self._pool = Pool()
+        if self._lock is None:
+            self._lock = multiprocessing.Lock()
+
+        for cols, fn in callables:
+            self._pool.apply_async(fn,
+                                   callback=partial(callback, self, cols))
 
     def __call__(self, row, style=None):
         """Write styled `row` to the terminal.
@@ -689,6 +794,17 @@ class Tabular(object):
             as the constructor's `columns` argument.  Any other object
             type should have an attribute for each column in specified
             via `columns`.
+
+            Instead of a plain value, a column's value can be a tuple
+            of the form (initial_value, callable).  The callable will
+            be called asynchronously with no arguments and should
+            return the value with which to replace `initial_value`.
+
+            Using callable values requires some additional steps.  The
+            `ids` property should be set unless the first column
+            happens to be a suitable id.  The instance should also be
+            used as a context manager so that the program waits at the
+            end of the block for the return values.
         style : dict, optional
             Each top-level key should be a column name and the value
             should be a style dict that overrides the class instance
@@ -701,23 +817,37 @@ class Tabular(object):
 
         if self._transform_method is None:
             self._transform_method = self._choose_transform_method(row)
+        row = self._transform_method(row)
+        callables = self._strip_callables(row)
 
-        if not self._rows:
-            self._maybe_write_header()
+        with self._write_lock():
+            if not self._rows:
+                self._maybe_write_header()
 
-        try:
-            self._set_widths(row)
-        except RewritePrevious:
-            self._repaint()
-        self._writerow(row, style=style)
-        self._rows.append(row)
+            try:
+                self._set_widths(row)
+            except RewritePrevious:
+                self._repaint()
+            self._writerow(row, style=style)
+            self._rows.append(row)
+        if callables:
+            self._start_callables(row, callables)
 
     @staticmethod
     def _infer_columns(row):
         try:
-            return list(row.keys())
+            columns = list(row.keys())
         except AttributeError:
             raise ValueError("Can't infer columns from data")
+        ## Make sure we don't have any multi-column keys.
+        flat = []
+        for column in columns:
+            if isinstance(column, tuple):
+                for c in column:
+                    flat.append(c)
+            else:
+                flat.append(column)
+        return flat
 
     def _repaint(self):
         if self._rows or self._style["header_"] is not None:
@@ -743,38 +873,44 @@ class Tabular(object):
 
     ## FIXME: This will break with stderr and when the output scrolls.
     ## Maybe we could check term height and repaint?
-    def rewrite(self, ids, column, new_value, style=None):
+    def rewrite(self, ids, values, style=None):
         """Rewrite a row.
 
         Parameters
         ----------
-        ids : dict
+        ids : dict or sequence
             The keys are the column names that in combination uniquely
             identify a row when matched for the values.
-        column : str
-            The name of the column whose value should be updated to
-            `new_value`.
-        new_value : str
+
+            If the id column names are set through the `ids` property,
+            a sequence of values can be passed instead of a dict.
+        values : dict
+            The keys are that columns to be updated, and the values
+            are the new values.
         style : dict
             A new style dictionary to use for the new row.  All
             unspecified style elements are taken from the instance's
             `style`.
         """
-        nback = None
-        for rev_idx, row in enumerate(reversed(self._rows), 1):
-            if all(row[k] == v for k, v in ids.items()):
-                nback = rev_idx
-                break
-        if nback is None:
-            raise ValueError("Could not find row for {}".format(ids))
+        if isinstance(ids, Sequence):
+            ids = dict(zip(self.ids, ids))
 
-        idx = len(self._rows) - nback
-        self._rows[idx][column] = new_value
+        with self._write_lock():
+            nback = None
+            for rev_idx, row in enumerate(reversed(self._rows), 1):
+                if all(row[k] == v for k, v in ids.items()):
+                    nback = rev_idx
+                    break
+            if nback is None:
+                raise ValueError("Could not find row for {}".format(ids))
 
-        try:
-            self._set_widths(self._rows[idx])
-        except RewritePrevious:
-            self._repaint()
-        else:
-            with self._moveback(nback):
-                self._writerow(self._rows[idx], style)
+            idx = len(self._rows) - nback
+            self._rows[idx].update(values)
+
+            try:
+                self._set_widths(self._rows[idx])
+            except RewritePrevious:
+                self._repaint()
+            else:
+                with self._moveback(nback):
+                    self._writerow(self._rows[idx], style)

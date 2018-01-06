@@ -3,6 +3,7 @@ from collections import OrderedDict
 from curses import tigetstr, tparm
 from functools import partial
 from six.moves import StringIO
+import time
 
 import blessings
 from mock import patch
@@ -388,7 +389,7 @@ def test_tabular_write_align():
 
 
 @patch("pyout.Terminal", TestTerminal)
-def test_tabular_write_update():
+def test_tabular_rewrite():
     fd = StringIO()
     out = Tabular(["name", "status"],
                   style={"name": {"width": 3}, "status": {"width": 9}},
@@ -398,7 +399,7 @@ def test_tabular_write_update():
     for row in data:
         out(row)
 
-    out.rewrite({"name": "foo"}, "status", "installed")
+    out.rewrite({"name": "foo"}, {"status": "installed"})
 
     expected = unicode_cap("cuu1") * 2 + unicode_cap("el") + "foo installed"
     assert eq_repr(fd.getvalue().strip().splitlines()[-1],
@@ -406,7 +407,7 @@ def test_tabular_write_update():
 
 
 @patch("pyout.Terminal", TestTerminal)
-def test_tabular_write_update_notfound():
+def test_tabular_rewrite_notfound():
     fd = StringIO()
     out = Tabular(["name", "status"],
                   stream=fd, force_styling=True)
@@ -416,13 +417,13 @@ def test_tabular_write_update_notfound():
         out(row)
 
     with pytest.raises(ValueError):
-        out.rewrite({"name": "not here"}, "status", "installed",
+        out.rewrite({"name": "not here"}, {"status": "installed"},
                     style={"name": {"width": 3},
                            "status": {"width": 9}})
 
 
 @patch("pyout.Terminal", TestTerminal)
-def test_tabular_write_update_multi_id():
+def test_tabular_rewrite_multi_id():
     fd = StringIO()
     out = Tabular(["name", "type", "status"],
                   style={"name": {"width": 3},
@@ -435,7 +436,7 @@ def test_tabular_write_update_multi_id():
     for row in data:
         out(row)
 
-    out.rewrite({"name": "foo", "type": "0"}, "status", "installed")
+    out.rewrite({"name": "foo", "type": "0"}, {"status": "installed"})
 
     expected = unicode_cap("cuu1") * 3 + unicode_cap("el") + "foo 0 installed"
     assert eq_repr(fd.getvalue().strip().splitlines()[-1],
@@ -443,7 +444,56 @@ def test_tabular_write_update_multi_id():
 
 
 @patch("pyout.Terminal", TestTerminal)
-def test_tabular_write_update_auto_width():
+def test_tabular_rewrite_multi_value():
+    fd = StringIO()
+    out = Tabular(["name", "type", "status"],
+                  style={"name": {"width": 3},
+                         "type": {"width": 1},
+                         "status": {"width": 9}},
+                  stream=fd, force_styling=True)
+    data = [{"name": "foo", "type": "0", "status": "unknown"},
+            {"name": "bar", "type": "1", "status": "unknown"}]
+    for row in data:
+        out(row)
+
+    out.rewrite({"name": "foo"}, {"status": "installed", "type": "3"})
+
+    expected = unicode_cap("cuu1") * 2 + unicode_cap("el") + "foo 3 installed"
+    assert eq_repr(fd.getvalue().strip().splitlines()[-1],
+                   expected)
+
+
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_rewrite_with_ids_property():
+    def write():
+        data = [{"name": "foo", "type": "0", "status": "unknown"},
+                {"name": "foo", "type": "1", "status": "unknown"},
+                {"name": "bar", "type": "2", "status": "installed"}]
+
+        fd = StringIO()
+        out = Tabular(["name", "type", "status"],
+                      style={"name": {"width": 3},
+                             "type": {"width": 1},
+                             "status": {"width": 9}},
+                      stream=fd, force_styling=True)
+        for row in data:
+            out(row)
+        return fd, out
+
+    fd_param, out_param = write()
+    fd_prop, out_prop = write()
+    out_prop.ids = ["name", "type"]
+
+    assert eq_repr(fd_param.getvalue(), fd_prop.getvalue())
+
+    out_param.rewrite({"name": "foo", "type": "0"}, {"status": "installed"})
+    out_prop.rewrite(["foo", "0"], {"status": "installed"})
+
+    assert eq_repr(fd_param.getvalue(), fd_prop.getvalue())
+
+
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_rewrite_auto_width():
     fd = StringIO()
     out = Tabular(["name", "status"],
                   style={"name": {"width": 3}, "status": {"width": "auto"}},
@@ -454,11 +504,34 @@ def test_tabular_write_update_auto_width():
     for row in data:
         out(row)
 
-    out.rewrite({"name": "bar"}, "status", "installed")
+    out.rewrite({"name": "bar"}, {"status": "installed"})
 
     lines = fd.getvalue().splitlines()
     assert len([ln for ln in lines if ln.endswith("foo unknown  ")]) == 1
     assert len([ln for ln in lines if ln.endswith("baz unknown  ")]) == 1
+
+
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_rewrite_data_as_list():
+    def init():
+        fd = StringIO()
+        out = Tabular(["name", "status"],
+                      style={"name": {"width": 3},
+                             "status": {"width": 9}},
+                      stream=fd)
+        return fd, out
+
+    fd_list, out_list = init()
+    out_list(["foo", "unknown"])
+    out_list(["bar", "installed"])
+    out_list.rewrite({"name": "foo"}, {"status": "installed"})
+
+    fd_dict, out_dict = init()
+    out_dict({"name": "foo", "status": "unknown"})
+    out_dict({"name": "bar", "status": "installed"})
+    out_dict.rewrite({"name": "foo"}, {"status": "installed"})
+
+    assert fd_list.getvalue() == fd_dict.getvalue()
 
 
 @patch("pyout.Terminal", TestTerminal)
@@ -773,3 +846,98 @@ def test_tabular_write_autowidth_different_data_types_same_output():
     out_list(["bar", "BAD!!!!!!!!!!!"])
 
     assert fd_dict.getvalue() == fd_list.getvalue()
+
+
+@pytest.mark.timeout(10)
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_callable_values():
+    update = False
+    def delay(value):
+        def fn():
+            while not update:
+                time.sleep(0.01)
+            return value
+        return fn
+
+    fd = StringIO()
+    with Tabular(["name", "status"], stream=fd, force_styling=True) as out:
+        out({"name": "foo", "status": ("thinking", delay("done"))})
+        out({"name": "bar", "status": "ok"})
+        out({"name": "baz", "status": ("waiting", delay("over"))})
+
+        expected = ("foo thinking\n"
+                    "bar ok      \n"
+                    "baz waiting \n")
+        assert eq_repr(fd.getvalue(), expected)
+
+        update = True
+    lines = fd.getvalue().splitlines()
+    assert len([ln for ln in lines if ln.endswith("foo done    ")]) == 1
+    assert len([ln for ln in lines if ln.endswith("baz over    ")]) == 1
+
+
+@pytest.mark.timeout(10)
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_callable_values_multi_return():
+    update = False
+    def delay():
+        while not update:
+            time.sleep(0.01)
+        return {"status": "done", "path": "/tmp/a"}
+
+    fd = StringIO()
+    out = Tabular(["name", "status", "path"], stream=fd, force_styling=True)
+    with out:
+        out({"name": "foo", ("status", "path"): ("...", delay)})
+        out({"name": "bar", "status": "ok", "path": "na"})
+
+        expected = ("foo ... ...\n"
+                    "bar ok  na \n")
+        assert eq_repr(fd.getvalue(), expected)
+
+        update = True
+    lines = fd.getvalue().splitlines()
+    assert len([ln for ln in lines if ln.endswith("foo done /tmp/a")]) == 1
+
+
+@pytest.mark.timeout(10)
+@pytest.mark.parametrize("result",
+                         [{"status": "done", "path": "/tmp/a"},
+                          ("done", "/tmp/a")],
+                         ids=["result=tuple", "result=dict"])
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_callable_values_multicol_key_infer_column(result):
+    update = False
+    def delay():
+        while not update:
+            time.sleep(0.01)
+        return result
+
+    fd = StringIO()
+    out = Tabular(stream=fd, force_styling=True)
+    with out:
+        out(OrderedDict([("name", "foo"),
+                         (("status", "path"), ("...", delay))]))
+        out(OrderedDict([("name", "bar"),
+                         ("status", "ok"),
+                         ("path", "na")]))
+
+        expected = ("foo ... ...\n"
+                    "bar ok  na \n")
+        assert eq_repr(fd.getvalue(), expected)
+
+        update = True
+    lines = fd.getvalue().splitlines()
+    assert len([ln for ln in lines if ln.endswith("foo done /tmp/a")]) == 1
+
+
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_wait_noop_if_nothreads():
+    fd = StringIO()
+    with Tabular(["name", "status"], stream=fd, force_styling=True) as out:
+        out({"name": "foo", "status": "done"})
+        out({"name": "bar", "status": "ok"})
+
+        expected = ("foo done\n"
+                    "bar ok  \n")
+        assert eq_repr(fd.getvalue(), expected)
