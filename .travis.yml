@@ -7,12 +7,16 @@ python:
 
 install:
   - pip install -U pip
+  - pip install codecov
   - pip install .[full]
 
 script:
-  - py.test --doctest-modules -v pyout.py test_pyout.py
+  - coverage run setup.py test
 
 notifications:
   email:
     on_success: never
     on_failure: always
+
+after_success:
+  - codecov

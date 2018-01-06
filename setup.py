@@ -17,6 +17,8 @@ setup(
     license="MIT",
     url="https://github.com/pyout/pyout.git",
     py_modules=["pyout"],
+    tests_require=requires["tests"],
+    setup_requires=["pytest-runner"],
     install_requires=requires["core"],
     extras_require=requires,
     long_description=open("README.rst").read(),

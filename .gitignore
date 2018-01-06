@@ -9,3 +9,5 @@ __pycache__
 /venv*
 /.tox
 /.cache
+/.coverage
+/htmlcov
