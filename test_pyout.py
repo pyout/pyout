@@ -118,6 +118,12 @@ def test_style_value_type():
     with pytest.raises(ValueError):
         fn({"unknown": 1})
 
+
+def test_style_processor_translate():
+    sp = StyleProcessors()
+    with pytest.raises(NotImplementedError):
+        sp.translate("name")
+
 ### Tabular tests
 
 ## TestTerminal, unicode_cap, and unicode_parm are copied from
@@ -611,6 +617,23 @@ def test_tabular_write_label_bold():
 
 
 @patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_label_bold_false():
+    fd = StringIO()
+    out = Tabular(style={"name": {"width": 3},
+                         "status": {"bold": {"label": {"BAD": False}},
+                                    "width": 6}},
+                  stream=fd, force_styling=True)
+    out(OrderedDict([("name", "foo"),
+                     ("status", "OK")]))
+    out(OrderedDict([("name", "bar"),
+                     ("status", "BAD")]))
+
+    expected = ("foo OK    \n"
+                "bar BAD   \n")
+    assert eq_repr(fd.getvalue(), expected)
+
+
+@patch("pyout.Terminal", TestTerminal)
 def test_tabular_write_intervals_color():
     fd = StringIO()
     out = Tabular(style={"name": {"width": 3},
@@ -845,6 +868,18 @@ def test_tabular_write_autowidth_different_data_types_same_output():
     out_list(["bar", "BAD!!!!!!!!!!!"])
 
     assert fd_dict.getvalue() == fd_list.getvalue()
+
+
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_autowidth_auto_false_exception():
+    fd = StringIO()
+    out = Tabular(style={"header_": {},
+                         "name": {"width": 4},
+                         "status": {"width": {"auto": False}}},
+                  stream=fd, force_styling=True)
+    with pytest.raises(ValueError):
+        out(OrderedDict([("name", "foo"),
+                         ("status", "U")]))
 
 
 class Delayed(object):
