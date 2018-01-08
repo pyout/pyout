@@ -19,10 +19,3 @@ TODO Summary
 ### Fixed
 ### Removed
 ### Security
-
----
-
-## References
-[datalad]: http://datalad.org
-[niceman]: http://niceman.repronim.org
-[repronim]: http://repronim.org
