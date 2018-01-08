@@ -3,7 +3,6 @@ from collections import OrderedDict
 from curses import tigetstr, tparm
 from functools import partial
 from six.moves import StringIO
-import time
 
 import blessings
 from mock import patch
@@ -118,6 +117,12 @@ def test_style_value_type():
 
     with pytest.raises(ValueError):
         fn({"unknown": 1})
+
+
+def test_style_processor_translate():
+    sp = StyleProcessors()
+    with pytest.raises(NotImplementedError):
+        sp.translate("name")
 
 ### Tabular tests
 
@@ -612,6 +617,23 @@ def test_tabular_write_label_bold():
 
 
 @patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_label_bold_false():
+    fd = StringIO()
+    out = Tabular(style={"name": {"width": 3},
+                         "status": {"bold": {"label": {"BAD": False}},
+                                    "width": 6}},
+                  stream=fd, force_styling=True)
+    out(OrderedDict([("name", "foo"),
+                     ("status", "OK")]))
+    out(OrderedDict([("name", "bar"),
+                     ("status", "BAD")]))
+
+    expected = ("foo OK    \n"
+                "bar BAD   \n")
+    assert eq_repr(fd.getvalue(), expected)
+
+
+@patch("pyout.Terminal", TestTerminal)
 def test_tabular_write_intervals_color():
     fd = StringIO()
     out = Tabular(style={"name": {"width": 3},
@@ -848,29 +870,53 @@ def test_tabular_write_autowidth_different_data_types_same_output():
     assert fd_dict.getvalue() == fd_list.getvalue()
 
 
+@patch("pyout.Terminal", TestTerminal)
+def test_tabular_write_autowidth_auto_false_exception():
+    fd = StringIO()
+    out = Tabular(style={"header_": {},
+                         "name": {"width": 4},
+                         "status": {"width": {"auto": False}}},
+                  stream=fd, force_styling=True)
+    with pytest.raises(ValueError):
+        out(OrderedDict([("name", "foo"),
+                         ("status", "U")]))
+
+
+class Delayed(object):
+    """Helper for producing a delayed callable.
+    """
+
+    def __init__(self, value):
+        self.value = value
+        self.now = False
+
+    def run(self):
+        """Return `value` once `now` is true.
+        """
+        while True:
+            if self.now:
+                return self.value
+
+
 @pytest.mark.timeout(10)
 @patch("pyout.Terminal", TestTerminal)
 def test_tabular_write_callable_values():
-    update = False
-    def delay(value):
-        def fn():
-            while not update:
-                time.sleep(0.01)
-            return value
-        return fn
+    delay0 = Delayed("done")
+    delay1 = Delayed("over")
 
     fd = StringIO()
     with Tabular(["name", "status"], stream=fd, force_styling=True) as out:
-        out({"name": "foo", "status": ("thinking", delay("done"))})
+        out({"name": "foo", "status": ("thinking", delay0.run)})
         out({"name": "bar", "status": "ok"})
-        out({"name": "baz", "status": ("waiting", delay("over"))})
+        out({"name": "baz", "status": ("waiting", delay1.run)})
 
         expected = ("foo thinking\n"
                     "bar ok      \n"
                     "baz waiting \n")
         assert eq_repr(fd.getvalue(), expected)
 
-        update = True
+        delay0.now = True
+        delay1.now = True
     lines = fd.getvalue().splitlines()
     assert len([ln for ln in lines if ln.endswith("foo done    ")]) == 1
     assert len([ln for ln in lines if ln.endswith("baz over    ")]) == 1
@@ -879,23 +925,19 @@ def test_tabular_write_callable_values():
 @pytest.mark.timeout(10)
 @patch("pyout.Terminal", TestTerminal)
 def test_tabular_write_callable_values_multi_return():
-    update = False
-    def delay():
-        while not update:
-            time.sleep(0.01)
-        return {"status": "done", "path": "/tmp/a"}
+    delay = Delayed({"status": "done", "path": "/tmp/a"})
 
     fd = StringIO()
     out = Tabular(["name", "status", "path"], stream=fd, force_styling=True)
     with out:
-        out({"name": "foo", ("status", "path"): ("...", delay)})
+        out({"name": "foo", ("status", "path"): ("...", delay.run)})
         out({"name": "bar", "status": "ok", "path": "na"})
 
         expected = ("foo ... ...\n"
                     "bar ok  na \n")
         assert eq_repr(fd.getvalue(), expected)
 
-        update = True
+        delay.now = True
     lines = fd.getvalue().splitlines()
     assert len([ln for ln in lines if ln.endswith("foo done /tmp/a")]) == 1
 
@@ -907,17 +949,12 @@ def test_tabular_write_callable_values_multi_return():
                          ids=["result=tuple", "result=dict"])
 @patch("pyout.Terminal", TestTerminal)
 def test_tabular_write_callable_values_multicol_key_infer_column(result):
-    update = False
-    def delay():
-        while not update:
-            time.sleep(0.01)
-        return result
-
+    delay = Delayed(result)
     fd = StringIO()
     out = Tabular(stream=fd, force_styling=True)
     with out:
         out(OrderedDict([("name", "foo"),
-                         (("status", "path"), ("...", delay))]))
+                         (("status", "path"), ("...", delay.run))]))
         out(OrderedDict([("name", "bar"),
                          ("status", "ok"),
                          ("path", "na")]))
@@ -926,7 +963,7 @@ def test_tabular_write_callable_values_multicol_key_infer_column(result):
                     "bar ok  na \n")
         assert eq_repr(fd.getvalue(), expected)
 
-        update = True
+        delay.now = True
     lines = fd.getvalue().splitlines()
     assert len([ln for ln in lines if ln.endswith("foo done /tmp/a")]) == 1
 

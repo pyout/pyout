@@ -182,17 +182,8 @@ class Field(object):
         self._width = value
         self._fmt = self._build_format()
 
-    @property
-    def align(self):
-        return self._align
-
-    @align.setter
-    def align(self, value):
-        self._align = value
-        self._fmt = self._build_format()
-
     def _build_format(self):
-        align = self._align_values[self.align]
+        align = self._align_values[self._align]
         return "".join(["{:", align, str(self.width), "}"])
 
     def __call__(self, value, which="default"):
@@ -766,9 +757,9 @@ class Tabular(object):
                 tab.rewrite(id_vals, result)
             elif isinstance(result, tuple):
                 tab.rewrite(id_vals, dict(zip(cols, result)))
-            else:
-                if len(cols) != 1:
-                    ValueError("Expected only one column")
+            elif len(cols) == 1:
+                ## Don't bother raising an exception if cols != 1
+                ## because it would be lost in the thread.
                 tab.rewrite(id_vals, {cols[0]: result})
 
         if self._pool is None:
