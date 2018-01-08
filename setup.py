@@ -28,6 +28,7 @@ setup(
         "Environment :: Console",
         "Development Status :: 1 - Planning",
         "Topic :: Utilities",
+        "Operating System :: POSIX",
         "Programming Language :: Python :: 2",
         "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
