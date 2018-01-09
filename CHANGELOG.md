@@ -22,9 +22,9 @@ Initial release
 This release adds a basic schema for styling columns (defined in
 `pyout.SCHEMA`) and the `Tabular` class, which serves as the entry
 point for writing tabular output.  The features at this point include
-value-based styling, a `rewrite` method that allows the user to update
-a previous row, and the ability to update previous fields by defining
-asynchronous callback functions.
+value-based styling, auto-sizing of column widths, a `rewrite` method
+that allows the user to update a previous row, and the ability to
+update previous fields by defining asynchronous callback functions.
 
 
 [Unreleased]: https://github.com/pyout/pyout/compare/v0.1.0...HEAD
