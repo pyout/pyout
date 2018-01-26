@@ -1,5 +1,5 @@
 import pytest
-from pyout.elements import adopt
+from pyout.elements import adopt, StyleError, validate
 
 
 def test_adopt_noop():
@@ -40,3 +40,13 @@ def test_adopt():
             assert newstyle[key] == "non-mapping update"
         else:
             assert newstyle[key] == value
+
+
+def test_validate_error():
+    with pytest.raises(StyleError):
+        validate("not ok")
+
+
+def test_validate_ok():
+    validate({})
+    validate({"header_": {"colname": {"bold": True}}})

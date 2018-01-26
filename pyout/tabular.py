@@ -168,7 +168,7 @@ class Tabular(object):
         self._style["separator_"] = _safe_get(self._init_style, "separator_",
                                               elements.default("separator_"))
 
-        elements.validate(self._style, elements.schema)
+        elements.validate(self._style)
 
     def _setup_fields(self):
         self._fields = {}
@@ -285,7 +285,7 @@ class Tabular(object):
         fields = self._fields
 
         if style is not None:
-            elements.validate(style, elements.schema)
+            elements.validate(style)
 
             rowstyle = elements.adopt(self._style, style) if adopt else style
             for column in self._columns:

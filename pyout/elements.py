@@ -115,12 +115,6 @@ def default(prop):
     return schema["properties"][prop]["default"]
 
 
-try:
-    from jsonschema import validate
-except ImportError:
-    validate = lambda *_: None
-
-
 def adopt(style, new_style):
     if new_style is None:
         return style
@@ -132,3 +126,40 @@ def adopt(style, new_style):
         else:
             combined[key] = new_style.get(key, value)
     return combined
+
+
+class StyleError(Exception):
+    """Exception raised for an invalid style.
+    """
+    def __init__(self, original_exception):
+        msg = ("Invalid style\n\n{}\n\n\n"
+               "See pyout.schema for style definition."
+               .format(original_exception))
+        super(StyleError, self).__init__(msg)
+
+
+def validate(style):
+    """Check `style` against pyout.styling.schema.
+
+    Parameters
+    ----------
+    style : dict
+        Style object to validate.
+
+    Raises
+    ------
+    StyleError if `style` is not valid.
+    """
+    try:
+        import jsonschema
+    except ImportError:
+        return
+
+    try:
+        jsonschema.validate(style, schema)
+    except jsonschema.ValidationError as exc:
+        new_exc = StyleError(exc)
+        # Don't dump the original jsonschema exception because it is
+        # already included in the StyleError's message.
+        new_exc.__cause__ = None
+        raise new_exc
