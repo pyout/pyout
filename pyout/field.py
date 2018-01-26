@@ -1,3 +1,5 @@
+"""Define a "field" based on a sequence of processor functions.
+"""
 
 
 class Field(object):

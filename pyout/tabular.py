@@ -1,7 +1,6 @@
-"""Terminal styling for tabular data.
+"""Interface for styling tabular output.
 
-TODO: Come up with a better one-line description.  Should emphasize
-style declaration.
+This module defines the Tabular entry point.
 """
 
 from collections import Mapping, OrderedDict, Sequence

@@ -1,3 +1,6 @@
+"""Style elements and schema validation.
+"""
+
 from collections import Mapping
 
 schema = {
@@ -102,6 +105,13 @@ schema = {
 
 
 def default(prop):
+    """Return the default value schema property.
+
+    Parameters
+    ----------
+    prop : str
+        A key for schema["properties"]
+    """
     return schema["properties"][prop]["default"]
 
 
