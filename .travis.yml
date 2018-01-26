@@ -4,11 +4,15 @@ sudo: false
 python:
   - 2.7
   - 3.6
+env:
+  - pip_schema=full
+  - pip_schema=core
 
 install:
   - pip install -U pip
   - pip install codecov
-  - pip install .[full]
+  - pip install .[$pip_schema]
+  - pip install .[tests]
 
 script:
   - coverage run setup.py test
