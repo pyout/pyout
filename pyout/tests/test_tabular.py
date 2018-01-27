@@ -8,123 +8,7 @@ import blessings
 from mock import patch
 import pytest
 
-from pyout import _adopt, Field, StyleProcessors, Tabular
-
-
-def test_adopt_noop():
-    default_value = {"align": "<",
-                     "width": 10,
-                     "attrs": []}
-
-    style = {"name": default_value,
-             "path": default_value,
-             "status": default_value}
-
-    newstyle = _adopt(style, None)
-    for key, value in style.items():
-        assert newstyle[key] == value
-
-
-def test_adopt():
-    default_value = {"align": "<",
-                     "width": 10,
-                     "attrs": []}
-
-    style = {"name": default_value,
-             "path": default_value,
-             "status": default_value,
-             "sep_": "non-mapping"}
-
-    newstyle = _adopt(style, {"path": {"width": 99},
-                              "status": {"attrs": ["foo"]},
-                              "sep_": "non-mapping update"})
-    for key, value in style.items():
-        if key == "path":
-            expected = {"align": "<", "width": 99, "attrs": []}
-            assert newstyle[key] == expected
-        elif key == "status":
-            expected = {"align": "<", "width": 10, "attrs": ["foo"]}
-            assert newstyle[key] == expected
-        elif key == "sep_":
-            assert newstyle[key] == "non-mapping update"
-        else:
-            assert newstyle[key] == value
-
-
-def test_field_base():
-    assert Field()("ok") == "ok        "
-    assert Field(width=5, align="right")("ok") == "   ok"
-
-
-def test_field_update():
-    field = Field()
-    field.width = 2
-    assert field("ok") == "ok"
-
-
-def test_field_processors():
-    field = Field(width=6, align="center")
-
-    def proc1(_, result):
-        return "AAA" + result
-
-    def proc2(_, result):
-        return result + "ZZZ"
-
-    field.processors["default"] = [proc1, proc2]
-
-    assert field("ok") == "AAA  ok  ZZZ"
-
-
-def test_truncate_mark_true():
-    fn = StyleProcessors.truncate(7, marker=True)
-
-    assert fn(None, "abc") == "abc"
-    assert fn(None, "abcdefg") == "abcdefg"
-    assert fn(None, "abcdefgh") == "abcd..."
-
-
-def test_truncate_mark_string():
-    fn = StyleProcessors.truncate(7, marker=u"…")
-
-    assert fn(None, "abc") == "abc"
-    assert fn(None, "abcdefg") == "abcdefg"
-    assert fn(None, "abcdefgh") == u"abcdef…"
-
-
-def test_truncate_mark_short():
-    fn = StyleProcessors.truncate(2, marker=True)
-    assert fn(None, "abc") == ".."
-
-
-def test_truncate_nomark():
-    fn = StyleProcessors.truncate(7, marker=False)
-
-    assert fn(None, "abc") == "abc"
-    assert fn(None, "abcdefg") == "abcdefg"
-    assert fn(None, "abcdefgh") == "abcdefg"
-
-
-def test_style_value_type():
-    fn = StyleProcessors.value_type
-
-    assert fn(True) == "simple"
-    assert fn("red") == "simple"
-    assert fn({"label": {"BAD": "red"}}) == "label"
-
-    interval = {"interval": [(0, 50, "red"), (50, 80, "yellow")]}
-    assert fn(interval) == "interval"
-
-    with pytest.raises(ValueError):
-        fn({"unknown": 1})
-
-
-def test_style_processor_translate():
-    sp = StyleProcessors()
-    with pytest.raises(NotImplementedError):
-        sp.translate("name")
-
-### Tabular tests
+from pyout import Tabular
 
 ## TestTerminal, unicode_cap, and unicode_parm are copied from
 ## blessings' tests.
@@ -152,7 +36,7 @@ def eq_repr(a, b):
     return repr(a) == repr(b)
 
 
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_color():
     fd = StringIO()
     out = Tabular(["name"],
@@ -165,7 +49,7 @@ def test_tabular_write_color():
     assert eq_repr(fd.getvalue(), expected)
 
 
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_columns_from_orderdict_row():
     fd = StringIO()
     out = Tabular(style={"name": {"width": 3},
@@ -186,7 +70,7 @@ def test_tabular_write_columns_from_orderdict_row():
 @pytest.mark.parametrize("row", [["foo", "ok"],
                                  {"name": "foo", "status": "ok"}],
                          ids=["sequence", "dict"])
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_columns_orderdict_mapping(row):
     fd = StringIO()
     out = Tabular(OrderedDict([("name", "Long name"),
@@ -203,7 +87,7 @@ def test_tabular_write_columns_orderdict_mapping(row):
     assert eq_repr(fd.getvalue(), expected)
 
 
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_data_as_list():
     fd = StringIO()
     out = Tabular(["name", "status"],
@@ -217,7 +101,7 @@ def test_tabular_write_data_as_list():
     assert eq_repr(fd.getvalue(), expected)
 
 
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_header():
     fd = StringIO()
     out = Tabular(["name", "status"],
@@ -236,7 +120,7 @@ def test_tabular_write_header():
     assert eq_repr(fd.getvalue(), expected)
 
 
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_data_as_object():
     class Data(object):
         def __init__(self, data):
@@ -259,7 +143,7 @@ def test_tabular_write_data_as_object():
     assert fd.getvalue() == expected
 
 
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_different_data_types_same_output():
     style = {"header_": {},
              "name": {"width": 10},
@@ -289,7 +173,7 @@ def test_tabular_write_different_data_types_same_output():
     assert fd_dict.getvalue() == fd_od.getvalue()
 
 
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_header_with_style():
     fd = StringIO()
     out = Tabular(["name", "status"],
@@ -308,7 +192,7 @@ def test_tabular_write_header_with_style():
     assert eq_repr(fd.getvalue(), expected)
 
 
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_nondefault_separator():
     fd = StringIO()
     out = Tabular(["name", "status"],
@@ -328,7 +212,7 @@ def test_tabular_nondefault_separator():
     assert eq_repr(fd.getvalue(), expected)
 
 
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_data_as_list_no_columns():
     fd = StringIO()
     out = Tabular(style={"name": {"width": 3},
@@ -338,7 +222,7 @@ def test_tabular_write_data_as_list_no_columns():
         out(["foo", "installed"])
 
 
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_style_override():
     fd = StringIO()
     out = Tabular(["name"],
@@ -352,7 +236,7 @@ def test_tabular_write_style_override():
     assert eq_repr(fd.getvalue(), expected)
 
 
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_default_style():
     fd = StringIO()
     out = Tabular(["name", "status"],
@@ -366,7 +250,7 @@ def test_tabular_default_style():
     assert fd.getvalue() == expected
 
 
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_multicolor():
     fd = StringIO()
     out = Tabular(["name", "status"],
@@ -382,7 +266,7 @@ def test_tabular_write_multicolor():
     assert eq_repr(fd.getvalue(), expected)
 
 
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_align():
     fd = StringIO()
     out = Tabular(["name"],
@@ -393,7 +277,7 @@ def test_tabular_write_align():
     assert eq_repr(fd.getvalue(), "       foo\n")
 
 
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_rewrite():
     fd = StringIO()
     out = Tabular(["name", "status"],
@@ -411,7 +295,7 @@ def test_tabular_rewrite():
                    expected)
 
 
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_rewrite_notfound():
     fd = StringIO()
     out = Tabular(["name", "status"],
@@ -427,7 +311,7 @@ def test_tabular_rewrite_notfound():
                            "status": {"width": 9}})
 
 
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_rewrite_multi_id():
     fd = StringIO()
     out = Tabular(["name", "type", "status"],
@@ -448,7 +332,7 @@ def test_tabular_rewrite_multi_id():
                    expected)
 
 
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_rewrite_multi_value():
     fd = StringIO()
     out = Tabular(["name", "type", "status"],
@@ -468,7 +352,7 @@ def test_tabular_rewrite_multi_value():
                    expected)
 
 
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_rewrite_with_ids_property():
     def write():
         data = [{"name": "foo", "type": "0", "status": "unknown"},
@@ -497,7 +381,7 @@ def test_tabular_rewrite_with_ids_property():
     assert eq_repr(fd_param.getvalue(), fd_prop.getvalue())
 
 
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_rewrite_auto_width():
     fd = StringIO()
     out = Tabular(["name", "status"],
@@ -516,7 +400,7 @@ def test_tabular_rewrite_auto_width():
     assert len([ln for ln in lines if ln.endswith("baz unknown  ")]) == 1
 
 
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_rewrite_data_as_list():
     def init():
         fd = StringIO()
@@ -539,7 +423,7 @@ def test_tabular_rewrite_data_as_list():
     assert fd_list.getvalue() == fd_dict.getvalue()
 
 
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_repaint():
     fd = StringIO()
     out = Tabular(["name", "status"],
@@ -557,7 +441,7 @@ def test_tabular_repaint():
     assert unicode_cap("el") + "bar installed" in lines
 
 
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_repaint_with_header():
     fd = StringIO()
     out = Tabular(["name", "status"],
@@ -580,7 +464,7 @@ def test_tabular_repaint_with_header():
     assert header in lines
 
 
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_label_color():
     fd = StringIO()
     out = Tabular(style={"name": {"width": 3},
@@ -598,7 +482,7 @@ def test_tabular_write_label_color():
     assert eq_repr(fd.getvalue(), expected)
 
 
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_label_bold():
     fd = StringIO()
     out = Tabular(style={"name": {"width": 3},
@@ -616,7 +500,7 @@ def test_tabular_write_label_bold():
     assert eq_repr(fd.getvalue(), expected)
 
 
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_label_bold_false():
     fd = StringIO()
     out = Tabular(style={"name": {"width": 3},
@@ -633,7 +517,7 @@ def test_tabular_write_label_bold_false():
     assert eq_repr(fd.getvalue(), expected)
 
 
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_intervals_color():
     fd = StringIO()
     out = Tabular(style={"name": {"width": 3},
@@ -655,7 +539,7 @@ def test_tabular_write_intervals_color():
     assert eq_repr(fd.getvalue(), expected)
 
 
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_intervals_color_open_ended():
     fd = StringIO()
     out = Tabular(style={"name": {"width": 3},
@@ -676,7 +560,7 @@ def test_tabular_write_intervals_color_open_ended():
     assert eq_repr(fd.getvalue(), expected)
 
 
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_intervals_color_outside_intervals():
     fd = StringIO()
     out = Tabular(style={"name": {"width": 3},
@@ -695,7 +579,7 @@ def test_tabular_write_intervals_color_outside_intervals():
     assert eq_repr(fd.getvalue(), expected)
 
 
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_intervals_bold():
     fd = StringIO()
     out = Tabular(style={"name": {"width": 3},
@@ -715,7 +599,7 @@ def test_tabular_write_intervals_bold():
     assert eq_repr(fd.getvalue(), expected)
 
 
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_width_truncate_long():
     fd = StringIO()
     out = Tabular(style={"name": {"width": 8},
@@ -731,7 +615,7 @@ def test_tabular_write_width_truncate_long():
     assert fd.getvalue() == expected
 
 
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_autowidth():
     fd = StringIO()
     out = Tabular(style={"name": {"width": "auto"},
@@ -750,7 +634,7 @@ def test_tabular_write_autowidth():
     assert len([ln for ln in lines if ln.endswith("fooab OK  /tmp/a")]) == 1
 
 
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_autowidth_with_header():
     fd = StringIO()
     out = Tabular(style={"header_": {},
@@ -766,7 +650,7 @@ def test_tabular_write_autowidth_with_header():
     assert len([ln for ln in lines if ln.endswith("name   status")]) == 1
 
 
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_autowidth_min():
     fd = StringIO()
     out = Tabular(style={"name": {"width": "auto"},
@@ -787,7 +671,7 @@ def test_tabular_write_autowidth_min():
 
 @pytest.mark.parametrize("marker", [True, False, u"…"],
                          ids=["marker=True", "marker=False", u"marker=…"])
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_autowidth_min_max(marker):
     fd = StringIO()
     out = Tabular(style={"name": {"width": 3},
@@ -823,7 +707,7 @@ def test_tabular_write_autowidth_min_max(marker):
         assert len([ln for ln in lines if ln.endswith("bar BAD!... /tmp/")]) == 1
 
 
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_autowidth_min_max_with_header():
     fd = StringIO()
     out = Tabular(style={"header_": {},
@@ -845,7 +729,7 @@ def test_tabular_write_autowidth_min_max_with_header():
     assert len([ln for ln in lines1 if ln.endswith("bar  BAD!!...")]) == 1
 
 
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_autowidth_different_data_types_same_output():
     fd_dict = StringIO()
     out_dict = Tabular(["name", "status"],
@@ -870,7 +754,7 @@ def test_tabular_write_autowidth_different_data_types_same_output():
     assert fd_dict.getvalue() == fd_list.getvalue()
 
 
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_autowidth_auto_false_exception():
     fd = StringIO()
     out = Tabular(style={"header_": {},
@@ -899,7 +783,7 @@ class Delayed(object):
 
 
 @pytest.mark.timeout(10)
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_callable_values():
     delay0 = Delayed("done")
     delay1 = Delayed("over")
@@ -923,7 +807,7 @@ def test_tabular_write_callable_values():
 
 
 @pytest.mark.timeout(10)
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_callable_values_multi_return():
     delay = Delayed({"status": "done", "path": "/tmp/a"})
 
@@ -947,7 +831,7 @@ def test_tabular_write_callable_values_multi_return():
                          [{"status": "done", "path": "/tmp/a"},
                           ("done", "/tmp/a")],
                          ids=["result=tuple", "result=dict"])
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_callable_values_multicol_key_infer_column(result):
     delay = Delayed(result)
     fd = StringIO()
@@ -968,7 +852,7 @@ def test_tabular_write_callable_values_multicol_key_infer_column(result):
     assert len([ln for ln in lines if ln.endswith("foo done /tmp/a")]) == 1
 
 
-@patch("pyout.Terminal", TestTerminal)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_wait_noop_if_nothreads():
     fd = StringIO()
     with Tabular(["name", "status"], stream=fd, force_styling=True) as out:

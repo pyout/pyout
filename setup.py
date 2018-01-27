@@ -16,7 +16,7 @@ setup(
     description="Terminal styling for tabular data",
     license="MIT",
     url="https://github.com/pyout/pyout.git",
-    py_modules=["pyout"],
+    packages=["pyout", "pyout.tests"],
     tests_require=requires["tests"],
     setup_requires=["pytest-runner"],
     install_requires=requires["core"],
