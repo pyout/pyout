@@ -29,19 +29,22 @@ class TermProcessors(StyleProcessors):
     def __init__(self, term):
         self.term = term
 
-    def translate(self, name):
-        """Translate a style key into a Terminal code.
+    def render(self, key, value):
+        """Prepend terminal code for `key` to `value`.
 
         Parameters
         ----------
-        name : str
+        key : str
             A style key (e.g., "bold").
+        value : str
+            The value to render.
 
         Returns
         -------
-        An output-specific translation of `name` (e.g., "\x1b[1m").
+        The code for `key` (e.g., "\x1b[1m" for bold) plus the
+        original value.
         """
-        return str(getattr(self.term, name))
+        return str(getattr(self.term, key)) + value
 
     def _maybe_reset(self):
         def maybe_reset_fn(_, result):
