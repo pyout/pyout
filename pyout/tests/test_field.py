@@ -91,7 +91,7 @@ def test_style_value_type():
         fn({"unknown": 1})
 
 
-def test_style_processor_translate():
+def test_style_processor_render():
     sp = StyleProcessors()
     with pytest.raises(NotImplementedError):
-        sp.translate("name")
+        sp.render("key", "value")
