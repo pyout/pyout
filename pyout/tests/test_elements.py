@@ -43,6 +43,11 @@ def test_adopt():
 
 
 def test_validate_error():
+    try:
+        import jsonschema
+    except ImportError:
+        pytest.skip("jsonschema is not installed")
+
     with pytest.raises(StyleError):
         validate("not ok")
 
