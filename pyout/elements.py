@@ -11,7 +11,7 @@ schema = {
             "type": "string",
             "enum": ["left", "right", "center"],
             "default": "left",
-            "scope": "table"},
+            "scope": "column"},
         "bold": {
             "description": "Whether text is bold",
             "oneOf": [{"type": "boolean"},
@@ -46,7 +46,7 @@ schema = {
                            "max": {"type": ["integer", "null"]},
                            "min": {"type": ["integer", "null"]}}}],
             "default": "auto",
-            "scope": "table"},
+            "scope": "column"},
         "styles": {
             "type": "object",
             "properties": {"align": {"$ref": "#/definitions/align"},
