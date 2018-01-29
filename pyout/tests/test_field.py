@@ -15,17 +15,22 @@ def test_field_update():
 
 
 def test_field_processors():
-    field = Field(width=6, align="center")
+    def pre(_, result):
+        return result.upper()
 
-    def proc1(_, result):
+    def post1(_, result):
         return "AAA" + result
 
-    def proc2(_, result):
+    def post2(_, result):
         return result + "ZZZ"
 
-    field.processors["default"] = [proc1, proc2]
+    field = Field(width=6, align="center")
+    field.add("pre", "some_key", pre)
+    field.add("post", "another_key", *[post1, post2])
+    assert field("ok") == "AAA  OK  ZZZ"
 
-    assert field("ok") == "AAA  ok  ZZZ"
+    with pytest.raises(ValueError):
+        field.add("not pre or post", "k")
 
 
 def test_truncate_mark_true():

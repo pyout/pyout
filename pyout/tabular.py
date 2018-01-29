@@ -47,10 +47,10 @@ class TermProcessors(StyleProcessors):
             return result
         return maybe_reset_fn
 
-    def from_style(self, column_style):
-        """Call StyleProcessors.from_style, adding a Terminal-specific reset.
+    def post_from_style(self, column_style):
+        """A Terminal-specific reset to StyleProcessors.post_from_style.
         """
-        for proc in super(TermProcessors, self).from_style(column_style):
+        for proc in super(TermProcessors, self).post_from_style(column_style):
             yield proc
         yield self._maybe_reset()
 
@@ -175,7 +175,7 @@ class Tabular(object):
         for column in self._columns:
             cstyle = self._style[column]
 
-            procs = []
+            core_procs = []
             style_width = cstyle["width"]
             is_auto = style_width == "auto" or _safe_get(style_width, "auto")
 
@@ -187,17 +187,24 @@ class Tabular(object):
 
                 if wmax is not None:
                     marker = _safe_get(style_width, "marker", True)
-                    procs = [self._tproc.truncate(wmax, marker)]
+                    core_procs = [self._tproc.truncate(wmax, marker)]
             elif is_auto is False:
                 raise ValueError("No 'width' specified")
             else:
                 width = style_width
-                procs = [self._tproc.truncate(width)]
+                core_procs = [self._tproc.truncate(width)]
 
+            # We are creating a distinction between "core" processors,
+            # that we always want to be active and "default"
+            # processors that we want to be active unless there's an
+            # overriding style (i.e., a header is being written or the
+            # `style` argument to __call__ is specified).
             field = Field(width=width, align=cstyle["align"])
-            field.processors["core"] = procs
-            field.processors["default"] = list(self._tproc.from_style(cstyle))
-
+            field.add("pre", "default",
+                      *(self._tproc.pre_from_style(cstyle)))
+            field.add("post", "core", *core_procs)
+            field.add("post", "default",
+                      *(self._tproc.post_from_style(cstyle)))
             self._fields[column] = field
 
     @property
@@ -290,13 +297,17 @@ class Tabular(object):
 
             rowstyle = elements.adopt(self._style, style) if adopt else style
             for column in self._columns:
-                fields[column].processors["row"] = list(
-                    self._tproc.from_style(rowstyle[column]))
-            proc_key = "row"
+                fields[column].pre["row"] = list(
+                    self._tproc.pre_from_style(rowstyle[column]))
+                fields[column].post["row"] = list(
+                    self._tproc.post_from_style(rowstyle[column]))
+            # Override the "default" processor key with "row".
+            proc_keys = {"pre_keys": ["row"], "post_keys": ["core", "row"]}
         else:
-            proc_key = "default"
+            # Use the set of processors defined by _setup_fields.
+            proc_keys = {}
 
-        proc_fields = [fields[c](row[c], proc_key) for c in self._columns]
+        proc_fields = [fields[c](row[c], **proc_keys) for c in self._columns]
         self.term.stream.write(
             self._style["separator_"].join(proc_fields) + "\n")
 

@@ -1,16 +1,25 @@
 """Define a "field" based on a sequence of processor functions.
 """
+from itertools import chain
 
 
 class Field(object):
     """Render values based on a list of processors.
 
     A Field instance is a template for a string that is defined by its
-    width, text alignment, and its "processors".  When a field is
-    called with a value, it renders the value as a string with the
-    specified width and text alignment.  Before this string is
-    returned, it is passed through the chain of processors.  The
-    rendered string is the result returned by the last processor.
+    width, text alignment, and its "processors".
+
+    When a field is called with a value, the value is rendered in
+    three steps.
+
+                       pre -> format -> post
+
+    During the first step, the value is fed through the list of
+    pre-format processor functions.  The result of this value is then
+    formatted as a string with the specified width and alignment.
+    Finally, this result is fed through the list of the post-format
+    processors.  The rendered string is the result returned by the
+    last processor
 
     Parameters
     ----------
@@ -21,18 +30,13 @@ class Field(object):
     ----------
     width : int
     align : str
-    processors : dict
-        Each key maps to a list of processors.  The keys "core" and
-        "default" must always be present.  When an instance object is
-        called, the rendered result is always sent through the "core"
-        processors.  It will then be sent through the "default"
-        processors unless another key is provided as the optional
-        `which` argument.
-
-        A processor should take two positional arguments, the value
-        that is being rendered and the current result.  Its return
-        value will be passed to the next processor as the current
-        result.
+    pre, post : dict
+        Each key maps to a list of processors.
+    pre_keys, post_keys : list
+        These lists define with processor lists are called by default
+        and in what order.  The values can be overridden by the
+        providign `pre_keys` and `post_keys` arguments when calling
+        the instance.
     """
 
     _align_values = {"left": "<", "right": ">", "center": "^"}
@@ -42,7 +46,43 @@ class Field(object):
         self._align = align
         self._fmt = self._build_format()
 
-        self.processors = {"core": [], "default": []}
+        self.pre = {}
+        self.pre_keys = []
+        self.post = {}
+        self.post_keys = []
+
+    def add(self, kind, key, *values):
+        """Add processor functions.
+
+        This method both adds the processor function and registers the
+        key.  As a result, any processor added through this method
+        will be enabled when the instance is called without the
+        `pre_keys` (if kind is "pre") or `post_keys` argument (if kind
+        is "post").  To set up non-default keys, modify the `pre` or
+        `post` attributes directly.
+
+        Parameters
+        ----------
+        kind : {"pre", "post"}
+        key : str
+            Put the functions under this key in the pre or post
+            processor collection.
+        *values : callables
+            Processors to add.
+        """
+        if kind == "pre":
+            procs, keys = self.pre, self.pre_keys
+        elif kind == "post":
+            procs, keys = self.post, self.post_keys
+        else:
+            raise ValueError("kind is not 'pre' or 'post'")
+
+        if key not in keys:
+            keys.append(key)
+        if key not in procs:
+            procs[key] = []
+        for value in values:
+            procs[key].append(value)
 
     @property
     def width(self):
@@ -57,7 +97,12 @@ class Field(object):
         align = self._align_values[self._align]
         return "".join(["{:", align, str(self.width), "}"])
 
-    def __call__(self, value, which="default"):
+    def _format(self, _, result):
+        """Wrap format call as a two-argument processor function.
+        """
+        return self._fmt.format(result)
+
+    def __call__(self, value, pre_keys=None, post_keys=None):
         """Render `value` by feeding it through the processors.
 
         Parameters
@@ -67,8 +112,17 @@ class Field(object):
             A key for the `processors` attribute that indicates the
             list of processors to use in addition to the "core" list.
         """
-        result = self._fmt.format(value)
-        for fn in self.processors["core"] + self.processors[which]:
+        if pre_keys is None:
+            pre_keys = self.pre_keys
+        if post_keys is None:
+            post_keys = self.post_keys
+
+        pre_funcs = chain(*(self.pre[k] for k in pre_keys))
+        post_funcs = chain(*(self.post[k] for k in post_keys))
+
+        funcs = chain(pre_funcs, [self._format], post_funcs)
+        result = value
+        for fn in funcs:
             result = fn(value, result)
         return result
 
@@ -234,8 +288,24 @@ class StyleProcessors(object):
             return keys[0]
         raise ValueError("Type of `value` could not be determined")
 
-    def from_style(self, column_style):
-        """Yield processors based on `column_style`.
+    def pre_from_style(self, column_style):
+        """Yield pre-format processors based on `column_style`.
+
+        Parameters
+        ----------
+        column_style : dict
+            A style where the top-level keys correspond to style
+            attributes such as "bold" or "color".
+
+        Returns
+        -------
+        A generator object.
+        """
+        return
+        yield
+
+    def post_from_style(self, column_style):
+        """Yield post-format processors based on `column_style`.
 
         Parameters
         ----------
