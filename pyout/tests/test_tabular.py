@@ -37,6 +37,16 @@ COLORNUMS = {"black": 0, "red": 1, "green": 2, "yellow": 3, "blue": 4,
              "magenta": 5, "cyan": 6, "white": 7}
 
 
+def capres(name, value):
+    """Format value with CAP key, followed by a reset.
+    """
+    if name in COLORNUMS:
+        prefix = unicode_parm("setaf", COLORNUMS[name])
+    else:
+        prefix = unicode_cap(name)
+    return prefix + value + unicode_cap("sgr0")
+
+
 def eq_repr(a, b):
     """Compare the repr's of `a` and `b` to escape escape codes.
     """
@@ -65,8 +75,7 @@ def test_tabular_write_color():
                   stream=fd, force_styling=True)
     out({"name": "foo"})
 
-    expected = unicode_parm("setaf", COLORNUMS["green"]) + "foo" + \
-               unicode_cap("sgr0") + "\n"
+    expected = capres("green", "foo") + "\n"
     assert eq_repr(fd.getvalue(), expected)
 
 
@@ -246,10 +255,9 @@ def test_tabular_write_header_with_style():
     out({"name": "foo",
          "status": "installed"})
 
-    expected = unicode_cap("smul") + "name" + unicode_cap("sgr0") + " " + \
-               unicode_cap("smul") + "status" + unicode_cap("sgr0") + "   " + \
-               "\nfoo  " + unicode_parm("setaf", COLORNUMS["green"]) + \
-               "installed" + unicode_cap("sgr0") + "\n"
+    expected = capres("smul", "name") + " " + \
+               capres("smul", "status") + "   " + "\nfoo  " + \
+               capres("green", "installed") + "\n"
     assert eq_repr(fd.getvalue(), expected)
 
 
@@ -292,8 +300,7 @@ def test_tabular_write_style_override():
     out({"name": "foo"},
         style={"name": {"color": "black", "width": 3}})
 
-    expected = unicode_parm("setaf", COLORNUMS["black"]) + "foo" + \
-               unicode_cap("sgr0") + "\n"
+    expected = capres("black", "foo") + "\n"
     assert eq_repr(fd.getvalue(), expected)
 
 
@@ -320,10 +327,8 @@ def test_tabular_write_multicolor():
                   stream=fd, force_styling=True)
     out({"name": "foo", "status": "unknown"})
 
-    expected = unicode_parm("setaf", COLORNUMS["green"]) + "foo" + \
-               unicode_cap("sgr0") + " " + \
-               unicode_parm("setaf", COLORNUMS["white"]) + "unknown" + \
-               unicode_cap("sgr0") + "\n"
+    expected = capres("green", "foo") + " " + \
+               capres("white", "unknown") + "\n"
     assert eq_repr(fd.getvalue(), expected)
 
 
@@ -348,8 +353,7 @@ def test_tabular_write_style_flanking():
                   stream=fd, force_styling=True)
     out({"name": "foo", "status": "bad"})
     # The text is style but not the flanking whitespace.
-    expected = "foo," + "  " + \
-               unicode_cap("smul") + "bad" + unicode_cap("sgr0") + "  \n"
+    expected = "foo," + "  " + capres("smul", "bad") + "  \n"
     assert eq_repr(fd.getvalue(), expected)
 
 
@@ -484,8 +488,7 @@ def test_tabular_write_lookup_color():
                      ("status", "BAD")]))
 
     expected = "foo " + "OK    \n" + \
-               "bar " + unicode_parm("setaf", COLORNUMS["red"]) + \
-               "BAD" + unicode_cap("sgr0") + "   \n"
+               "bar " + capres("red", "BAD") + "   \n"
     assert eq_repr(fd.getvalue(), expected)
 
 
@@ -502,8 +505,7 @@ def test_tabular_write_lookup_bold():
                      ("status", "BAD")]))
 
     expected = "foo " + "OK    \n" + \
-               "bar " + unicode_cap("bold") + \
-               "BAD" + unicode_cap("sgr0") + "   \n"
+               "bar " + capres("bold", "BAD") + "   \n"
     assert eq_repr(fd.getvalue(), expected)
 
 
@@ -550,10 +552,8 @@ def test_tabular_write_intervals_color():
     out(OrderedDict([("name", "bar"),
                      ("percent", 33)]))
 
-    expected = "foo " + unicode_parm("setaf", COLORNUMS["green"]) + \
-               "88" + unicode_cap("sgr0") + "     \n" + \
-               "bar " + unicode_parm("setaf", COLORNUMS["red"]) + \
-               "33" + unicode_cap("sgr0") + "     \n"
+    expected = "foo " + capres("green", "88") + "     \n" + \
+               "bar " + capres("red", "33") + "     \n"
     assert eq_repr(fd.getvalue(), expected)
 
 
@@ -571,10 +571,8 @@ def test_tabular_write_intervals_color_open_ended():
     out(OrderedDict([("name", "bar"),
                      ("percent", 33)]))
 
-    expected = "foo " + unicode_parm("setaf", COLORNUMS["green"]) + \
-               "88" + unicode_cap("sgr0") + "     \n" + \
-               "bar " + unicode_parm("setaf", COLORNUMS["red"]) + \
-               "33" + unicode_cap("sgr0") + "     \n"
+    expected = "foo " + capres("green", "88") + "     \n" + \
+               "bar " + capres("red", "33") + "     \n"
     assert eq_repr(fd.getvalue(), expected)
 
 
@@ -592,8 +590,7 @@ def test_tabular_write_intervals_color_outside_intervals():
                      ("percent", 33)]))
 
     expected = "foo 88     \n" + \
-               "bar " + unicode_parm("setaf", COLORNUMS["red"]) + \
-               "33" + unicode_cap("sgr0") + "     \n"
+               "bar " + capres("red", "33") + "     \n"
     assert eq_repr(fd.getvalue(), expected)
 
 
@@ -611,8 +608,7 @@ def test_tabular_write_intervals_bold():
     out(OrderedDict([("name", "bar"),
                      ("percent", 33)]))
 
-    expected = "foo " + unicode_cap("bold") + \
-               "78" + unicode_cap("sgr0") + "\n" + \
+    expected = "foo " + capres("bold", "78") + "\n" + \
                "bar 33\n"
     assert eq_repr(fd.getvalue(), expected)
 
@@ -631,9 +627,7 @@ def test_tabular_write_intervals_missing():
     # Interval lookup function can handle a missing value.
     out(OrderedDict([("name", "bar")]))
 
-    expected = "foo " + unicode_cap("bold") + \
-               "78" + unicode_cap("sgr0") + "\n" + \
-               "bar   \n"
+    expected = "foo " + capres("bold", "78") + "\n" + "bar   \n"
     assert eq_repr(fd.getvalue(), expected)
 
 
