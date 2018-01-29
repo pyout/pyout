@@ -10,8 +10,8 @@ import pytest
 
 from pyout import Tabular
 
-## TestTerminal, unicode_cap, and unicode_parm are copied from
-## blessings' tests.
+# TestTerminal, unicode_cap, and unicode_parm are copied from
+# blessings' tests.
 
 TestTerminal = partial(blessings.Terminal, kind='xterm-256color')
 

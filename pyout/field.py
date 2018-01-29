@@ -125,7 +125,7 @@ class StyleProcessors(object):
         if marker is True:
             marker = "..."
 
-        ## TODO: Add an option to center the truncation marker?
+        # TODO: Add an option to center the truncation marker?
         def truncate_fn(_, result):
             if len(result) <= length:
                 return result

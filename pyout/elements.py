@@ -5,7 +5,7 @@ from collections import Mapping
 
 schema = {
     "definitions": {
-        ## Styles
+        # Styles
         "align": {
             "description": "Alignment of text",
             "type": "string",
@@ -55,7 +55,7 @@ schema = {
                            "underline": {"$ref": "#/definitions/underline"},
                            "width": {"$ref": "#/definitions/width"}},
             "additionalProperties": False},
-        ## Mapping types
+        # Mapping types
         "interval": {
             "description": "Map a value within an interval to a style",
             "type": "object",
@@ -99,7 +99,7 @@ schema = {
             "default": " ",
             "scope": "table"}
     },
-    ## All other keys are column names.
+    # All other keys are column names.
     "additionalProperties": {"$ref": "#/definitions/styles"}
 }
 

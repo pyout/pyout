@@ -162,7 +162,7 @@ class Tabular(object):
                           if k in self._header_attributes}
                 hstyle[col] = dict(cstyle, **self._init_style["header_"])
 
-        ## Store special keys in _style so that they can be validated.
+        # Store special keys in _style so that they can be validated.
         self._style["default_"] = default
         self._style["header_"] = hstyle
         self._style["separator_"] = _safe_get(self._init_style, "separator_",
@@ -313,8 +313,8 @@ class Tabular(object):
         try:
             self._set_widths(row)
         except RewritePrevious:
-            ## We're at the header, so there aren't any previous
-            ## lines to update.
+            # We're at the header, so there aren't any previous lines
+            # to update.
             pass
         self._writerow(row, style=self._style["header_"], adopt=False)
 
@@ -361,8 +361,8 @@ class Tabular(object):
             elif isinstance(result, tuple):
                 tab.rewrite(id_vals, dict(zip(cols, result)))
             elif len(cols) == 1:
-                ## Don't bother raising an exception if cols != 1
-                ## because it would be lost in the thread.
+                # Don't bother raising an exception if cols != 1
+                # because it would be lost in the thread.
                 tab.rewrite(id_vals, {cols[0]: result})
 
         if self._pool is None:
@@ -431,7 +431,7 @@ class Tabular(object):
             columns = list(row.keys())
         except AttributeError:
             raise ValueError("Can't infer columns from data")
-        ## Make sure we don't have any multi-column keys.
+        # Make sure we don't have any multi-column keys.
         flat = []
         for column in columns:
             if isinstance(column, tuple):
@@ -463,8 +463,8 @@ class Tabular(object):
             self.term.stream.write(self.term.move_down * (n - 1))
             self.term.stream.flush()
 
-    ## FIXME: This will break with stderr and when the output scrolls.
-    ## Maybe we could check term height and repaint?
+    # FIXME: This will break with stderr and when the output scrolls.
+    # Maybe we could check term height and repaint?
     def rewrite(self, ids, values, style=None):
         """Rewrite a row.
 
