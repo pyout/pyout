@@ -127,6 +127,15 @@ class Field(object):
         return result
 
 
+class StyleFunctionError(Exception):
+    """Signal that a style function failed.
+    """
+    def __init__(self, function):
+        msg = ("Style transform {} raised an exception. "
+               "See above.".format(function))
+        super(StyleFunctionError, self).__init__(msg)
+
+
 class StyleProcessors(object):
     """A base class for generating Field.processors for styled output.
 
@@ -191,6 +200,17 @@ class StyleProcessors(object):
                     return result[:marker_beg] + marker
             return result[:length]
         return truncate_fn
+
+    @staticmethod
+    def transform(function):
+        """Return a processor for a style's "transform" function.
+        """
+        def transform_fn(_, result):
+            try:
+                return function(result)
+            except:
+                raise StyleFunctionError(function)
+        return transform_fn
 
     def by_key(self, key):
         """Return a processor for the style given by `key`.
@@ -301,8 +321,8 @@ class StyleProcessors(object):
         -------
         A generator object.
         """
-        return
-        yield
+        if "transform" in column_style:
+            yield self.transform(column_style["transform"])
 
     def post_from_style(self, column_style):
         """Yield post-format processors based on `column_style`.
