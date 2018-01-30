@@ -248,12 +248,13 @@ class Tabular(object):
         rewrite = False
         for column in self._columns:
             if column in self._autowidth_columns:
+                field = self._fields[column]
                 value_width = len(str(row[column]))
                 wmax = self._autowidth_columns[column]["max"]
-                if value_width > self._fields[column].width:
-                    if wmax is None or self._fields[column].width < wmax:
+                if value_width > field.width:
+                    if wmax is None or field.width < wmax:
                         rewrite = True
-                    self._fields[column].width = value_width
+                    field.width = value_width
         if rewrite:
             raise RewritePrevious
 
