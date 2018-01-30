@@ -3,7 +3,7 @@
 
 
 class Field(object):
-    """Format, process, and render tabular fields.
+    """Render values based on a list of processors.
 
     A Field instance is a template for a string that is defined by its
     width, text alignment, and its "processors".  When a field is
