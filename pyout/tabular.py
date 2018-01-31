@@ -384,7 +384,7 @@ class Tabular(object):
             values are the data to write.  For a sequence, the items
             represent the values and are taken to be in the same order
             as the constructor's `columns` argument.  Any other object
-            type should have an attribute for each column in specified
+            type should have an attribute for each column specified
             via `columns`.
 
             Instead of a plain value, a column's value can be a tuple
