@@ -29,7 +29,6 @@ class Field(object):
     Attributes
     ----------
     width : int
-    align : str
     pre, post : dict of lists
         Each key maps to a list of processors.  Conceptually, `pre`
         and `post` are a list of functions that form a pipeline, but
