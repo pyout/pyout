@@ -23,8 +23,8 @@ class Field(object):
 
     Parameters
     ----------
-    width : int
-    align : {'left', 'right', 'center'}
+    width : int, optional
+    align : {'left', 'right', 'center'}, optional
 
     Attributes
     ----------
