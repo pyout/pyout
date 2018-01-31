@@ -301,7 +301,7 @@ class Tabular(object):
                 self._lock.release()
 
     def _style_proc_group(self, style, adopt=True):
-        """Return whether group is "default" or "overrriding".
+        """Return whether group is "default" or "override".
 
         In the case of "override", the self._fields pre-format and
         post-format processors will be set under the "override" key.

@@ -33,9 +33,9 @@ class Field(object):
     pre, post : dict
         Each key maps to a list of processors.
     pre_keys, post_keys : list
-        These lists define with processor lists are called by default
+        These lists define which processor lists are called by default
         and in what order.  The values can be overridden by the
-        providign `pre_keys` and `post_keys` arguments when calling
+        providing `pre_keys` and `post_keys` arguments when calling
         the instance.
     """
 
