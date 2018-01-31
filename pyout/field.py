@@ -107,9 +107,11 @@ class Field(object):
         Parameters
         ----------
         value : str
-        which : str, optional
-            A key for the `processors` attribute that indicates the
-            list of processors to use in addition to the "core" list.
+        pre_keys, post_keys : sequence, optional
+            These lists define which processor lists are called and in
+            what order.  If not specified, the keys defined by the
+            corresponding attribute (`pre_keys` or `post_keys`) will
+            be used.
         """
         if pre_keys is None:
             pre_keys = self.pre_keys
