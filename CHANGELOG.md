@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 TODO Summary
 
 ### Added
+
+- A new style attribute, "transform", has been added to the schema.
+
+  This feature can be used to provide a function that takes a field
+  value and returns a transformed field value.
+
 ### Changed
 ### Deprecated
 ### Fixed

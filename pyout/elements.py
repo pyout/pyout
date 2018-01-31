@@ -11,7 +11,7 @@ schema = {
             "type": "string",
             "enum": ["left", "right", "center"],
             "default": "left",
-            "scope": "table"},
+            "scope": "column"},
         "bold": {
             "description": "Whether text is bold",
             "oneOf": [{"type": "boolean"},
@@ -46,12 +46,13 @@ schema = {
                            "max": {"type": ["integer", "null"]},
                            "min": {"type": ["integer", "null"]}}}],
             "default": "auto",
-            "scope": "table"},
+            "scope": "column"},
         "styles": {
             "type": "object",
             "properties": {"align": {"$ref": "#/definitions/align"},
                            "bold": {"$ref": "#/definitions/bold"},
                            "color": {"$ref": "#/definitions/color"},
+                           "transform": {"$ref": "#/definitions/transform"},
                            "underline": {"$ref": "#/definitions/underline"},
                            "width": {"$ref": "#/definitions/width"}},
             "additionalProperties": False},
@@ -72,7 +73,14 @@ schema = {
             "description": "Map a value to a style",
             "type": "object",
             "properties": {"label": {"type": "object"}},
-            "additionalProperties": False}
+            "additionalProperties": False},
+        "transform": {
+            "description": """An arbitrary function.
+            This function will be called with the (unprocessed) field
+            value as the single argument and should return a
+            transformed value.  Note: This function should not have
+            side-effects because it may be called multiple times.""",
+            "scope": "field"}
     },
     "type": "object",
     "properties": {

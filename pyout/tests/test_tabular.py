@@ -9,6 +9,7 @@ from mock import patch
 import pytest
 
 from pyout import Tabular
+from pyout.field import StyleFunctionError
 
 # TestTerminal, unicode_cap, and unicode_parm are copied from
 # blessings' tests.
@@ -597,6 +598,85 @@ def test_tabular_write_intervals_bold():
                "78" + unicode_cap("sgr0") + "\n" + \
                "bar 33\n"
     assert eq_repr(fd.getvalue(), expected)
+
+
+@patch("pyout.tabular.Terminal", TestTerminal)
+def test_tabular_write_transform():
+    fd = StringIO()
+    out = Tabular(style={"val": {"transform": lambda x: x[::-1]}},
+                  stream=fd)
+    out(OrderedDict([("name", "foo"),
+                     ("val", "330")]))
+    out(OrderedDict([("name", "bar"),
+                     ("val", "780")]))
+
+    expected = ("foo 033\n"
+                "bar 087\n")
+    assert eq_repr(fd.getvalue(), expected)
+
+
+@patch("pyout.tabular.Terminal", TestTerminal)
+def test_tabular_write_transform_with_header():
+    fd = StringIO()
+    out = Tabular(style={"header_": {},
+                         "name": {"width": 4},
+                         "val": {"transform": lambda x: x[::-1]}},
+                  stream=fd)
+    out(OrderedDict([("name", "foo"),
+                     ("val", "330")]))
+    out(OrderedDict([("name", "bar"),
+                     ("val", "780")]))
+
+    expected = ("name val\n"
+                "foo  033\n"
+                "bar  087\n")
+    assert eq_repr(fd.getvalue(), expected)
+
+
+@patch("pyout.tabular.Terminal", TestTerminal)
+def test_tabular_write_transform_autowidth():
+    fd = StringIO()
+    out = Tabular(style={"val": {"transform": lambda x: x * 2}},
+                  stream=fd)
+    out(OrderedDict([("name", "foo"),
+                     ("val", "330")]))
+    out(OrderedDict([("name", "bar"),
+                     ("val", "7800")]))
+
+    lines = fd.getvalue().splitlines()
+    assert len([ln for ln in lines if ln.endswith("foo 330330  ")]) == 1
+    assert len([ln for ln in lines if ln.endswith("bar 78007800")]) == 1
+
+
+@patch("pyout.tabular.Terminal", TestTerminal)
+def test_tabular_write_transform_on_header():
+    fd = StringIO()
+    out = Tabular(style={"header_": {"transform": str.upper},
+                         "name": {"width": 4},
+                         "val": {"width": 3}},
+                  stream=fd)
+    out(OrderedDict([("name", "foo"),
+                     ("val", "330")]))
+    out(OrderedDict([("name", "bar"),
+                     ("val", "780")]))
+
+    expected = ("NAME VAL\n"
+                "foo  330\n"
+                "bar  780\n")
+    assert eq_repr(fd.getvalue(), expected)
+
+
+@patch("pyout.tabular.Terminal", TestTerminal)
+def test_tabular_write_transform_func_error():
+    fd = StringIO()
+    out = Tabular(style={"name": {"width": 4},
+                         "val": {"transform": lambda x: x[::-1]}},
+                  stream=fd)
+    # The transform function receives the data as given, so it fails
+    # trying to index an integer.
+    with pytest.raises(StyleFunctionError):
+        out(OrderedDict([("name", "foo"),
+                         ("val", 330)]))
 
 
 @patch("pyout.tabular.Terminal", TestTerminal)

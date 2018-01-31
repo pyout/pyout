@@ -1,48 +1,99 @@
 """Define a "field" based on a sequence of processor functions.
 """
+from itertools import chain
+from collections import defaultdict
 
 
 class Field(object):
-    """Format, process, and render tabular fields.
+    """Render values based on a list of processors.
 
     A Field instance is a template for a string that is defined by its
-    width, text alignment, and its "processors".  When a field is
-    called with a value, it renders the value as a string with the
-    specified width and text alignment.  Before this string is
-    returned, it is passed through the chain of processors.  The
-    rendered string is the result returned by the last processor.
+    width, text alignment, and its "processors".
+
+    When a field is called with a value, the value is rendered in
+    three steps.
+
+                       pre -> format -> post
+
+    During the first step, the value is fed through the list of
+    pre-format processor functions.  The result of this value is then
+    formatted as a string with the specified width and alignment.
+    Finally, this result is fed through the list of the post-format
+    processors.  The rendered string is the result returned by the
+    last processor
 
     Parameters
     ----------
-    width : int
-    align : {'left', 'right', 'center'}
+    width : int, optional
+    align : {'left', 'right', 'center'}, optional
+    default_keys, other_keys : sequence, optional
+        Together, these define the "registered" set of processor keys
+        that can be used in the `pre` and `post` dicts.  Any key given
+        to the `add` method or instance call must be contained in one
+        of these collections.
+
+        The processor lists for `default_keys` is used when the
+        instance is called without a list of `keys`.  `other_keys`
+        defines additional keys that can be passed as the `keys`
+        argument to the instance call.
 
     Attributes
     ----------
     width : int
-    align : str
-    processors : dict
-        Each key maps to a list of processors.  The keys "core" and
-        "default" must always be present.  When an instance object is
-        called, the rendered result is always sent through the "core"
-        processors.  It will then be sent through the "default"
-        processors unless another key is provided as the optional
-        `which` argument.
-
-        A processor should take two positional arguments, the value
-        that is being rendered and the current result.  Its return
-        value will be passed to the next processor as the current
-        result.
+    registered_keys : set
+        Set of available keys.
+    default_keys : list
+        Defines which processor lists are called by default and in
+        what order.  The values can be overridden by the `keys`
+        argument when calling the instance.
+    pre, post : dict of lists
+        These map each registered key to a list of processors.
+        Conceptually, `pre` and `post` are a list of functions that
+        form a pipeline, but they are structured as a dict of lists to
+        allow different processors to be grouped by key.  By
+        specifying keys, the caller can control which groups are
+        "enabled".
     """
 
     _align_values = {"left": "<", "right": ">", "center": "^"}
 
-    def __init__(self, width=10, align="left"):
+    def __init__(self, width=10, align="left",
+                 default_keys=None, other_keys=None):
         self._width = width
         self._align = align
         self._fmt = self._build_format()
 
-        self.processors = {"core": [], "default": []}
+        self.default_keys = default_keys or []
+        self.registered_keys = set(chain(self.default_keys, other_keys or []))
+
+        self.pre = defaultdict(list)
+        self.post = defaultdict(list)
+
+    def _check_if_registered(self, key):
+        if key not in self.registered_keys:
+            raise ValueError(
+                "key '{}' was not specified at initialization".format(key))
+
+    def add(self, kind, key, *values):
+        """Add processor functions.
+
+        Parameters
+        ----------
+        kind : {"pre", "post"}
+        key : str
+            A registered key.  Add the functions (in order) to this
+            key's list of processors.
+        *values : callables
+            Processors to add.
+        """
+        if kind == "pre":
+            procs = self.pre
+        elif kind == "post":
+            procs = self.post
+        else:
+            raise ValueError("kind is not 'pre' or 'post'")
+        self._check_if_registered(key)
+        procs[key].extend(values)
 
     @property
     def width(self):
@@ -57,20 +108,50 @@ class Field(object):
         align = self._align_values[self._align]
         return "".join(["{:", align, str(self.width), "}"])
 
-    def __call__(self, value, which="default"):
+    def _format(self, _, result):
+        """Wrap format call as a two-argument processor function.
+        """
+        return self._fmt.format(result)
+
+    def __call__(self, value, keys=None, exclude_post=False):
         """Render `value` by feeding it through the processors.
 
         Parameters
         ----------
         value : str
-        which : str, optional
-            A key for the `processors` attribute that indicates the
-            list of processors to use in addition to the "core" list.
+        keys : sequence, optional
+            These lists define which processor lists are called and in
+            what order.  If not specified, the `default_keys`
+            attribute will be used.
+        exclude_post : bool, optional
+            Whether to return the vaue after the format step rather
+            than feeding it through post-format processors.
         """
-        result = self._fmt.format(value)
-        for fn in self.processors["core"] + self.processors[which]:
+        if keys is None:
+            keys = self.default_keys
+        for key in keys:
+            self._check_if_registered(key)
+
+        pre_funcs = chain(*(self.pre[k] for k in keys))
+        if exclude_post:
+            post_funcs = []
+        else:
+            post_funcs = chain(*(self.post[k] for k in keys))
+
+        funcs = chain(pre_funcs, [self._format], post_funcs)
+        result = value
+        for fn in funcs:
             result = fn(value, result)
         return result
+
+
+class StyleFunctionError(Exception):
+    """Signal that a style function failed.
+    """
+    def __init__(self, function):
+        msg = ("Style transform {} raised an exception. "
+               "See above.".format(function))
+        super(StyleFunctionError, self).__init__(msg)
 
 
 class StyleProcessors(object):
@@ -137,6 +218,17 @@ class StyleProcessors(object):
                     return result[:marker_beg] + marker
             return result[:length]
         return truncate_fn
+
+    @staticmethod
+    def transform(function):
+        """Return a processor for a style's "transform" function.
+        """
+        def transform_fn(_, result):
+            try:
+                return function(result)
+            except:
+                raise StyleFunctionError(function)
+        return transform_fn
 
     def by_key(self, key):
         """Return a processor for the style given by `key`.
@@ -234,8 +326,24 @@ class StyleProcessors(object):
             return keys[0]
         raise ValueError("Type of `value` could not be determined")
 
-    def from_style(self, column_style):
-        """Yield processors based on `column_style`.
+    def pre_from_style(self, column_style):
+        """Yield pre-format processors based on `column_style`.
+
+        Parameters
+        ----------
+        column_style : dict
+            A style where the top-level keys correspond to style
+            attributes such as "bold" or "color".
+
+        Returns
+        -------
+        A generator object.
+        """
+        if "transform" in column_style:
+            yield self.transform(column_style["transform"])
+
+    def post_from_style(self, column_style):
+        """Yield post-format processors based on `column_style`.
 
         Parameters
         ----------
