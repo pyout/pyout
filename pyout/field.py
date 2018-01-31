@@ -1,6 +1,7 @@
 """Define a "field" based on a sequence of processor functions.
 """
 from itertools import chain
+from collections import defaultdict
 
 
 class Field(object):
@@ -25,65 +26,73 @@ class Field(object):
     ----------
     width : int, optional
     align : {'left', 'right', 'center'}, optional
+    default_keys, other_keys : sequence, optional
+        Together, these define the "registered" set of processor keys
+        that can be used in the `pre` and `post` dicts.  Any key given
+        to the `add` method or instance call must be contained in one
+        of these collections.
+
+        The processor lists for `default_keys` is used when the
+        instance is called without a list of `keys`.  `other_keys`
+        defines additional keys that can be passed as the `keys`
+        argument to the instance call.
 
     Attributes
     ----------
     width : int
+    registered_keys : set
+        Set of available keys.
+    default_keys : list
+        Defines which processor lists are called by default and in
+        what order.  The values can be overridden by the `keys`
+        argument when calling the instance.
     pre, post : dict of lists
-        Each key maps to a list of processors.  Conceptually, `pre`
-        and `post` are a list of functions that form a pipeline, but
-        they are structured as a dict of lists to allow different
-        processors to be grouped by key.  By specifying keys, the
-        caller can control which groups are "enabled".
-    pre_keys, post_keys : list
-        These lists define which processor lists are called by default
-        and in what order.  The values can be overridden by the
-        providing `pre_keys` and `post_keys` arguments when calling
-        the instance.
+        These map each registered key to a list of processors.
+        Conceptually, `pre` and `post` are a list of functions that
+        form a pipeline, but they are structured as a dict of lists to
+        allow different processors to be grouped by key.  By
+        specifying keys, the caller can control which groups are
+        "enabled".
     """
 
     _align_values = {"left": "<", "right": ">", "center": "^"}
 
-    def __init__(self, width=10, align="left"):
+    def __init__(self, width=10, align="left",
+                 default_keys=None, other_keys=None):
         self._width = width
         self._align = align
         self._fmt = self._build_format()
 
-        self.pre = {}
-        self.pre_keys = []
-        self.post = {}
-        self.post_keys = []
+        self.default_keys = default_keys or []
+        self.registered_keys = set(chain(self.default_keys, other_keys or []))
+
+        self.pre = defaultdict(list)
+        self.post = defaultdict(list)
+
+    def _check_if_registered(self, key):
+        if key not in self.registered_keys:
+            raise ValueError(
+                "key '{}' was not specified at initialization".format(key))
 
     def add(self, kind, key, *values):
         """Add processor functions.
-
-        This method both adds the processor function and registers the
-        key.  As a result, any processor added through this method
-        will be enabled when the instance is called without the
-        `pre_keys` (if kind is "pre") or `post_keys` argument (if kind
-        is "post").  To set up non-default keys, modify the `pre` or
-        `post` attributes directly.
 
         Parameters
         ----------
         kind : {"pre", "post"}
         key : str
-            Put the functions under this key in the pre or post
-            processor collection.
+            A registered key.  Add the functions (in order) to this
+            key's list of processors.
         *values : callables
             Processors to add.
         """
         if kind == "pre":
-            procs, keys = self.pre, self.pre_keys
+            procs = self.pre
         elif kind == "post":
-            procs, keys = self.post, self.post_keys
+            procs = self.post
         else:
             raise ValueError("kind is not 'pre' or 'post'")
-
-        if key not in keys:
-            keys.append(key)
-        if key not in procs:
-            procs[key] = []
+        self._check_if_registered(key)
         procs[key].extend(values)
 
     @property
@@ -104,25 +113,30 @@ class Field(object):
         """
         return self._fmt.format(result)
 
-    def __call__(self, value, pre_keys=None, post_keys=None):
+    def __call__(self, value, keys=None, exclude_post=False):
         """Render `value` by feeding it through the processors.
 
         Parameters
         ----------
         value : str
-        pre_keys, post_keys : sequence, optional
+        keys : sequence, optional
             These lists define which processor lists are called and in
-            what order.  If not specified, the keys defined by the
-            corresponding attribute (`pre_keys` or `post_keys`) will
-            be used.
+            what order.  If not specified, the `default_keys`
+            attribute will be used.
+        exclude_post : bool, optional
+            Whether to return the vaue after the format step rather
+            than feeding it through post-format processors.
         """
-        if pre_keys is None:
-            pre_keys = self.pre_keys
-        if post_keys is None:
-            post_keys = self.post_keys
+        if keys is None:
+            keys = self.default_keys
+        for key in keys:
+            self._check_if_registered(key)
 
-        pre_funcs = chain(*(self.pre[k] for k in pre_keys))
-        post_funcs = chain(*(self.post[k] for k in post_keys))
+        pre_funcs = chain(*(self.pre[k] for k in keys))
+        if exclude_post:
+            post_funcs = []
+        else:
+            post_funcs = chain(*(self.post[k] for k in keys))
 
         funcs = chain(pre_funcs, [self._format], post_funcs)
         result = value

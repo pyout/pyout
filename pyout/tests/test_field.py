@@ -24,13 +24,17 @@ def test_field_processors():
     def post2(_, result):
         return result + "ZZZ"
 
-    field = Field(width=6, align="center")
+    field = Field(width=6, align="center",
+                  default_keys=["some_key", "another_key"])
     field.add("pre", "some_key", pre)
     field.add("post", "another_key", *[post1, post2])
     assert field("ok") == "AAA  OK  ZZZ"
 
     with pytest.raises(ValueError):
         field.add("not pre or post", "k")
+
+    with pytest.raises(ValueError):
+        field.add("pre", "not registered key")
 
 
 def test_truncate_mark_true():

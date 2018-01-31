@@ -199,7 +199,9 @@ class Tabular(object):
             # processors that we want to be active unless there's an
             # overriding style (i.e., a header is being written or the
             # `style` argument to __call__ is specified).
-            field = Field(width=width, align=cstyle["align"])
+            field = Field(width=width, align=cstyle["align"],
+                          default_keys=["core", "default"],
+                          other_keys=["override"])
             field.add("pre", "default",
                       *(self._tproc.pre_from_style(cstyle)))
             field.add("post", "core", *core_procs)
@@ -263,8 +265,8 @@ class Tabular(object):
                 # pre-format processors, we want to measure the width
                 # of their result rather than the raw value.
                 if field.pre[proc_group]:
-                    value = field(row[column],
-                                  pre_keys=[proc_group], post_keys=[])
+                    value = field(row[column], keys=[proc_group],
+                                  exclude_post=True)
                 else:
                     value = row[column]
                 value_width = len(str(value))
@@ -313,17 +315,18 @@ class Tabular(object):
             elements.validate(style)
 
             for column in self._columns:
-                fields[column].pre["override"] = list(
-                    self._tproc.pre_from_style(style[column]))
-                fields[column].post["override"] = list(
-                    self._tproc.post_from_style(style[column]))
+                fields[column].add(
+                    "pre", "override",
+                    *(self._tproc.pre_from_style(style[column])))
+                fields[column].add(
+                    "post", "override",
+                    *(self._tproc.post_from_style(style[column])))
             return "override"
         else:
             return "default"
 
     def _writerow(self, row, proc_keys=None):
-        proc_keys = proc_keys or {}
-        proc_fields = [self._fields[c](row[c], **proc_keys)
+        proc_fields = [self._fields[c](row[c], keys=proc_keys)
                        for c in self._columns]
         self.term.stream.write(
             self._style["separator_"].join(proc_fields) + "\n")
@@ -360,11 +363,10 @@ class Tabular(object):
 
         if proc_group == "override":
             # Override the "default" processor key.
-            proc_keys = {"pre_keys": ["override"],
-                         "post_keys": ["core", "override"]}
+            proc_keys = ["core", "override"]
         else:
             # Use the set of processors defined by _setup_fields.
-            proc_keys = {}
+            proc_keys = None
 
         if no_write:
             return proc_keys, repainted
