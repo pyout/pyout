@@ -339,7 +339,7 @@ class Tabular(object):
         style : dict or None
             Overridding style or None.
         adopt : bool, optional
-            If true, use overalp `style` on top of `self._style`.
+            If true, overlay `style` on top of `self._style`.
             Otherwise, treat `style` as a standalone style.
         repaint : bool, optional
             Whether to repaint of width check reports that previous
