@@ -30,8 +30,12 @@ class Field(object):
     ----------
     width : int
     align : str
-    pre, post : dict
-        Each key maps to a list of processors.
+    pre, post : dict of lists
+        Each key maps to a list of processors.  Conceptually, `pre`
+        and `post` are a list of functions that form a pipeline, but
+        they are structured as a dict of lists to allow different
+        processors to be grouped by key.  By specifying keys, the
+        caller can control which groups are "enabled".
     pre_keys, post_keys : list
         These lists define which processor lists are called by default
         and in what order.  The values can be overridden by the
