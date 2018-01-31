@@ -634,6 +634,21 @@ def test_tabular_write_transform_with_header():
 
 
 @patch("pyout.tabular.Terminal", TestTerminal)
+def test_tabular_write_transform_autowidth():
+    fd = StringIO()
+    out = Tabular(style={"val": {"transform": lambda x: x * 2}},
+                  stream=fd)
+    out(OrderedDict([("name", "foo"),
+                     ("val", "330")]))
+    out(OrderedDict([("name", "bar"),
+                     ("val", "7800")]))
+
+    lines = fd.getvalue().splitlines()
+    assert len([ln for ln in lines if ln.endswith("foo 330330  ")]) == 1
+    assert len([ln for ln in lines if ln.endswith("bar 78007800")]) == 1
+
+
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_transform_on_header():
     fd = StringIO()
     out = Tabular(style={"header_": {"transform": str.upper},
