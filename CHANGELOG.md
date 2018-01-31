@@ -15,6 +15,12 @@ TODO Summary
   This feature can be used to provide a function that takes a field
   value and returns a transformed field value.
 
+- Row values can now be generator functions or generator objects in
+  addition to plain values and non-generator functions.
+
+  This feature can be used to update previous fields with a sequence
+  of new values rather than a one-time update.
+
 ### Changed
 ### Deprecated
 ### Fixed
