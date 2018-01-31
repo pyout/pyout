@@ -10,10 +10,10 @@ TODO Summary
 
 ### Added
 
-- A new style type, "transform", has been added to the schema.
+- A new style attribute, "transform", has been added to the schema.
 
-  This type can be used to provide a function that takes a field value
-  and returns a transformed field value.
+  This feature can be used to provide a function that takes a field
+  value and returns a transformed field value.
 
 ### Changed
 ### Deprecated
