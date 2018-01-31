@@ -81,8 +81,7 @@ class Field(object):
             keys.append(key)
         if key not in procs:
             procs[key] = []
-        for value in values:
-            procs[key].append(value)
+        procs[key].extend(values)
 
     @property
     def width(self):
