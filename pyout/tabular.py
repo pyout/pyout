@@ -462,6 +462,12 @@ class Tabular(object):
             be called asynchronously with no arguments and should
             return the value with which to replace `initial_value`.
 
+            The callable can return an update for multiple columns.
+            To do so, the keys of `row` should include a tuple with
+            the column names and the callable's return value should be
+            a tuple with the same order as the key or a mapping from
+            column name to the updated value.
+
             Using callable values requires some additional steps.  The
             `ids` property should be set unless the first column
             happens to be a suitable id.  Also, to instruct the
