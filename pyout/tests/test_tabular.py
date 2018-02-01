@@ -933,15 +933,21 @@ def test_tabular_write_callable_values_multicol_key_infer_column(result):
     assert len([ln for ln in lines if ln.endswith("foo done /tmp/a")]) == 1
 
 
-def delayed_updates():
-    for val in ["update", "finished"]:
-        time.sleep(0.05)
-        yield val
+def delayed_gen_func(*values):
+    if not values:
+        values = ["update", "finished"]
+
+    def fn():
+        for val in values:
+            time.sleep(0.05)
+            yield val
+    return fn
 
 
 @pytest.mark.timeout(10)
 @pytest.mark.parametrize("gen_source",
-                         [delayed_updates, delayed_updates()],
+                         [delayed_gen_func(),
+                          delayed_gen_func()()],
                          ids=["gen_func", "generator"])
 @patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_generator_function_values(gen_source):
