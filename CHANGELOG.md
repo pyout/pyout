@@ -22,6 +22,11 @@ TODO Summary
   of new values rather than a one-time update.
 
 ### Changed
+
+- `pyout` has been restructured from a single module into a package.
+  The only associated user-facing change is the rename of
+  `pyout.SCHEMA` to `pyout.schema`.
+
 ### Deprecated
 ### Fixed
 ### Removed
