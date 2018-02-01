@@ -3,6 +3,7 @@ from collections import OrderedDict
 from curses import tigetstr, tparm
 from functools import partial
 from six.moves import StringIO
+import time
 
 import blessings
 from mock import patch
@@ -930,6 +931,32 @@ def test_tabular_write_callable_values_multicol_key_infer_column(result):
         delay.now = True
     lines = fd.getvalue().splitlines()
     assert len([ln for ln in lines if ln.endswith("foo done /tmp/a")]) == 1
+
+
+def delayed_updates():
+    for val in ["update", "finished"]:
+        time.sleep(0.05)
+        yield val
+
+
+@pytest.mark.timeout(10)
+@pytest.mark.parametrize("gen_source",
+                         [delayed_updates, delayed_updates()],
+                         ids=["gen_func", "generator"])
+@patch("pyout.tabular.Terminal", TestTerminal)
+def test_tabular_write_generator_function_values(gen_source):
+    fd = StringIO()
+    with Tabular(["name", "status"], stream=fd) as out:
+        out({"name": "foo", "status": ("waiting", gen_source)})
+        out({"name": "bar", "status": "ok"})
+
+        expected = ("foo waiting\n"
+                    "bar ok     \n")
+        assert eq_repr(fd.getvalue(), expected)
+    lines = fd.getvalue().splitlines()
+    assert len([ln for ln in lines if ln.endswith("foo update ")]) == 1
+    assert len([ln for ln in lines if ln.endswith("foo finished")]) == 1
+    assert len([ln for ln in lines if ln.endswith("bar ok      ")]) == 1
 
 
 @patch("pyout.tabular.Terminal", TestTerminal)

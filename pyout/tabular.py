@@ -6,6 +6,7 @@ This module defines the Tabular entry point.
 from collections import Mapping, OrderedDict, Sequence
 from contextlib import contextmanager
 from functools import partial
+import inspect
 import multiprocessing
 from multiprocessing.dummy import Pool
 
@@ -405,7 +406,7 @@ class Tabular(object):
             except (ValueError, TypeError):
                 continue
             else:
-                if callable(fn):
+                if callable(fn) or inspect.isgenerator(fn):
                     if not isinstance(columns, tuple):
                         columns = columns,
                     else:
@@ -441,8 +442,21 @@ class Tabular(object):
             self._lock = multiprocessing.Lock()
 
         for cols, fn in callables:
-            self._pool.apply_async(fn,
-                                   callback=partial(callback, self, cols))
+            cb_func = partial(callback, self, cols)
+
+            gen = None
+            if inspect.isgeneratorfunction(fn):
+                gen = fn()
+            elif inspect.isgenerator(fn):
+                gen = fn
+
+            if gen:
+                def callback_for_each():
+                    for i in gen:
+                        cb_func(i)
+                self._pool.apply_async(callback_for_each)
+            else:
+                self._pool.apply_async(fn, callback=cb_func)
 
     def __call__(self, row, style=None):
         """Write styled `row` to the terminal.
@@ -458,15 +472,27 @@ class Tabular(object):
             via `columns`.
 
             Instead of a plain value, a column's value can be a tuple
-            of the form (initial_value, callable).  The callable will
-            be called asynchronously with no arguments and should
-            return the value with which to replace `initial_value`.
+            of the form (initial_value, producer).  If a producer is
+            is a generator function or a generator object, each item
+            produced replaces `initial_value`.  Otherwise, a producer
+            should be a function that will be called with no arguments
+            and that returns the value with which to replace
+            `initial_value`.  For both generators and normal
+            functions, the execution will happen asynchronously.
 
-            Using callable values requires some additional steps.  The
-            `ids` property should be set unless the first column
-            happens to be a suitable id.  The instance should also be
-            used as a context manager so that the program waits at the
-            end of the block for the return values.
+            The producer can return an update for multiple columns.
+            To do so, the keys of `row` should include a tuple with
+            the column names and the produced value should be a tuple
+            with the same order as the key or a mapping from column
+            name to the updated value.
+
+            Using the (initial_value, producer) form requires some
+            additional steps.  The `ids` property should be set unless
+            the first column happens to be a suitable id.  Also, to
+            instruct the program to wait for the updated values, the
+            instance calls should be followed by a call to the `wait`
+            method or the instance should be used as a context
+            manager.
         style : dict, optional
             Each top-level key should be a column name and the value
             should be a style dict that overrides the class instance
