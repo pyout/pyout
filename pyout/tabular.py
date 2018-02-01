@@ -464,9 +464,10 @@ class Tabular(object):
 
             Using callable values requires some additional steps.  The
             `ids` property should be set unless the first column
-            happens to be a suitable id.  The instance should also be
-            used as a context manager so that the program waits at the
-            end of the block for the return values.
+            happens to be a suitable id.  Also, to instruct the
+            program to wait for the updated values, the instance calls
+            should be followed by a call to the `wait` method or the
+            instance should be used as a context manager.
         style : dict, optional
             Each top-level key should be a column name and the value
             should be a style dict that overrides the class instance
