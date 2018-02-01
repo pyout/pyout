@@ -965,6 +965,31 @@ def test_tabular_write_generator_function_values(gen_source):
     assert len([ln for ln in lines if ln.endswith("bar ok      ")]) == 1
 
 
+@pytest.mark.timeout(10)
+@patch("pyout.tabular.Terminal", TestTerminal)
+def test_tabular_write_generator_values_multireturn():
+    gen = delayed_gen_func({"status": "working"},  # for one of two columns
+                           {"path": "/tmp/a"},  # for the other of two columns
+                           {"path": "/tmp/b",  # for both columns
+                            "status": "done"})
+    fd = StringIO()
+    out = Tabular(stream=fd)
+    with out:
+        out(OrderedDict([("name", "foo"),
+                         (("status", "path"), ("...", gen))]))
+        out(OrderedDict([("name", "bar"),
+                         ("status", "ok"),
+                         ("path", "na")]))
+
+        expected = ("foo ... ...\n"
+                    "bar ok  na \n")
+        assert eq_repr(fd.getvalue(), expected)
+    lines = fd.getvalue().splitlines()
+    assert len([ln for ln in lines if ln.endswith("foo working ...")]) == 1
+    assert len([ln for ln in lines if ln.endswith("foo working /tmp/a")]) == 1
+    assert len([ln for ln in lines if ln.endswith("foo done    /tmp/b")]) == 1
+
+
 @patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_wait_noop_if_nothreads():
     fd = StringIO()
