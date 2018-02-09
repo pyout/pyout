@@ -391,7 +391,19 @@ class Tabular(object):
 
     @staticmethod
     def _strip_callables(row):
-        """Replace (initial_value, callable) form in `row` with initial value.
+        """Extract callable values from `row`.
+
+        Replace the callable values with the initial value if
+        specified) or an empty string.
+
+        Parameters
+        ----------
+        row : dict
+            A normalized data row.  The keys are either a single
+            column name or a tuple of column names.  The values take
+            one of three forms: 1) a non-callable value, 2) a tuple
+            (initial_value, callable), 3) or a single callable (in
+            which case the initial value is set to an empty string).
 
         Returns
         -------
@@ -401,19 +413,22 @@ class Tabular(object):
         to_delete = []
         to_add = []
         for columns, value in row.items():
-            try:
+            if isinstance(value, tuple):
                 initial, fn = value
-            except (ValueError, TypeError):
-                continue
             else:
-                if callable(fn) or inspect.isgenerator(fn):
-                    if not isinstance(columns, tuple):
-                        columns = columns,
-                    else:
-                        to_delete.append(columns)
-                    for column in columns:
-                        to_add.append((column, initial))
-                    callables.append((columns, fn))
+                initial = ""
+                # Value could be a normal (non-callable) value or a
+                # callable with no initial value.
+                fn = value
+
+            if callable(fn) or inspect.isgenerator(fn):
+                if not isinstance(columns, tuple):
+                    columns = columns,
+                else:
+                    to_delete.append(columns)
+                for column in columns:
+                    to_add.append((column, initial))
+                callables.append((columns, fn))
 
         for column, value in to_add:
             row[column] = value
@@ -479,6 +494,9 @@ class Tabular(object):
             and that returns the value with which to replace
             `initial_value`.  For both generators and normal
             functions, the execution will happen asynchronously.
+
+            Directly supplying a producer as the value rather than
+            (initial_value, producer) is shorthand for ("", producer).
 
             The producer can return an update for multiple columns.
             To do so, the keys of `row` should include a tuple with
