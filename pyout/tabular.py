@@ -181,7 +181,7 @@ class Tabular(object):
             is_auto = style_width == "auto" or _safe_get(style_width, "auto")
 
             if is_auto:
-                width = _safe_get(style_width, "min", 1)
+                width = _safe_get(style_width, "min", 0)
                 wmax = _safe_get(style_width, "max")
 
                 self._autowidth_columns[column] = {"max": wmax}

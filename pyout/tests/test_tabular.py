@@ -52,6 +52,14 @@ def test_tabular_write_color():
 
 
 @patch("pyout.tabular.Terminal", TestTerminal)
+def test_tabular_write_empty_string():
+    fd = StringIO()
+    out = Tabular(stream=fd)
+    out({"name": ""})
+    assert eq_repr(fd.getvalue(), "\n")
+
+
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_columns_from_orderdict_row():
     fd = StringIO()
     out = Tabular(style={"name": {"width": 3},
