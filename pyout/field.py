@@ -150,12 +150,21 @@ class Nothing(object):
 
     This is used instead of a built-ins like None, "", or 0 to allow
     us to unambiguously identify a missing value.  In terms of
-    methods, it tries to mimic an empty string because that behavior
-    is the most useful internally for formatting the output.
+    methods, it tries to mimic the string `text` (an empty string by
+    default) because that behavior is the most useful internally for
+    formatting the output.
+
+    Parameters
+    ----------
+    text : str, optional
+        Text to use for string representation of this object.
     """
 
+    def __init__(self, text=""):
+        self._text = text
+
     def __str__(self):
-        return ""
+        return self._text
 
     def __add__(self, right):
         return str(self) + right
@@ -169,7 +178,7 @@ class Nothing(object):
     __nonzero__ = __bool__  # py2
 
     def __format__(self, format_spec):
-        return str.__format__("", format_spec)
+        return str.__format__(self._text, format_spec)
 
 
 class StyleFunctionError(Exception):

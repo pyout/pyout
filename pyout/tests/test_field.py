@@ -37,13 +37,15 @@ def test_field_processors():
         field.add("pre", "not registered key")
 
 
-def test_something_about_nothing():
-    nada = Nothing()
+@pytest.mark.parametrize("text", ["", "-"], ids=["text=''", "text='-'"])
+def test_something_about_nothing(text):
+    nada = Nothing(text=text)
     assert not nada
-    assert str(nada) == ""
-    assert "{:5}".format(nada) == "     "
-    assert "x" + nada  == "x"
-    assert nada + "x"  == "x"
+
+    assert str(nada) == text
+    assert "{:5}".format(nada) == "{:5}".format(text)
+    assert "x" + nada  == "x" + text
+    assert nada + "x"  == text + "x"
 
 
 def test_truncate_mark_true():
