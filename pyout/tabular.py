@@ -129,7 +129,7 @@ class Tabular(object):
         self._columns = columns
         self._ids = None
         self._fields = None
-        self._transform_method = None
+        self._normalizer = None
 
         self._init_style = style
         self._style = None
@@ -236,7 +236,7 @@ class Tabular(object):
     def _attrs_to_dict(self, row):
         return {c: getattr(row, c) for c in self._columns}
 
-    def _choose_transform_method(self, row):
+    def _choose_normalizer(self, row):
         if isinstance(row, Mapping):
             return self._identity
         if isinstance(row, Sequence):
@@ -379,8 +379,8 @@ class Tabular(object):
 
         if isinstance(self._columns, OrderedDict):
             row = self._columns
-        elif self._transform_method == self._seq_to_dict:
-            row = self._transform_method(self._columns)
+        elif self._normalizer == self._seq_to_dict:
+            row = self._normalizer(self._columns)
         else:
             row = dict(zip(self._columns, self._columns))
 
@@ -503,9 +503,9 @@ class Tabular(object):
             self._setup_style()
             self._setup_fields()
 
-        if self._transform_method is None:
-            self._transform_method = self._choose_transform_method(row)
-        row = self._transform_method(row)
+        if self._normalizer is None:
+            self._normalizer = self._choose_normalizer(row)
+        row = self._normalizer(row)
         callables = self._strip_callables(row)
 
         with self._write_lock():
