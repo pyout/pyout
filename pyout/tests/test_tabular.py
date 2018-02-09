@@ -68,6 +68,17 @@ def test_tabular_write_missing_column():
 
 
 @patch("pyout.tabular.Terminal", TestTerminal)
+def test_tabular_write_missing_column_missing_text():
+    fd = StringIO()
+    out = Tabular(columns=["name", "status"],
+                  style={"status":
+                         {"missing": "-"}},
+                  stream=fd)
+    out({"name": "solo"})
+    assert eq_repr(fd.getvalue(), "solo -\n")
+
+
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_columns_from_orderdict_row():
     fd = StringIO()
     out = Tabular(style={"name": {"width": 3},

@@ -527,8 +527,13 @@ class Tabular(object):
             self._normalizer = self._choose_normalizer(row)
         row = self._normalizer(row)
         callables = self._strip_callables(row)
+
         # Fill in any missing values.
-        row = {c: row.get(c, NOTHING) for c in self._columns}
+        for column in self._columns:
+            if column in row:
+                continue
+            missing = self._style[column].get("missing")
+            row[column] = Nothing(missing) if missing else NOTHING
 
         with self._write_lock():
             if not self._rows:
