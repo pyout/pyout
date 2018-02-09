@@ -873,11 +873,12 @@ def test_tabular_write_callable_values():
     with Tabular(["name", "status"], stream=fd, force_styling=True) as out:
         out({"name": "foo", "status": ("thinking", delay0.run)})
         out({"name": "bar", "status": "ok"})
-        out({"name": "baz", "status": ("waiting", delay1.run)})
+        # A single callable can be passed rather than (initial_value, fn).
+        out({"name": "baz", "status": delay1.run})
 
         expected = ("foo thinking\n"
                     "bar ok      \n"
-                    "baz waiting \n")
+                    "baz         \n")
         assert eq_repr(fd.getvalue(), expected)
 
         delay0.now = True
