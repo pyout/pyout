@@ -13,7 +13,9 @@ from multiprocessing.dummy import Pool
 from blessings import Terminal
 
 from pyout import elements
-from pyout.field import Field, StyleProcessors
+from pyout.field import Field, StyleProcessors, Nothing
+
+NOTHING = Nothing()
 
 
 class TermProcessors(StyleProcessors):
@@ -416,7 +418,7 @@ class Tabular(object):
             if isinstance(value, tuple):
                 initial, fn = value
             else:
-                initial = ""
+                initial = NOTHING
                 # Value could be a normal (non-callable) value or a
                 # callable with no initial value.
                 fn = value

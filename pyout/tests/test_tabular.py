@@ -898,6 +898,26 @@ def test_tabular_write_callable_values():
 
 @pytest.mark.timeout(10)
 @patch("pyout.tabular.Terminal", TestTerminal)
+def test_tabular_write_callable_transform_nothing():
+    delay0 = Delayed(3)
+
+    fd = StringIO()
+    out = Tabular(["name", "status"],
+                  style={"status": {"transform": lambda n: n + 2}},
+                  stream=fd)
+    with out:
+        # The unspecified initial value is set to Nothing().  The
+        # transform function above, which is designed to take a
+        # number, won't be called with it.
+        out({"name": "foo", "status": delay0.run})
+        assert eq_repr(fd.getvalue(), "foo \n")
+        delay0.now = True
+    lines = fd.getvalue().splitlines()
+    assert len([ln for ln in lines if ln.endswith("foo 5")]) == 1
+
+
+@pytest.mark.timeout(10)
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_callable_values_multi_return():
     delay = Delayed({"status": "done", "path": "/tmp/a"})
 
