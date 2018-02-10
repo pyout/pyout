@@ -643,6 +643,27 @@ def test_tabular_write_intervals_bold():
     assert eq_repr(fd.getvalue(), expected)
 
 
+
+@patch("pyout.tabular.Terminal", TestTerminal)
+def test_tabular_write_intervals_missing():
+    fd = StringIO()
+    out = Tabular(style={"name": {"width": 3},
+                         "percent": {"bold": {"interval":
+                                              [[30, 50, False],
+                                               [50, 80, True]]},
+                                     "width": 2}},
+                  stream=fd, force_styling=True)
+    out(OrderedDict([("name", "foo"),
+                     ("percent", 78)]))
+    # Interval lookup function can handle a missing value.
+    out(OrderedDict([("name", "bar")]))
+
+    expected = "foo " + unicode_cap("bold") + \
+               "78" + unicode_cap("sgr0") + "\n" + \
+               "bar   \n"
+    assert eq_repr(fd.getvalue(), expected)
+
+
 @patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_transform():
     fd = StringIO()

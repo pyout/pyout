@@ -330,7 +330,11 @@ class StyleProcessors(object):
         A function.
         """
         def by_interval_lookup_fn(value, result):
-            value = float(value)
+            try:
+                value = float(value)
+            except TypeError:
+                return result
+
             for start, end, lookup_value in intervals:
                 if start is None:
                     start = float("-inf")
