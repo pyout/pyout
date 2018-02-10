@@ -135,7 +135,7 @@ class Tabular(object):
 
         self._init_style = style
         self._style = None
-
+        self._nothings = {}  # column => missing value
         self._autowidth_columns = {}
 
         if columns is not None:
@@ -172,6 +172,12 @@ class Tabular(object):
                                               elements.default("separator_"))
 
         elements.validate(self._style)
+
+        for col in self._columns:
+            if "missing" in self._style[col]:
+                self._nothings[col] = Nothing(self._style[col]["missing"])
+            else:
+                self._nothings[col] = NOTHING
 
     def _setup_fields(self):
         self._fields = {}
@@ -236,7 +242,7 @@ class Tabular(object):
         return dict(zip(self._columns, row))
 
     def _attrs_to_dict(self, row):
-        return {c: getattr(row, c) for c in self._columns}
+        return {c: getattr(row, c, self._nothings[c]) for c in self._columns}
 
     def _choose_normalizer(self, row):
         if isinstance(row, Mapping):
@@ -528,12 +534,15 @@ class Tabular(object):
         row = self._normalizer(row)
         callables = self._strip_callables(row)
 
-        # Fill in any missing values.
-        for column in self._columns:
-            if column in row:
-                continue
-            missing = self._style[column].get("missing")
-            row[column] = Nothing(missing) if missing else NOTHING
+        # Fill in any missing values.  Note: If the un-normalized data is an
+        # object, we already handle this in its normalizer, _attrs_to_dict.
+        # When the data is given as a dict, we do it here instead of its
+        # normalizer because there may be multi-column tuple keys.
+        if self._normalizer == self._identity:
+            for column in self._columns:
+                if column in row:
+                    continue
+                row[column] = self._nothings[column]
 
         with self._write_lock():
             if not self._rows:
