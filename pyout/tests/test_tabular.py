@@ -52,6 +52,48 @@ def test_tabular_write_color():
 
 
 @patch("pyout.tabular.Terminal", TestTerminal)
+def test_tabular_write_empty_string():
+    fd = StringIO()
+    out = Tabular(stream=fd)
+    out({"name": ""})
+    assert eq_repr(fd.getvalue(), "\n")
+
+
+@patch("pyout.tabular.Terminal", TestTerminal)
+def test_tabular_write_missing_column():
+    fd = StringIO()
+    out = Tabular(columns=["name", "status"], stream=fd)
+    out({"name": "solo"})
+    assert eq_repr(fd.getvalue(), "solo \n")
+
+
+@patch("pyout.tabular.Terminal", TestTerminal)
+def test_tabular_write_missing_column_missing_text():
+    fd = StringIO()
+    out = Tabular(columns=["name", "status"],
+                  style={"status":
+                         {"missing": "-"}},
+                  stream=fd)
+    out({"name": "solo"})
+    assert eq_repr(fd.getvalue(), "solo -\n")
+
+
+@patch("pyout.tabular.Terminal", TestTerminal)
+def test_tabular_write_missing_column_missing_object_data():
+    class Data(object):
+        name = "solo"
+    data = Data()
+
+    fd = StringIO()
+    out = Tabular(columns=["name", "status"],
+                  style={"status":
+                         {"missing": "-"}},
+                  stream=fd)
+    out(data)
+    assert eq_repr(fd.getvalue(), "solo -\n")
+
+
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_columns_from_orderdict_row():
     fd = StringIO()
     out = Tabular(style={"name": {"width": 3},
@@ -601,6 +643,27 @@ def test_tabular_write_intervals_bold():
     assert eq_repr(fd.getvalue(), expected)
 
 
+
+@patch("pyout.tabular.Terminal", TestTerminal)
+def test_tabular_write_intervals_missing():
+    fd = StringIO()
+    out = Tabular(style={"name": {"width": 3},
+                         "percent": {"bold": {"interval":
+                                              [[30, 50, False],
+                                               [50, 80, True]]},
+                                     "width": 2}},
+                  stream=fd, force_styling=True)
+    out(OrderedDict([("name", "foo"),
+                     ("percent", 78)]))
+    # Interval lookup function can handle a missing value.
+    out(OrderedDict([("name", "bar")]))
+
+    expected = "foo " + unicode_cap("bold") + \
+               "78" + unicode_cap("sgr0") + "\n" + \
+               "bar   \n"
+    assert eq_repr(fd.getvalue(), expected)
+
+
 @patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_transform():
     fd = StringIO()
@@ -886,6 +949,26 @@ def test_tabular_write_callable_values():
     lines = fd.getvalue().splitlines()
     assert len([ln for ln in lines if ln.endswith("foo done    ")]) == 1
     assert len([ln for ln in lines if ln.endswith("baz over    ")]) == 1
+
+
+@pytest.mark.timeout(10)
+@patch("pyout.tabular.Terminal", TestTerminal)
+def test_tabular_write_callable_transform_nothing():
+    delay0 = Delayed(3)
+
+    fd = StringIO()
+    out = Tabular(["name", "status"],
+                  style={"status": {"transform": lambda n: n + 2}},
+                  stream=fd)
+    with out:
+        # The unspecified initial value is set to Nothing().  The
+        # transform function above, which is designed to take a
+        # number, won't be called with it.
+        out({"name": "foo", "status": delay0.run})
+        assert eq_repr(fd.getvalue(), "foo \n")
+        delay0.now = True
+    lines = fd.getvalue().splitlines()
+    assert len([ln for ln in lines if ln.endswith("foo 5")]) == 1
 
 
 @pytest.mark.timeout(10)

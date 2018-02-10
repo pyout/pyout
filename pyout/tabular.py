@@ -13,7 +13,9 @@ from multiprocessing.dummy import Pool
 from blessings import Terminal
 
 from pyout import elements
-from pyout.field import Field, StyleProcessors
+from pyout.field import Field, StyleProcessors, Nothing
+
+NOTHING = Nothing()
 
 
 class TermProcessors(StyleProcessors):
@@ -133,7 +135,7 @@ class Tabular(object):
 
         self._init_style = style
         self._style = None
-
+        self._nothings = {}  # column => missing value
         self._autowidth_columns = {}
 
         if columns is not None:
@@ -171,6 +173,12 @@ class Tabular(object):
 
         elements.validate(self._style)
 
+        for col in self._columns:
+            if "missing" in self._style[col]:
+                self._nothings[col] = Nothing(self._style[col]["missing"])
+            else:
+                self._nothings[col] = NOTHING
+
     def _setup_fields(self):
         self._fields = {}
         for column in self._columns:
@@ -181,7 +189,7 @@ class Tabular(object):
             is_auto = style_width == "auto" or _safe_get(style_width, "auto")
 
             if is_auto:
-                width = _safe_get(style_width, "min", 1)
+                width = _safe_get(style_width, "min", 0)
                 wmax = _safe_get(style_width, "max")
 
                 self._autowidth_columns[column] = {"max": wmax}
@@ -234,7 +242,7 @@ class Tabular(object):
         return dict(zip(self._columns, row))
 
     def _attrs_to_dict(self, row):
-        return {c: getattr(row, c) for c in self._columns}
+        return {c: getattr(row, c, self._nothings[c]) for c in self._columns}
 
     def _choose_normalizer(self, row):
         if isinstance(row, Mapping):
@@ -416,7 +424,7 @@ class Tabular(object):
             if isinstance(value, tuple):
                 initial, fn = value
             else:
-                initial = ""
+                initial = NOTHING
                 # Value could be a normal (non-callable) value or a
                 # callable with no initial value.
                 fn = value
@@ -525,6 +533,16 @@ class Tabular(object):
             self._normalizer = self._choose_normalizer(row)
         row = self._normalizer(row)
         callables = self._strip_callables(row)
+
+        # Fill in any missing values.  Note: If the un-normalized data is an
+        # object, we already handle this in its normalizer, _attrs_to_dict.
+        # When the data is given as a dict, we do it here instead of its
+        # normalizer because there may be multi-column tuple keys.
+        if self._normalizer == self._identity:
+            for column in self._columns:
+                if column in row:
+                    continue
+                row[column] = self._nothings[column]
 
         with self._write_lock():
             if not self._rows:

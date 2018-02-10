@@ -28,6 +28,12 @@ schema = {
                       {"$ref": "#/definitions/interval"}],
             "default": "black",
             "scope": "field"},
+        "missing": {
+            "description": "Text to display for missing values",
+            "type": "string",
+            "default": "",
+            "scope": "column"
+        },
         "underline": {
             "description": "Whether text is underlined",
             "oneOf": [{"type": "boolean"},
@@ -52,6 +58,7 @@ schema = {
             "properties": {"align": {"$ref": "#/definitions/align"},
                            "bold": {"$ref": "#/definitions/bold"},
                            "color": {"$ref": "#/definitions/color"},
+                           "missing": {"$ref": "#/definitions/missing"},
                            "transform": {"$ref": "#/definitions/transform"},
                            "underline": {"$ref": "#/definitions/underline"},
                            "width": {"$ref": "#/definitions/width"}},

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import pytest
-from pyout.field import Field, StyleProcessors
+from pyout.field import Field, Nothing, StyleProcessors
 
 
 def test_field_base():
@@ -35,6 +35,17 @@ def test_field_processors():
 
     with pytest.raises(ValueError):
         field.add("pre", "not registered key")
+
+
+@pytest.mark.parametrize("text", ["", "-"], ids=["text=''", "text='-'"])
+def test_something_about_nothing(text):
+    nada = Nothing(text=text)
+    assert not nada
+
+    assert str(nada) == text
+    assert "{:5}".format(nada) == "{:5}".format(text)
+    assert "x" + nada  == "x" + text
+    assert nada + "x"  == text + "x"
 
 
 def test_truncate_mark_true():

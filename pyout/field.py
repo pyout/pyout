@@ -145,6 +145,42 @@ class Field(object):
         return result
 
 
+class Nothing(object):
+    """Internal class to represent missing values.
+
+    This is used instead of a built-ins like None, "", or 0 to allow
+    us to unambiguously identify a missing value.  In terms of
+    methods, it tries to mimic the string `text` (an empty string by
+    default) because that behavior is the most useful internally for
+    formatting the output.
+
+    Parameters
+    ----------
+    text : str, optional
+        Text to use for string representation of this object.
+    """
+
+    def __init__(self, text=""):
+        self._text = text
+
+    def __str__(self):
+        return self._text
+
+    def __add__(self, right):
+        return str(self) + right
+
+    def __radd__(self, left):
+        return left + str(self)
+
+    def __bool__(self):
+        return False
+
+    __nonzero__ = __bool__  # py2
+
+    def __format__(self, format_spec):
+        return str.__format__(self._text, format_spec)
+
+
 class StyleFunctionError(Exception):
     """Signal that a style function failed.
     """
@@ -224,6 +260,8 @@ class StyleProcessors(object):
         """Return a processor for a style's "transform" function.
         """
         def transform_fn(_, result):
+            if isinstance(result, Nothing):
+                return result
             try:
                 return function(result)
             except:
@@ -292,7 +330,11 @@ class StyleProcessors(object):
         A function.
         """
         def by_interval_lookup_fn(value, result):
-            value = float(value)
+            try:
+                value = float(value)
+            except TypeError:
+                return result
+
             for start, end, lookup_value in intervals:
                 if start is None:
                     start = float("-inf")
