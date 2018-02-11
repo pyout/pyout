@@ -2,6 +2,9 @@
 """
 from itertools import chain
 from collections import defaultdict
+import sys
+
+import six
 
 
 class Field(object):
@@ -184,9 +187,9 @@ class Nothing(object):
 class StyleFunctionError(Exception):
     """Signal that a style function failed.
     """
-    def __init__(self, function):
-        msg = ("Style transform {} raised an exception. "
-               "See above.".format(function))
+    def __init__(self, function, exc_type, exc_value):
+        msg = "{} raised {}\n  {}".format(function, exc_type.__name__,
+                                            exc_value)
         super(StyleFunctionError, self).__init__(msg)
 
 
@@ -265,7 +268,17 @@ class StyleProcessors(object):
             try:
                 return function(result)
             except:
-                raise StyleFunctionError(function)
+                exctype, value, tb = sys.exc_info()
+                try:
+                    new_exc = StyleFunctionError(function, exctype, value)
+                    # Remove the "During handling ..." since we're
+                    # reraising with the traceback.
+                    new_exc.__cause__ = None
+                    six.reraise(StyleFunctionError, new_exc, tb)
+                finally:
+                    # Remove circular reference.
+                    # https://docs.python.org/2/library/sys.html#sys.exc_info
+                    del tb
         return transform_fn
 
     def by_key(self, key):
