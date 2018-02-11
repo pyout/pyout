@@ -9,10 +9,15 @@ from pyout import Tabular
 if __name__ == '__main__':
     # TODO: cmldline args etc for above
     idfield = "key"  # TODO: how do we specify
+    flatten = True   # flatten nested dicts
     out = Tabular(style=dict(
         header_=dict(bold=True, transform=lambda x: x.upper()),
         # Default styling could be provided from some collection of styling files
         default_=dict(
+            width=dict(
+                auto=True,
+                max=20
+            ),
             color=dict(
                 # needs catchall as discussed?
                 label={
@@ -26,9 +31,19 @@ if __name__ == '__main__':
     first = True
     for line in sys.stdin:
         line_json = json.loads(line)
-        line_json['_line_json_'] = json.dumps(line_json)
+        #line_json['_line_json_'] = json.dumps(line_json)
+        adjusted = {}
+        for k, v in line_json.items():
+            # RF: to make it recursive
+            if flatten and isinstance(v, dict):
+                for k_, v_ in v.items():
+                    adjusted[k_] = v_
+            else:
+                adjusted[k] = v
+
         if first:
             first = False
-            if idfield in line_json:
+            if idfield in adjusted:
                 out.ids = [idfield]
-        out(line_json)
+        #print adjusted
+        out(adjusted)
