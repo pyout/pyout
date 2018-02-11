@@ -111,7 +111,7 @@ class Field(object):
     def _format(self, _, result):
         """Wrap format call as a two-argument processor function.
         """
-        return self._fmt.format(result)
+        return self._fmt.format(str(result))
 
     def __call__(self, value, keys=None, exclude_post=False):
         """Render `value` by feeding it through the processors.

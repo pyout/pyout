@@ -79,6 +79,14 @@ def test_tabular_write_missing_column_missing_text():
 
 
 @patch("pyout.tabular.Terminal", TestTerminal)
+def test_tabular_write_list_value():
+    fd = StringIO()
+    out = Tabular(columns=["name", "status"], stream=fd)
+    out({"name": "foo", "status": [0, 1]})
+    assert eq_repr(fd.getvalue(), "foo [0, 1]\n")
+
+
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_missing_column_missing_object_data():
     class Data(object):
         name = "solo"
