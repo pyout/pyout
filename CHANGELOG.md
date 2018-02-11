@@ -27,6 +27,8 @@ TODO Summary
   The only associated user-facing change is the rename of
   `pyout.SCHEMA` to `pyout.schema`.
 
+- The style attribute "label" has been renamed to "lookup".
+
 ### Deprecated
 ### Fixed
 ### Removed

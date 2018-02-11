@@ -517,10 +517,10 @@ def test_tabular_repaint_with_header():
 
 
 @patch("pyout.tabular.Terminal", TestTerminal)
-def test_tabular_write_label_color():
+def test_tabular_write_lookup_color():
     fd = StringIO()
     out = Tabular(style={"name": {"width": 3},
-                         "status": {"color": {"label": {"BAD": "red"}},
+                         "status": {"color": {"lookup": {"BAD": "red"}},
                                     "width": 6}},
                   stream=fd, force_styling=True)
     out(OrderedDict([("name", "foo"),
@@ -535,10 +535,10 @@ def test_tabular_write_label_color():
 
 
 @patch("pyout.tabular.Terminal", TestTerminal)
-def test_tabular_write_label_bold():
+def test_tabular_write_lookup_bold():
     fd = StringIO()
     out = Tabular(style={"name": {"width": 3},
-                         "status": {"bold": {"label": {"BAD": True}},
+                         "status": {"bold": {"lookup": {"BAD": True}},
                                     "width": 6}},
                   stream=fd, force_styling=True)
     out(OrderedDict([("name", "foo"),
@@ -553,10 +553,10 @@ def test_tabular_write_label_bold():
 
 
 @patch("pyout.tabular.Terminal", TestTerminal)
-def test_tabular_write_label_bold_false():
+def test_tabular_write_lookup_bold_false():
     fd = StringIO()
     out = Tabular(style={"name": {"width": 3},
-                         "status": {"bold": {"label": {"BAD": False}},
+                         "status": {"bold": {"lookup": {"BAD": False}},
                                     "width": 6}},
                   stream=fd, force_styling=True)
     out(OrderedDict([("name", "foo"),
@@ -570,9 +570,9 @@ def test_tabular_write_label_bold_false():
 
 
 @patch("pyout.tabular.Terminal", TestTerminal)
-def test_tabular_write_label_non_hashable():
+def test_tabular_write_lookup_non_hashable():
     fd = StringIO()
-    out = Tabular(style={"status": {"color": {"label": {"BAD": "red"}}}},
+    out = Tabular(style={"status": {"color": {"lookup": {"BAD": "red"}}}},
                   stream=fd)
     out(OrderedDict([("status", [0, 1])]))
     expected = ("[0, 1]\n")

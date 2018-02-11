@@ -82,7 +82,7 @@ def test_style_value_type():
 
     assert fn(True) == "simple"
     assert fn("red") == "simple"
-    assert fn({"label": {"BAD": "red"}}) == "label"
+    assert fn({"lookup": {"BAD": "red"}}) == "lookup"
 
     interval = {"interval": [(0, 50, "red"), (50, 80, "yellow")]}
     assert fn(interval) == "interval"

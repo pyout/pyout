@@ -360,13 +360,13 @@ class StyleProcessors(object):
 
         Returns
         -------
-        str, {"simple", "label", "interval"}
+        str, {"simple", "lookup", "interval"}
         """
         try:
             keys = list(value.keys())
         except AttributeError:
             return "simple"
-        if keys in [["label"], ["interval"]]:
+        if keys in [["lookup"], ["interval"]]:
             return keys[0]
         raise ValueError("Type of `value` could not be determined")
 
@@ -412,7 +412,7 @@ class StyleProcessors(object):
                         yield self.by_key(key)
                 elif key_type is str:
                     yield self.by_key(column_style[key])
-            elif vtype == "label":
+            elif vtype == "lookup":
                 yield self.by_lookup(column_style[key][vtype], attr_key)
             elif vtype == "interval":
                 yield self.by_interval_lookup(column_style[key][vtype],
