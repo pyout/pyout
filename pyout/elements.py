@@ -15,7 +15,7 @@ schema = {
         "bold": {
             "description": "Whether text is bold",
             "oneOf": [{"type": "boolean"},
-                      {"$ref": "#/definitions/label"},
+                      {"$ref": "#/definitions/lookup"},
                       {"$ref": "#/definitions/interval"}],
             "default": False,
             "scope": "field"},
@@ -24,7 +24,7 @@ schema = {
             "oneOf": [{"type": "string",
                        "enum": ["black", "red", "green", "yellow",
                                 "blue", "magenta", "cyan", "white"]},
-                      {"$ref": "#/definitions/label"},
+                      {"$ref": "#/definitions/lookup"},
                       {"$ref": "#/definitions/interval"}],
             "default": "black",
             "scope": "field"},
@@ -37,7 +37,7 @@ schema = {
         "underline": {
             "description": "Whether text is underlined",
             "oneOf": [{"type": "boolean"},
-                      {"$ref": "#/definitions/label"},
+                      {"$ref": "#/definitions/lookup"},
                       {"$ref": "#/definitions/interval"}],
             "default": False,
             "scope": "field"},
@@ -76,10 +76,10 @@ schema = {
                                            {"type": ["string", "boolean"]}],
                                  "additionalItems": False}]}},
             "additionalProperties": False},
-        "label": {
+        "lookup": {
             "description": "Map a value to a style",
             "type": "object",
-            "properties": {"label": {"type": "object"}},
+            "properties": {"lookup": {"type": "object"}},
             "additionalProperties": False},
         "transform": {
             "description": """An arbitrary function.
