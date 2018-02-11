@@ -304,7 +304,9 @@ class StyleProcessors(object):
         def by_lookup_fn(value, result):
             try:
                 lookup_value = mapping[value]
-            except KeyError:
+            except (KeyError, TypeError):
+                # ^ TypeError is included in case the user passes
+                # non-hashable values.
                 return result
 
             if not lookup_value:

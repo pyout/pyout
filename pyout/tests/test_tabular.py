@@ -570,6 +570,16 @@ def test_tabular_write_label_bold_false():
 
 
 @patch("pyout.tabular.Terminal", TestTerminal)
+def test_tabular_write_label_non_hashable():
+    fd = StringIO()
+    out = Tabular(style={"status": {"color": {"label": {"BAD": "red"}}}},
+                  stream=fd)
+    out(OrderedDict([("status", [0, 1])]))
+    expected = ("[0, 1]\n")
+    assert eq_repr(fd.getvalue(), expected)
+
+
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_intervals_color():
     fd = StringIO()
     out = Tabular(style={"name": {"width": 3},
