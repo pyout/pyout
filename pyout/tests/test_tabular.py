@@ -79,6 +79,14 @@ def test_tabular_write_missing_column_missing_text():
 
 
 @patch("pyout.tabular.Terminal", TestTerminal)
+def test_tabular_write_list_value():
+    fd = StringIO()
+    out = Tabular(columns=["name", "status"], stream=fd)
+    out({"name": "foo", "status": [0, 1]})
+    assert eq_repr(fd.getvalue(), "foo [0, 1]\n")
+
+
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_missing_column_missing_object_data():
     class Data(object):
         name = "solo"
@@ -558,6 +566,16 @@ def test_tabular_write_label_bold_false():
 
     expected = ("foo OK    \n"
                 "bar BAD   \n")
+    assert eq_repr(fd.getvalue(), expected)
+
+
+@patch("pyout.tabular.Terminal", TestTerminal)
+def test_tabular_write_label_non_hashable():
+    fd = StringIO()
+    out = Tabular(style={"status": {"color": {"label": {"BAD": "red"}}}},
+                  stream=fd)
+    out(OrderedDict([("status", [0, 1])]))
+    expected = ("[0, 1]\n")
     assert eq_repr(fd.getvalue(), expected)
 
 
