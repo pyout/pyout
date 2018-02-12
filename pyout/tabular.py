@@ -562,8 +562,7 @@ class Tabular(object):
         flat = []
         for column in columns:
             if isinstance(column, tuple):
-                for c in column:
-                    flat.append(c)
+                flat.extend(column)
             else:
                 flat.append(column)
         return flat
