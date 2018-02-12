@@ -231,7 +231,7 @@ def test_tabular_write_different_data_types_same_output():
 def test_tabular_write_header_with_style():
     fd = StringIO()
     out = Tabular(["name", "status"],
-                  style={"header_": {"underline": True},
+                  style={"header_": {"bold": True},
                          "name": {"width": 4},
                          "status": {"width": 9,
                                     "color": "green"}},
@@ -239,8 +239,8 @@ def test_tabular_write_header_with_style():
     out({"name": "foo",
          "status": "installed"})
 
-    expected = unicode_cap("smul") + "name" + unicode_cap("sgr0") + " " + \
-               unicode_cap("smul") + "status   " + unicode_cap("sgr0") + \
+    expected = unicode_cap("bold") + "name" + unicode_cap("sgr0") + " " + \
+               unicode_cap("bold") + "status   " + unicode_cap("sgr0") + \
                "\nfoo  " + unicode_parm("setaf", COLORNUMS["green"]) + \
                "installed" + unicode_cap("sgr0") + "\n"
     assert eq_repr(fd.getvalue(), expected)
@@ -317,6 +317,34 @@ def test_tabular_write_multicolor():
                unicode_cap("sgr0") + " " + \
                unicode_parm("setaf", COLORNUMS["white"]) + "unknown" + \
                unicode_cap("sgr0") + "\n"
+    assert eq_repr(fd.getvalue(), expected)
+
+
+@patch("pyout.tabular.Terminal", TestTerminal)
+def test_tabular_write_empty_string_nostyle():
+    fd = StringIO()
+    out = Tabular(style={"name": {"color": "green"}},
+                  stream=fd, force_styling=True)
+    out({"name": ""})
+    assert eq_repr(fd.getvalue(), "\n")
+
+
+@patch("pyout.tabular.Terminal", TestTerminal)
+def test_tabular_write_underline():
+    fd = StringIO()
+    out = Tabular(columns=["name", "status"],
+                  style={"status": {"underline": True,
+                                    "bold": True,
+                                    "align": "center",
+                                    "width": 7},
+                         # Use "," to more easily see spaces in fields.
+                         "separator_": ",",},
+                  stream=fd, force_styling=True)
+    out({"name": "foo", "status": "bad"})
+    # The text is underlined but not the flanking spaces.
+    expected = "foo," + unicode_cap("bold") + "  " + \
+               unicode_cap("smul") + "bad" + unicode_cap("sgr0") + \
+               "  " + unicode_cap("sgr0") + "\n"
     assert eq_repr(fd.getvalue(), expected)
 
 

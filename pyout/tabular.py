@@ -9,6 +9,7 @@ from functools import partial
 import inspect
 import multiprocessing
 from multiprocessing.dummy import Pool
+import re
 
 from blessings import Terminal
 
@@ -29,33 +30,33 @@ class TermProcessors(StyleProcessors):
     def __init__(self, term):
         self.term = term
 
-    def translate(self, name):
-        """Translate a style key into a Terminal code.
+    def render(self, key, value):
+        """Prepend terminal code for `key` to `value`.
 
         Parameters
         ----------
-        name : str
+        key : str
             A style key (e.g., "bold").
+        value : str
+            The value to render.
 
         Returns
         -------
-        An output-specific translation of `name` (e.g., "\x1b[1m").
+        The code for `key` (e.g., "\x1b[1m" for bold) plus the
+        original value.
         """
-        return str(getattr(self.term, name))
-
-    def _maybe_reset(self):
-        def maybe_reset_fn(_, result):
-            if "\x1b" in result:
-                return result + self.term.normal
-            return result
-        return maybe_reset_fn
-
-    def post_from_style(self, column_style):
-        """A Terminal-specific reset to StyleProcessors.post_from_style.
-        """
-        for proc in super(TermProcessors, self).post_from_style(column_style):
-            yield proc
-        yield self._maybe_reset()
+        if not value.strip():
+            # We've got an empty string.  Don't bother adding any
+            # codes.
+            return value
+        if key == "underline":
+            strip_re = re.compile(r"(\s*)(.*\S)(\s*)\Z")
+            match = strip_re.match(value)
+            assert match, "This regexp should always match"
+            return (match.group(1) + str(getattr(self.term, key)) +
+                    match.group(2) + self.term.normal +
+                    match.group(3))
+        return str(getattr(self.term, key)) + value + self.term.normal
 
 
 def _safe_get(mapping, key, default=None):
