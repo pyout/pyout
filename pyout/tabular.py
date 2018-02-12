@@ -9,6 +9,7 @@ from functools import partial
 import inspect
 import multiprocessing
 from multiprocessing.dummy import Pool
+import re
 
 from blessings import Terminal
 
@@ -48,7 +49,14 @@ class TermProcessors(StyleProcessors):
             # We've got an empty string.  Don't bother adding any
             # codes.
             return value
-        return str(getattr(self.term, key)) + value + str(self.term.normal)
+        if key == "underline":
+            strip_re = re.compile(r"(\s*)(.*\S)(\s*)\Z")
+            match = strip_re.match(value)
+            assert match, "This regexp should always match"
+            return (match.group(1) + str(getattr(self.term, key)) +
+                    match.group(2) + self.term.normal +
+                    match.group(3))
+        return str(getattr(self.term, key)) + value + self.term.normal
 
 
 def _safe_get(mapping, key, default=None):

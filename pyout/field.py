@@ -203,8 +203,13 @@ class StyleProcessors(object):
         expected type.
     """
 
-    style_keys = [("bold", bool),
-                  ("underline", bool),
+    # Sadly, the order matters here because we want "underline" to
+    # ignore flanking whitespace, which means it needs to get the
+    # string before "bold" or "color" change the value.  The need for
+    # this kludge suggests that this class, or perhaps even Field,
+    # should be redesigned.
+    style_keys = [("underline", bool),
+                  ("bold", bool),
                   ("color", str)]
 
     def render(self, key, value):

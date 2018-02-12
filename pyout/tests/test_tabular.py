@@ -330,6 +330,25 @@ def test_tabular_write_empty_string_nostyle():
 
 
 @patch("pyout.tabular.Terminal", TestTerminal)
+def test_tabular_write_underline():
+    fd = StringIO()
+    out = Tabular(columns=["name", "status"],
+                  style={"status": {"underline": True,
+                                    "bold": True,
+                                    "align": "center",
+                                    "width": 7},
+                         # Use "," to more easily see spaces in fields.
+                         "separator_": ",",},
+                  stream=fd, force_styling=True)
+    out({"name": "foo", "status": "bad"})
+    # The text is underlined but not the flanking spaces.
+    expected = "foo," + unicode_cap("bold") + "  " + \
+               unicode_cap("smul") + "bad" + unicode_cap("sgr0") + \
+               "  " + unicode_cap("sgr0") + "\n"
+    assert eq_repr(fd.getvalue(), expected)
+
+
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_align():
     fd = StringIO()
     out = Tabular(["name"],
