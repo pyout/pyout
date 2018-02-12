@@ -48,21 +48,7 @@ class TermProcessors(StyleProcessors):
             # We've got an empty string.  Don't bother adding any
             # codes.
             return value
-        return str(getattr(self.term, key)) + value
-
-    def _maybe_reset(self):
-        def maybe_reset_fn(_, result):
-            if "\x1b" in result:
-                return result + self.term.normal
-            return result
-        return maybe_reset_fn
-
-    def post_from_style(self, column_style):
-        """A Terminal-specific reset to StyleProcessors.post_from_style.
-        """
-        for proc in super(TermProcessors, self).post_from_style(column_style):
-            yield proc
-        yield self._maybe_reset()
+        return str(getattr(self.term, key)) + value + str(self.term.normal)
 
 
 def _safe_get(mapping, key, default=None):
