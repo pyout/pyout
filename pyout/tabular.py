@@ -270,7 +270,7 @@ class Tabular(object):
         for column in self._columns:
             if column in self._autowidth_columns:
                 field = self._fields[column]
-                # If we've added style transform function as
+                # If we've added any style transform functions as
                 # pre-format processors, we want to measure the width
                 # of their result rather than the raw value.
                 if field.pre[proc_group]:
