@@ -603,8 +603,8 @@ class Tabular(object):
             If the id column names are set through the `ids` property,
             a sequence of values can be passed instead of a dict.
         values : dict
-            The keys are that columns to be updated, and the values
-            are the new values.
+            The keys are the columns to be updated, and the values are
+            the new values.
         style : dict
             A new style dictionary to use for the new row.  All
             unspecified style elements are taken from the instance's
