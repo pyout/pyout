@@ -270,7 +270,7 @@ class Tabular(object):
         for column in self._columns:
             if column in self._autowidth_columns:
                 field = self._fields[column]
-                # If we've added style transform function as
+                # If we've added any style transform functions as
                 # pre-format processors, we want to measure the width
                 # of their result rather than the raw value.
                 if field.pre[proc_group]:
@@ -562,8 +562,7 @@ class Tabular(object):
         flat = []
         for column in columns:
             if isinstance(column, tuple):
-                for c in column:
-                    flat.append(c)
+                flat.extend(column)
             else:
                 flat.append(column)
         return flat
@@ -604,8 +603,8 @@ class Tabular(object):
             If the id column names are set through the `ids` property,
             a sequence of values can be passed instead of a dict.
         values : dict
-            The keys are that columns to be updated, and the values
-            are the new values.
+            The keys are the columns to be updated, and the values are
+            the new values.
         style : dict
             A new style dictionary to use for the new row.  All
             unspecified style elements are taken from the instance's
