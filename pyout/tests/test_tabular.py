@@ -325,6 +325,15 @@ def test_tabular_write_multicolor():
 
 
 @patch("pyout.tabular.Terminal", TestTerminal)
+def test_tabular_write_empty_string_nostyle():
+    fd = StringIO()
+    out = Tabular(style={"name": {"color": "green"}},
+                  stream=fd, force_styling=True)
+    out({"name": ""})
+    assert eq_repr(fd.getvalue(), "\n")
+
+
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_align():
     fd = StringIO()
     out = Tabular(["name"],
