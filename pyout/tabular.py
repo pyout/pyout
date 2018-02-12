@@ -343,8 +343,6 @@ class Tabular(object):
 
         if isinstance(self._columns, OrderedDict):
             row = self._columns
-        elif self._normalizer == self._seq_to_dict:
-            row = self._normalizer(self._columns)
         else:
             row = dict(zip(self._columns, self._columns))
 
