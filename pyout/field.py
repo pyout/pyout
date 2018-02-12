@@ -2,6 +2,7 @@
 """
 from itertools import chain
 from collections import defaultdict
+import re
 import sys
 
 import six
@@ -408,6 +409,9 @@ class StyleProcessors(object):
         -------
         A generator object.
         """
+        flanks = Flanks()
+        yield flanks.split_flanks
+
         for key, key_type in self.style_keys:
             if key not in column_style:
                 continue
@@ -426,6 +430,36 @@ class StyleProcessors(object):
             elif vtype == "interval":
                 yield self.by_interval_lookup(column_style[key][vtype],
                                               attr_key)
+
+        yield flanks.join_flanks
+
+
+class Flanks(object):
+    """A pair of processors that split and rejoin flanking whitespace.
+    """
+
+    flank_re = re.compile(r"(\s*)(.*\S)(\s*)\Z")
+
+    def __init__(self):
+        self.left, self.right = None, None
+
+    def split_flanks(self, _, result):
+        """Return `result` without flanking whitespace.
+        """
+        if not result.strip():
+            self.left, self.right = "", ""
+            return result
+
+        match = self.flank_re.match(result)
+        assert match, "This regexp should always match"
+        self.left, self.right = match.group(1), match.group(3)
+        return match.group(2)
+
+    def join_flanks(self, _, result):
+        """Add whitespace from last `split_flanks` call back to `result`.
+        """
+        return self.left + result + self.right
+
 
 
 class TermProcessors(StyleProcessors):
@@ -471,5 +505,7 @@ class TermProcessors(StyleProcessors):
         """A Terminal-specific reset to StyleProcessors.post_from_style.
         """
         for proc in super(TermProcessors, self).post_from_style(column_style):
+            if proc.__name__ == "join_flanks":
+                # Reset any codes before adding back whitespace.
+                yield self._maybe_reset()
             yield proc
-        yield self._maybe_reset()
