@@ -3,7 +3,9 @@ from collections import OrderedDict
 from curses import tigetstr, tparm
 from functools import partial
 from six.moves import StringIO
+import sys
 import time
+import traceback
 
 import blessings
 from mock import patch
@@ -750,15 +752,26 @@ def test_tabular_write_transform_on_header():
 
 @patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_transform_func_error():
+    def dontlikeints(x):
+        return x[::-1]
+
     fd = StringIO()
     out = Tabular(style={"name": {"width": 4},
-                         "val": {"transform": lambda x: x[::-1]}},
+                         "val": {"transform": dontlikeints}},
                   stream=fd)
     # The transform function receives the data as given, so it fails
     # trying to index an integer.
-    with pytest.raises(StyleFunctionError):
-        out(OrderedDict([("name", "foo"),
-                         ("val", 330)]))
+    try:
+        out(OrderedDict([("name", "foo"), ("val", 330)]))
+    except:
+        exc_type, value, tb = sys.exc_info()
+        try:
+            assert isinstance(value, StyleFunctionError)
+            tblines = "\n".join(
+                traceback.format_exception(exc_type, value, tb))
+            assert "in dontlikeints" in tblines
+        finally:
+            del tb
 
 
 @patch("pyout.tabular.Terminal", TestTerminal)
