@@ -231,7 +231,7 @@ def test_tabular_write_different_data_types_same_output():
 def test_tabular_write_header_with_style():
     fd = StringIO()
     out = Tabular(["name", "status"],
-                  style={"header_": {"underline": True},
+                  style={"header_": {"bold": True},
                          "name": {"width": 4},
                          "status": {"width": 9,
                                     "color": "green"}},
@@ -239,8 +239,8 @@ def test_tabular_write_header_with_style():
     out({"name": "foo",
          "status": "installed"})
 
-    expected = unicode_cap("smul") + "name" + unicode_cap("sgr0") + " " + \
-               unicode_cap("smul") + "status   " + unicode_cap("sgr0") + \
+    expected = unicode_cap("bold") + "name" + unicode_cap("sgr0") + " " + \
+               unicode_cap("bold") + "status   " + unicode_cap("sgr0") + \
                "\nfoo  " + unicode_parm("setaf", COLORNUMS["green"]) + \
                "installed" + unicode_cap("sgr0") + "\n"
     assert eq_repr(fd.getvalue(), expected)
