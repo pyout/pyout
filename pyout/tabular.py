@@ -97,11 +97,14 @@ class Tabular(object):
         self._autowidth_columns = {}
 
         if columns is not None:
-            self._setup_style()
-            self._setup_fields()
+            self._init_after_columns()
 
         self._pool = None
         self._lock = None
+
+    def _init_after_columns(self):
+        self._setup_style()
+        self._setup_fields()
 
     def __enter__(self):
         return self
@@ -475,8 +478,7 @@ class Tabular(object):
         """
         if self._columns is None:
             self._columns = self._infer_columns(row)
-            self._setup_style()
-            self._setup_fields()
+            self._init_after_columns()
 
         if self._normalizer is None:
             self._normalizer = self._choose_normalizer(row)
