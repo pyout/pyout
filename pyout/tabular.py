@@ -77,18 +77,17 @@ class Tabular(object):
     Parameters
     ----------
     columns : list of str or OrderedDict, optional
-        Column names.  An OrderedDict can be used instead of a
-        sequence to provide a map of short names to the displayed
-        column names.
+        Column names.  An OrderedDict can be used instead of a sequence to
+        provide a map of short names to the displayed column names.
 
-        If not given, the keys will be extracted from the first row of
-        data that the object is called with, which is particularly
-        useful if the row is an OrderedDict.  This argument must be
-        given if this instance will not be called with a mapping.
+        If not given, the keys will be extracted from the first row of data
+        that the object is called with, which is particularly useful if the row
+        is an OrderedDict.  This argument must be given if this instance will
+        not be called with a mapping.
     style : dict, optional
-        Each top-level key should be a column name and the value
-        should be a style dict that overrides the `default_style`
-        class attribute.  See the "Examples" section below.
+        Each top-level key should be a column name and the value should be a
+        style dict that overrides the `default_style` class attribute.  See the
+        "Examples" section below.
     stream : file object, optional
         Defaults to standard output.
 
@@ -107,9 +106,9 @@ class Tabular(object):
 
     >>> out = Tabular(["name", "status"], style={"status": {"width": 5}})
 
-    The first field, "name", is taken as the unique ID.  The `style`
-    argument is used to override the default width for the "status"
-    field that is defined by the class attribute `default_style`.
+    The first field, "name", is taken as the unique ID.  The `style` argument
+    is used to override the default width for the "status" field that is
+    defined by the class attribute `default_style`.
 
     Write a row to stdout:
 
@@ -203,11 +202,10 @@ class Tabular(object):
                 width = style_width
                 core_procs = [self._tproc.truncate(width)]
 
-            # We are creating a distinction between "core" processors,
-            # that we always want to be active and "default"
-            # processors that we want to be active unless there's an
-            # overriding style (i.e., a header is being written or the
-            # `style` argument to __call__ is specified).
+            # We are creating a distinction between "core" processors, that we
+            # always want to be active and "default" processors that we want to
+            # be active unless there's an overriding style (i.e., a header is
+            # being written or the `style` argument to __call__ is specified).
             field = Field(width=width, align=cstyle["align"],
                           default_keys=["core", "default"],
                           other_keys=["override"])
@@ -258,13 +256,13 @@ class Tabular(object):
         ----------
         row : dict
         proc_group : {'default', 'override'}
-            Whether to consider 'default' or 'override' key for pre-
-            and post-format processors.
+            Whether to consider 'default' or 'override' key for pre- and
+            post-format processors.
 
         Raises
         ------
-        RewritePrevious to signal that previously written rows, if
-        any, may be stale.
+        RewritePrevious to signal that previously written rows, if any, may be
+        stale.
         """
         rewrite = False
         for column in self._columns:
@@ -299,9 +297,9 @@ class Tabular(object):
     def _write_lock(self):
         """Acquire and release the lock around output calls.
 
-        This should allow multiple threads or processes to write
-        output reliably.  Code that modifies the `_rows` attribute
-        should also do so within this context.
+        This should allow multiple threads or processes to write output
+        reliably.  Code that modifies the `_rows` attribute should also do so
+        within this context.
         """
         if self._lock:
             self._lock.acquire()
@@ -314,8 +312,8 @@ class Tabular(object):
     def _style_proc_group(self, style, adopt=True):
         """Return whether group is "default" or "override".
 
-        In the case of "override", the self._fields pre-format and
-        post-format processors will be set under the "override" key.
+        In the case of "override", the self._fields pre-format and post-format
+        processors will be set under the "override" key.
         """
         fields = self._fields
         if style is not None:
@@ -351,15 +349,14 @@ class Tabular(object):
         style : dict or None
             Overridding style or None.
         adopt : bool, optional
-            If true, overlay `style` on top of `self._style`.
-            Otherwise, treat `style` as a standalone style.
+            If true, overlay `style` on top of `self._style`.  Otherwise, treat
+            `style` as a standalone style.
         repaint : bool, optional
-            Whether to repaint of width check reports that previous
-            widths are stale.
+            Whether to repaint of width check reports that previous widths are
+            stale.
         no_write : bool, optional
-            Do the check but don't write.  Instead, return the
-            processor keys that can be used to call self._writerow
-            directly.
+            Do the check but don't write.  Instead, return the processor keys
+            that can be used to call self._writerow directly.
         """
         repainted = False
         proc_group = self._style_proc_group(style, adopt=adopt)
@@ -401,17 +398,17 @@ class Tabular(object):
     def _strip_callables(row):
         """Extract callable values from `row`.
 
-        Replace the callable values with the initial value if
-        specified) or an empty string.
+        Replace the callable values with the initial value if specified) or an
+        empty string.
 
         Parameters
         ----------
         row : dict
-            A normalized data row.  The keys are either a single
-            column name or a tuple of column names.  The values take
-            one of three forms: 1) a non-callable value, 2) a tuple
-            (initial_value, callable), 3) or a single callable (in
-            which case the initial value is set to an empty string).
+            A normalized data row.  The keys are either a single column name or
+            a tuple of column names.  The values take one of three forms: 1) a
+            non-callable value, 2) a tuple (initial_value, callable), 3) or a
+            single callable (in which case the initial value is set to an empty
+            string).
 
         Returns
         -------
@@ -487,42 +484,37 @@ class Tabular(object):
         Parameters
         ----------
         row : mapping, sequence, or other
-            If a mapping is given, the keys are the column names and
-            values are the data to write.  For a sequence, the items
-            represent the values and are taken to be in the same order
-            as the constructor's `columns` argument.  Any other object
-            type should have an attribute for each column specified
-            via `columns`.
+            If a mapping is given, the keys are the column names and values are
+            the data to write.  For a sequence, the items represent the values
+            and are taken to be in the same order as the constructor's
+            `columns` argument.  Any other object type should have an attribute
+            for each column specified via `columns`.
 
-            Instead of a plain value, a column's value can be a tuple
-            of the form (initial_value, producer).  If a producer is
-            is a generator function or a generator object, each item
-            produced replaces `initial_value`.  Otherwise, a producer
-            should be a function that will be called with no arguments
-            and that returns the value with which to replace
-            `initial_value`.  For both generators and normal
+            Instead of a plain value, a column's value can be a tuple of the
+            form (initial_value, producer).  If a producer is is a generator
+            function or a generator object, each item produced replaces
+            `initial_value`.  Otherwise, a producer should be a function that
+            will be called with no arguments and that returns the value with
+            which to replace `initial_value`.  For both generators and normal
             functions, the execution will happen asynchronously.
 
             Directly supplying a producer as the value rather than
             (initial_value, producer) is shorthand for ("", producer).
 
-            The producer can return an update for multiple columns.
-            To do so, the keys of `row` should include a tuple with
-            the column names and the produced value should be a tuple
-            with the same order as the key or a mapping from column
-            name to the updated value.
+            The producer can return an update for multiple columns.  To do so,
+            the keys of `row` should include a tuple with the column names and
+            the produced value should be a tuple with the same order as the key
+            or a mapping from column name to the updated value.
 
-            Using the (initial_value, producer) form requires some
-            additional steps.  The `ids` property should be set unless
-            the first column happens to be a suitable id.  Also, to
-            instruct the program to wait for the updated values, the
-            instance calls should be followed by a call to the `wait`
-            method or the instance should be used as a context
-            manager.
+            Using the (initial_value, producer) form requires some additional
+            steps.  The `ids` property should be set unless the first column
+            happens to be a suitable id.  Also, to instruct the program to wait
+            for the updated values, the instance calls should be followed by a
+            call to the `wait` method or the instance should be used as a
+            context manager.
         style : dict, optional
-            Each top-level key should be a column name and the value
-            should be a style dict that overrides the class instance
-            style.
+            Each top-level key should be a column name and the value should be
+            a style dict that overrides the class instance style.
         """
         if self._columns is None:
             self._columns = self._infer_columns(row)
@@ -589,26 +581,25 @@ class Tabular(object):
             self.term.stream.write(self.term.move_down * (n - 1))
             self.term.stream.flush()
 
-    # FIXME: This will break with stderr and when the output scrolls.
-    # Maybe we could check term height and repaint?
+    # FIXME: This will break with stderr and when the output scrolls.  Maybe we
+    # could check term height and repaint?
     def rewrite(self, ids, values, style=None):
         """Rewrite a row.
 
         Parameters
         ----------
         ids : dict or sequence
-            The keys are the column names that in combination uniquely
-            identify a row when matched for the values.
+            The keys are the column names that in combination uniquely identify
+            a row when matched for the values.
 
-            If the id column names are set through the `ids` property,
-            a sequence of values can be passed instead of a dict.
+            If the id column names are set through the `ids` property, a
+            sequence of values can be passed instead of a dict.
         values : dict
-            The keys are the columns to be updated, and the values are
-            the new values.
+            The keys are the columns to be updated, and the values are the new
+            values.
         style : dict
-            A new style dictionary to use for the new row.  All
-            unspecified style elements are taken from the instance's
-            `style`.
+            A new style dictionary to use for the new row.  All unspecified
+            style elements are taken from the instance's `style`.
         """
         if isinstance(ids, Sequence):
             ids = dict(zip(self.ids, ids))

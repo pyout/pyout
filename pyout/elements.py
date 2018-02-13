@@ -83,10 +83,10 @@ schema = {
             "additionalProperties": False},
         "transform": {
             "description": """An arbitrary function.
-            This function will be called with the (unprocessed) field
-            value as the single argument and should return a
-            transformed value.  Note: This function should not have
-            side-effects because it may be called multiple times.""",
+            This function will be called with the (unprocessed) field value as
+            the single argument and should return a transformed value.  Note:
+            This function should not have side-effects because it may be called
+            multiple times.""",
             "scope": "field"}
     },
     "type": "object",
@@ -174,7 +174,7 @@ def validate(style):
         jsonschema.validate(style, schema)
     except jsonschema.ValidationError as exc:
         new_exc = StyleError(exc)
-        # Don't dump the original jsonschema exception because it is
-        # already included in the StyleError's message.
+        # Don't dump the original jsonschema exception because it is already
+        # included in the StyleError's message.
         new_exc.__cause__ = None
         raise new_exc

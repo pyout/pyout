@@ -10,35 +10,31 @@ import six
 class Field(object):
     """Render values based on a list of processors.
 
-    A Field instance is a template for a string that is defined by its
-    width, text alignment, and its "processors".
+    A Field instance is a template for a string that is defined by its width,
+    text alignment, and its "processors".
 
-    When a field is called with a value, the value is rendered in
-    three steps.
+    When a field is called with a value, the value is rendered in three steps.
 
                        pre -> format -> post
 
-    During the first step, the value is fed through the list of
-    pre-format processor functions.  The result of this value is then
-    formatted as a string with the specified width and alignment.
-    Finally, this result is fed through the list of the post-format
-    processors.  The rendered string is the result returned by the
-    last processor
+    During the first step, the value is fed through the list of pre-format
+    processor functions.  The result of this value is then formatted as a
+    string with the specified width and alignment.  Finally, this result is fed
+    through the list of the post-format processors.  The rendered string is the
+    result returned by the last processor
 
     Parameters
     ----------
     width : int, optional
     align : {'left', 'right', 'center'}, optional
     default_keys, other_keys : sequence, optional
-        Together, these define the "registered" set of processor keys
-        that can be used in the `pre` and `post` dicts.  Any key given
-        to the `add` method or instance call must be contained in one
-        of these collections.
+        Together, these define the "registered" set of processor keys that can
+        be used in the `pre` and `post` dicts.  Any key given to the `add`
+        method or instance call must be contained in one of these collections.
 
-        The processor lists for `default_keys` is used when the
-        instance is called without a list of `keys`.  `other_keys`
-        defines additional keys that can be passed as the `keys`
-        argument to the instance call.
+        The processor lists for `default_keys` is used when the instance is
+        called without a list of `keys`.  `other_keys` defines additional keys
+        that can be passed as the `keys` argument to the instance call.
 
     Attributes
     ----------
@@ -46,16 +42,15 @@ class Field(object):
     registered_keys : set
         Set of available keys.
     default_keys : list
-        Defines which processor lists are called by default and in
-        what order.  The values can be overridden by the `keys`
-        argument when calling the instance.
+        Defines which processor lists are called by default and in what order.
+        The values can be overridden by the `keys` argument when calling the
+        instance.
     pre, post : dict of lists
-        These map each registered key to a list of processors.
-        Conceptually, `pre` and `post` are a list of functions that
-        form a pipeline, but they are structured as a dict of lists to
-        allow different processors to be grouped by key.  By
-        specifying keys, the caller can control which groups are
-        "enabled".
+        These map each registered key to a list of processors.  Conceptually,
+        `pre` and `post` are a list of functions that form a pipeline, but they
+        are structured as a dict of lists to allow different processors to be
+        grouped by key.  By specifying keys, the caller can control which
+        groups are "enabled".
     """
 
     _align_values = {"left": "<", "right": ">", "center": "^"}
@@ -84,8 +79,8 @@ class Field(object):
         ----------
         kind : {"pre", "post"}
         key : str
-            A registered key.  Add the functions (in order) to this
-            key's list of processors.
+            A registered key.  Add the functions (in order) to this key's list
+            of processors.
         *values : callables
             Processors to add.
         """
@@ -123,12 +118,12 @@ class Field(object):
         ----------
         value : str
         keys : sequence, optional
-            These lists define which processor lists are called and in
-            what order.  If not specified, the `default_keys`
-            attribute will be used.
+            These lists define which processor lists are called and in what
+            order.  If not specified, the `default_keys` attribute will be
+            used.
         exclude_post : bool, optional
-            Whether to return the vaue after the format step rather
-            than feeding it through post-format processors.
+            Whether to return the vaue after the format step rather than
+            feeding it through post-format processors.
         """
         if keys is None:
             keys = self.default_keys
@@ -151,11 +146,10 @@ class Field(object):
 class Nothing(object):
     """Internal class to represent missing values.
 
-    This is used instead of a built-ins like None, "", or 0 to allow
-    us to unambiguously identify a missing value.  In terms of
-    methods, it tries to mimic the string `text` (an empty string by
-    default) because that behavior is the most useful internally for
-    formatting the output.
+    This is used instead of a built-ins like None, "", or 0 to allow us to
+    unambiguously identify a missing value.  In terms of methods, it tries to
+    mimic the string `text` (an empty string by default) because that behavior
+    is the most useful internally for formatting the output.
 
     Parameters
     ----------
@@ -199,8 +193,8 @@ class StyleProcessors(object):
     Attributes
     ----------
     style_keys : list of tuples
-        Each pair consists of a style attribute (e.g., "bold") and the
-        expected type.
+        Each pair consists of a style attribute (e.g., "bold") and the expected
+        type.
     """
 
     style_keys = [("bold", bool),
@@ -225,18 +219,18 @@ class StyleProcessors(object):
     def truncate(length, marker=True):
         """Return a processor that truncates the result to `length`.
 
-        Note: You probably want to place this function at the
-        beginning of the processor list so that the truncation is
-        based on the length of the original value.
+        Note: You probably want to place this function at the beginning of the
+        processor list so that the truncation is based on the length of the
+        original value.
 
         Parameters
         ----------
         length : int
         marker : str or bool
-            Indicate truncation with this string.  If True, indicate
-            truncation by replacing the last three characters of a
-            truncated string with '...'.  If False, no truncation
-            marker is added to a truncated string.
+            Indicate truncation with this string.  If True, indicate truncation
+            by replacing the last three characters of a truncated string with
+            '...'.  If False, no truncation marker is added to a truncated
+            string.
 
         Returns
         -------
@@ -303,12 +297,12 @@ class StyleProcessors(object):
         Parameters
         ----------
         mapping : mapping
-            A map from the field value to a style key, or, if `key` is
-            given, a map from the field value to a value that
-            indicates whether the processor should style its result.
+            A map from the field value to a style key, or, if `key` is given, a
+            map from the field value to a value that indicates whether the
+            processor should style its result.
         key : str, optional
-            A style key to be translated.  If not given, the value
-            from `mapping` is used.
+            A style key to be translated.  If not given, the value from
+            `mapping` is used.
 
         Returns
         -------
@@ -318,8 +312,8 @@ class StyleProcessors(object):
             try:
                 lookup_value = mapping[value]
             except (KeyError, TypeError):
-                # ^ TypeError is included in case the user passes
-                # non-hashable values.
+                # ^ TypeError is included in case the user passes non-hashable
+                # values.
                 return result
 
             if not lookup_value:
@@ -333,12 +327,12 @@ class StyleProcessors(object):
         Parameters
         ----------
         intervals : sequence of tuples
-            Each tuple should have the form `(start, end, key)`, where
-            start is the start of the interval (inclusive) , end is
-            the end of the interval, and key is a style key.
+            Each tuple should have the form `(start, end, key)`, where start is
+            the start of the interval (inclusive) , end is the end of the
+            interval, and key is a style key.
         key : str, optional
-            A style key to be translated.  If not given, the value
-            from `mapping` is used.
+            A style key to be translated.  If not given, the value from
+            `mapping` is used.
 
         Returns
         -------
@@ -389,8 +383,8 @@ class StyleProcessors(object):
         Parameters
         ----------
         column_style : dict
-            A style where the top-level keys correspond to style
-            attributes such as "bold" or "color".
+            A style where the top-level keys correspond to style attributes
+            such as "bold" or "color".
 
         Returns
         -------
@@ -405,8 +399,8 @@ class StyleProcessors(object):
         Parameters
         ----------
         column_style : dict
-            A style where the top-level keys correspond to style
-            attributes such as "bold" or "color".
+            A style where the top-level keys correspond to style attributes
+            such as "bold" or "color".
 
         Returns
         -------

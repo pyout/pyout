@@ -759,8 +759,8 @@ def test_tabular_write_transform_func_error():
     out = Tabular(style={"name": {"width": 4},
                          "val": {"transform": dontlikeints}},
                   stream=fd)
-    # The transform function receives the data as given, so it fails
-    # trying to index an integer.
+    # The transform function receives the data as given, so it fails trying to
+    # index an integer.
     try:
         out(OrderedDict([("name", "foo"), ("val", 330)]))
     except:
@@ -992,9 +992,9 @@ def test_tabular_write_callable_transform_nothing():
                   style={"status": {"transform": lambda n: n + 2}},
                   stream=fd)
     with out:
-        # The unspecified initial value is set to Nothing().  The
-        # transform function above, which is designed to take a
-        # number, won't be called with it.
+        # The unspecified initial value is set to Nothing().  The transform
+        # function above, which is designed to take a number, won't be called
+        # with it.
         out({"name": "foo", "status": delay0.run})
         assert eq_repr(fd.getvalue(), "foo \n")
         delay0.now = True
