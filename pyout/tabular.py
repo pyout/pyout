@@ -13,9 +13,9 @@ from multiprocessing.dummy import Pool
 from blessings import Terminal
 
 from pyout import elements
-from pyout.field import Field, TermProcessors, Nothing
+from pyout.field import Field, TermProcessors
+from pyout.common import RowNormalizer
 
-NOTHING = Nothing()
 
 def _safe_get(mapping, key, default=None):
     try:
@@ -93,7 +93,6 @@ class Tabular(object):
 
         self._init_style = style
         self._style = None
-        self._nothings = {}  # column => missing value
         self._autowidth_columns = {}
 
         if columns is not None:
@@ -105,6 +104,7 @@ class Tabular(object):
     def _init_after_columns(self):
         self._setup_style()
         self._setup_fields()
+        self._normalizer = RowNormalizer(self._columns, self._style)
 
     def __enter__(self):
         return self
@@ -133,12 +133,6 @@ class Tabular(object):
                                               elements.default("separator_"))
 
         elements.validate(self._style)
-
-        for col in self._columns:
-            if "missing" in self._style[col]:
-                self._nothings[col] = Nothing(self._style[col]["missing"])
-            else:
-                self._nothings[col] = NOTHING
 
     def _setup_fields(self):
         self._fields = {}
@@ -193,23 +187,6 @@ class Tabular(object):
     @ids.setter
     def ids(self, columns):
         self._ids = columns
-
-    @staticmethod
-    def _identity(row):
-        return row
-
-    def _seq_to_dict(self, row):
-        return dict(zip(self._columns, row))
-
-    def _attrs_to_dict(self, row):
-        return {c: getattr(row, c, self._nothings[c]) for c in self._columns}
-
-    def _choose_normalizer(self, row):
-        if isinstance(row, Mapping):
-            return self._identity
-        if isinstance(row, Sequence):
-            return self._seq_to_dict
-        return self._attrs_to_dict
 
     def _set_widths(self, row, proc_group):
         """Update auto-width Fields based on `row`.
@@ -354,54 +331,6 @@ class Tabular(object):
         self._check_and_write(row, self._style["header_"],
                               adopt=False, repaint=False)
 
-    @staticmethod
-    def _strip_callables(row):
-        """Extract callable values from `row`.
-
-        Replace the callable values with the initial value (if specified) or an
-        empty string.
-
-        Parameters
-        ----------
-        row : dict
-            A normalized data row.  The keys are either a single column name or
-            a tuple of column names.  The values take one of three forms: 1) a
-            non-callable value, 2) a tuple (initial_value, callable), 3) or a
-            single callable (in which case the initial value is set to an empty
-            string).
-
-        Returns
-        -------
-        list of (column, callable)
-        """
-        callables = []
-        to_delete = []
-        to_add = []
-        for columns, value in row.items():
-            if isinstance(value, tuple):
-                initial, fn = value
-            else:
-                initial = NOTHING
-                # Value could be a normal (non-callable) value or a
-                # callable with no initial value.
-                fn = value
-
-            if callable(fn) or inspect.isgenerator(fn):
-                if not isinstance(columns, tuple):
-                    columns = columns,
-                else:
-                    to_delete.append(columns)
-                for column in columns:
-                    to_add.append((column, initial))
-                callables.append((columns, fn))
-
-        for column, value in to_add:
-            row[column] = value
-        for multi_columns in to_delete:
-            del row[multi_columns]
-
-        return callables
-
     def _start_callables(self, row, callables):
         """Start running `callables` asynchronously.
         """
@@ -480,20 +409,7 @@ class Tabular(object):
             self._columns = self._infer_columns(row)
             self._init_after_columns()
 
-        if self._normalizer is None:
-            self._normalizer = self._choose_normalizer(row)
-        row = self._normalizer(row)
-        callables = self._strip_callables(row)
-
-        # Fill in any missing values.  Note: If the un-normalized data is an
-        # object, we already handle this in its normalizer, _attrs_to_dict.
-        # When the data is given as a dict, we do it here instead of its
-        # normalizer because there may be multi-column tuple keys.
-        if self._normalizer == self._identity:
-            for column in self._columns:
-                if column in row:
-                    continue
-                row[column] = self._nothings[column]
+        callables, row = self._normalizer(row)
 
         with self._write_lock():
             if not self._rows:
