@@ -13,50 +13,9 @@ from multiprocessing.dummy import Pool
 from blessings import Terminal
 
 from pyout import elements
-from pyout.field import Field, StyleProcessors, Nothing
+from pyout.field import Field, TermProcessors, Nothing
 
 NOTHING = Nothing()
-
-
-class TermProcessors(StyleProcessors):
-    """Generate Field.processors for styled Terminal output.
-
-    Parameters
-    ----------
-    term : blessings.Terminal
-    """
-
-    def __init__(self, term):
-        self.term = term
-
-    def translate(self, name):
-        """Translate a style key into a Terminal code.
-
-        Parameters
-        ----------
-        name : str
-            A style key (e.g., "bold").
-
-        Returns
-        -------
-        An output-specific translation of `name` (e.g., "\x1b[1m").
-        """
-        return str(getattr(self.term, name))
-
-    def _maybe_reset(self):
-        def maybe_reset_fn(_, result):
-            if "\x1b" in result:
-                return result + self.term.normal
-            return result
-        return maybe_reset_fn
-
-    def post_from_style(self, column_style):
-        """A Terminal-specific reset to StyleProcessors.post_from_style.
-        """
-        for proc in super(TermProcessors, self).post_from_style(column_style):
-            yield proc
-        yield self._maybe_reset()
-
 
 def _safe_get(mapping, key, default=None):
     try:
