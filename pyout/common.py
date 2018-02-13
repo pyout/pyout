@@ -6,7 +6,7 @@ amount of general logic that should be extracted if any other outputter is
 actually added.
 """
 
-from collections import Mapping, Sequence
+from collections import defaultdict, Mapping, Sequence
 from functools import partial
 import inspect
 
@@ -60,15 +60,24 @@ class RowNormalizer(object):
         self._columns = columns
         self.method = None
 
+        self.delayed = defaultdict(list)
+        self.delayed_columns = set()
         self.nothings = {}  # column => missing value
 
         for column in columns:
             cstyle = style[column]
 
+            if "delayed" in cstyle:
+                value = cstyle["delayed"]
+                group = column if value is True else value
+                self.delayed[group].append(column)
+                self.delayed_columns.add(column)
+
             if "missing" in cstyle:
                 self.nothings[column] = Nothing(cstyle["missing"])
             else:
                 self.nothings[column] = NOTHING
+
 
     def __call__(self, row):
         """Normalize `row`
@@ -96,16 +105,28 @@ class RowNormalizer(object):
 
     def _normalize(self, getter, row):
         if isinstance(row, Mapping):
-            callables = self.strip_callables(row)
+            callables0 = self.strip_callables(row)
         else:
-            callables = []
-        return callables, self._get(getter, row, self._columns)
+            callables0 = []
 
-    @staticmethod
-    def _get(getter, row, columns):
+        norm_row = self._maybe_delay(getter, row, self._columns)
+        # We need a second pass with strip_callables because norm_row will
+        # contain new callables for any delayed values.
+        callables1 = self.strip_callables(norm_row)
+        return callables0 + callables1, norm_row
+
+    def _maybe_delay(self, getter, row, columns):
         row_norm = {}
-        for col in columns:
-            row_norm[col] = getter(row, col)
+        for column in columns:
+            if column not in self.delayed_columns:
+                row_norm[column] = getter(row, column)
+
+        def delay(cols):
+            return lambda: {c: getter(row, c) for c in cols}
+
+        for columns in self.delayed.values():
+            key = columns[0] if len(columns) == 1 else tuple(columns)
+            row_norm[key] = delay(columns)
         return row_norm
 
     @staticmethod
@@ -156,7 +177,8 @@ class RowNormalizer(object):
 
         return callables
 
-    # Input-specific getters
+    # Input-specific getters.  These exist as their own methods so that they
+    # can be wrapped in a callable and delayed.
 
     def getter_dict(self, row, column):
         return row.get(column, self.nothings[column])

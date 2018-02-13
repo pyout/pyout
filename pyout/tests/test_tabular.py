@@ -1119,3 +1119,39 @@ def test_tabular_write_wait_noop_if_nothreads():
         expected = ("foo done\n"
                     "bar ok  \n")
         assert eq_repr(fd.getvalue(), expected)
+
+
+@pytest.mark.timeout(10)
+@pytest.mark.parametrize("form", ["dict", "list", "attrs"])
+@patch("pyout.tabular.Terminal", TestTerminal)
+def test_tabular_write_delayed(form):
+    data = OrderedDict([("name", "foo"),
+                        ("paired0", 1),
+                        ("paired1", 2),
+                        ("solo", 3)])
+
+    if form == "dict":
+        row = data
+    elif form == "list":
+        row = list(data.values())
+    elif form == "attrs":
+        row = AttrData(**data)
+
+    fd = StringIO()
+    out = Tabular(list(data.keys()),
+                  style={"paired0": {"delayed": "pair"},
+                         "paired1": {"delayed": "pair"},
+                         "solo": {"delayed": True}},
+                  stream=fd)
+    with out:
+        out(row)
+    lines = fd.getvalue().splitlines()
+    assert lines[0] == "foo   "
+
+    # Either paired0/paired1 came in first or solo came in first, but
+    # paired0/paired1 should arrive together.
+    firstin = [ln for ln in lines
+               if ln.endswith("foo 1 2 ") or ln.endswith("foo   3")]
+    assert len(firstin) == 1
+
+    assert lines[-1].endswith("foo 1 2 3")
