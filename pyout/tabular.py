@@ -347,7 +347,7 @@ class Tabular(object):
         row : dict
            Data to write.
         style : dict or None
-            Overridding style or None.
+            Overriding style or None.
         adopt : bool, optional
             If true, overlay `style` on top of `self._style`.  Otherwise, treat
             `style` as a standalone style.
@@ -398,7 +398,7 @@ class Tabular(object):
     def _strip_callables(row):
         """Extract callable values from `row`.
 
-        Replace the callable values with the initial value if specified) or an
+        Replace the callable values with the initial value (if specified) or an
         empty string.
 
         Parameters
