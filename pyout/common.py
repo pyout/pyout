@@ -98,10 +98,12 @@ class RowNormalizer(object):
 
     def _choose_normalizer(self, row):
         if isinstance(row, Mapping):
-            return partial(self._normalize, self.getter_dict)
-        if isinstance(row, Sequence):
-            return partial(self._normalize, self.getter_seq)
-        return partial(self._normalize, self.getter_attrs)
+            getter = self.getter_dict
+        elif isinstance(row, Sequence):
+            getter = self.getter_seq
+        else:
+            getter = self.getter_attrs
+        return partial(self._normalize, getter)
 
     def _normalize(self, getter, row):
         if isinstance(row, Mapping):
