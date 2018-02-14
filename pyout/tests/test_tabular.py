@@ -40,6 +40,20 @@ def eq_repr(a, b):
     return repr(a) == repr(b)
 
 
+class AttrData(object):
+    """Store `kwargs` as attributes.
+
+    For testing tabular calls to construct row's data from an objects
+    attributes.
+
+    This doesn't use __getattr__ to map dict keys to attributes because then
+    we'd have to handle a KeyError for the "missing" column tests.
+    """
+    def __init__(self, **kwargs):
+        for attr, value in kwargs.items():
+            setattr(self, attr, value)
+
+
 @patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_color():
     fd = StringIO()
@@ -90,9 +104,7 @@ def test_tabular_write_list_value():
 
 @patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_missing_column_missing_object_data():
-    class Data(object):
-        name = "solo"
-    data = Data()
+    data = AttrData(name="solo")
 
     fd = StringIO()
     out = Tabular(columns=["name", "status"],
@@ -176,22 +188,14 @@ def test_tabular_write_header():
 
 @patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_data_as_object():
-    class Data(object):
-        def __init__(self, data):
-            self._data = data
-
-        def __getattr__(self, name):
-            return self._data[name]
-
-
     fd = StringIO()
     out = Tabular(["name", "status"],
                   style={"name": {"width": 3},
                          "status": {"width": 9}},
                   stream=fd)
 
-    out(Data({"name": "foo", "status": "installed"}))
-    out(Data({"name": "bar", "status": "unknown"}))
+    out(AttrData(name="foo", status="installed"))
+    out(AttrData(name="bar", status="unknown"))
 
     expected = "foo installed\nbar unknown  \n"
     assert fd.getvalue() == expected
