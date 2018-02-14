@@ -12,22 +12,8 @@ from multiprocessing.dummy import Pool
 
 from blessings import Terminal
 
-from pyout import elements
-from pyout.field import Field, TermProcessors
-from pyout.common import RowNormalizer
-
-
-def _safe_get(mapping, key, default=None):
-    try:
-        return mapping.get(key, default)
-    except AttributeError:
-        return default
-
-
-class RewritePrevious(Exception):
-    """Signal that the previous output needs to be updated.
-    """
-    pass
+from pyout.field import TermProcessors
+from pyout.common import RowNormalizer, StyleFields
 
 
 class Tabular(object):
@@ -79,21 +65,15 @@ class Tabular(object):
     ...     style={"status": {"color": "red", "bold": True}})
     """
 
-    _header_attributes = {"align", "width"}
-
     def __init__(self, columns=None, style=None, stream=None, force_styling=False):
         self.term = Terminal(stream=stream, force_styling=force_styling)
-        self._tproc = TermProcessors(self.term)
 
         self._rows = []
         self._columns = columns
         self._ids = None
-        self._fields = None
         self._normalizer = None
 
-        self._init_style = style
-        self._style = None
-        self._autowidth_columns = {}
+        self._sfields = StyleFields(style, TermProcessors(self.term))
 
         if columns is not None:
             self._init_after_columns()
@@ -102,75 +82,14 @@ class Tabular(object):
         self._lock = None
 
     def _init_after_columns(self):
-        self._setup_style()
-        self._setup_fields()
-        self._normalizer = RowNormalizer(self._columns, self._style)
+        self._sfields.build(self._columns)
+        self._normalizer = RowNormalizer(self._columns, self._sfields.style)
 
     def __enter__(self):
         return self
 
     def __exit__(self, *args):
         self.wait()
-
-    def _setup_style(self):
-        default = dict(elements.default("default_"),
-                       **_safe_get(self._init_style, "default_", {}))
-        self._style = elements.adopt({c: default for c in self._columns},
-                                     self._init_style)
-
-        hstyle = None
-        if self._init_style is not None and "header_" in self._init_style:
-            hstyle = {}
-            for col in self._columns:
-                cstyle = {k: v for k, v in self._style[col].items()
-                          if k in self._header_attributes}
-                hstyle[col] = dict(cstyle, **self._init_style["header_"])
-
-        # Store special keys in _style so that they can be validated.
-        self._style["default_"] = default
-        self._style["header_"] = hstyle
-        self._style["separator_"] = _safe_get(self._init_style, "separator_",
-                                              elements.default("separator_"))
-
-        elements.validate(self._style)
-
-    def _setup_fields(self):
-        self._fields = {}
-        for column in self._columns:
-            cstyle = self._style[column]
-
-            core_procs = []
-            style_width = cstyle["width"]
-            is_auto = style_width == "auto" or _safe_get(style_width, "auto")
-
-            if is_auto:
-                width = _safe_get(style_width, "min", 0)
-                wmax = _safe_get(style_width, "max")
-
-                self._autowidth_columns[column] = {"max": wmax}
-
-                if wmax is not None:
-                    marker = _safe_get(style_width, "marker", True)
-                    core_procs = [self._tproc.truncate(wmax, marker)]
-            elif is_auto is False:
-                raise ValueError("No 'width' specified")
-            else:
-                width = style_width
-                core_procs = [self._tproc.truncate(width)]
-
-            # We are creating a distinction between "core" processors, that we
-            # always want to be active and "default" processors that we want to
-            # be active unless there's an overriding style (i.e., a header is
-            # being written or the `style` argument to __call__ is specified).
-            field = Field(width=width, align=cstyle["align"],
-                          default_keys=["core", "default"],
-                          other_keys=["override"])
-            field.add("pre", "default",
-                      *(self._tproc.pre_from_style(cstyle)))
-            field.add("post", "core", *core_procs)
-            field.add("post", "default",
-                      *(self._tproc.post_from_style(cstyle)))
-            self._fields[column] = field
 
     @property
     def ids(self):
@@ -187,42 +106,6 @@ class Tabular(object):
     @ids.setter
     def ids(self, columns):
         self._ids = columns
-
-    def _set_widths(self, row, proc_group):
-        """Update auto-width Fields based on `row`.
-
-        Parameters
-        ----------
-        row : dict
-        proc_group : {'default', 'override'}
-            Whether to consider 'default' or 'override' key for pre- and
-            post-format processors.
-
-        Raises
-        ------
-        RewritePrevious to signal that previously written rows, if any, may be
-        stale.
-        """
-        rewrite = False
-        for column in self._columns:
-            if column in self._autowidth_columns:
-                field = self._fields[column]
-                # If we've added any style transform functions as
-                # pre-format processors, we want to measure the width
-                # of their result rather than the raw value.
-                if field.pre[proc_group]:
-                    value = field(row[column], keys=[proc_group],
-                                  exclude_post=True)
-                else:
-                    value = row[column]
-                value_width = len(str(value))
-                wmax = self._autowidth_columns[column]["max"]
-                if value_width > field.width:
-                    if wmax is None or field.width < wmax:
-                        rewrite = True
-                    field.width = value_width
-        if rewrite:
-            raise RewritePrevious
 
     def wait(self):
         """Wait for asynchronous calls to return.
@@ -248,34 +131,8 @@ class Tabular(object):
             if self._lock:
                 self._lock.release()
 
-    def _style_proc_group(self, style, adopt=True):
-        """Return whether group is "default" or "override".
-
-        In the case of "override", the self._fields pre-format and post-format
-        processors will be set under the "override" key.
-        """
-        fields = self._fields
-        if style is not None:
-            if adopt:
-                style = elements.adopt(self._style, style)
-            elements.validate(style)
-
-            for column in self._columns:
-                fields[column].add(
-                    "pre", "override",
-                    *(self._tproc.pre_from_style(style[column])))
-                fields[column].add(
-                    "post", "override",
-                    *(self._tproc.post_from_style(style[column])))
-            return "override"
-        else:
-            return "default"
-
-    def _writerow(self, row, proc_keys=None):
-        proc_fields = [self._fields[c](row[c], keys=proc_keys)
-                       for c in self._columns]
-        self.term.stream.write(
-            self._style["separator_"].join(proc_fields) + "\n")
+    def _write(self, content):
+        self.term.stream.write(content)
 
     def _check_and_write(self, row, style, adopt=True,
                          repaint=True, no_write=False):
@@ -298,27 +155,17 @@ class Tabular(object):
             that can be used to call self._writerow directly.
         """
         repainted = False
-        proc_group = self._style_proc_group(style, adopt=adopt)
-        try:
-            self._set_widths(row, proc_group)
-        except RewritePrevious:
-            if repaint:
-                self._repaint()
-                repainted = True
-
-        if proc_group == "override":
-            # Override the "default" processor key.
-            proc_keys = ["core", "override"]
-        else:
-            # Use the set of processors defined by _setup_fields.
-            proc_keys = None
+        line, adjusted = self._sfields.render(row, style, adopt=adopt)
+        if adjusted and repaint:
+            self._repaint()
+            repainted = True
 
         if no_write:
-            return proc_keys, repainted
-        self._writerow(row, proc_keys)
+            return line, repainted
+        self._write(line)
 
     def _maybe_write_header(self):
-        if self._style["header_"] is None:
+        if not self._sfields.has_header:
             return
 
         if isinstance(self._columns, OrderedDict):
@@ -328,7 +175,7 @@ class Tabular(object):
 
         # Set repaint=False because we're at the header, so there
         # aren't any previous lines to update.
-        self._check_and_write(row, self._style["header_"],
+        self._check_and_write(row, self._sfields.style["header_"],
                               adopt=False, repaint=False)
 
     def _start_callables(self, row, callables):
@@ -435,16 +282,17 @@ class Tabular(object):
         return flat
 
     def _repaint(self):
-        if self._rows or self._style["header_"] is not None:
+        if self._rows or self._sfields.has_header:
             self._move_to_firstrow()
             self.term.stream.write(self.term.clear_eol)
             self._maybe_write_header()
             for row in self._rows:
                 self.term.stream.write(self.term.clear_eol)
-                self._writerow(row)
+                line, _ = self._sfields.render(row)
+                self._write(line)
 
     def _move_to_firstrow(self):
-        ntimes = len(self._rows) + (self._style["header_"] is not None)
+        ntimes = len(self._rows) + self._sfields.has_header
         self.term.stream.write(self.term.move_up * ntimes)
 
     @contextmanager
@@ -493,8 +341,8 @@ class Tabular(object):
 
             # Set no_write=True because there is no reason to go back
             # and rewrite row if we've already repainted.
-            keys, repainted = self._check_and_write(self._rows[idx], style,
+            line, repainted = self._check_and_write(self._rows[idx], style,
                                                     no_write=True)
             if not repainted:
                 with self._moveback(nback):
-                    self._writerow(self._rows[idx], keys)
+                    self._write(line)

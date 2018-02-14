@@ -10,6 +10,7 @@ from collections import Mapping, Sequence
 from functools import partial
 import inspect
 
+from pyout import elements
 from pyout.field import Field, Nothing
 
 NOTHING = Nothing()
@@ -166,3 +167,207 @@ class RowNormalizer(object):
 
     def getter_attrs(self, row, column):
         return getattr(row, column, self.nothings[column])
+
+
+def _safe_get(mapping, key, default=None):
+    try:
+        return mapping.get(key, default)
+    except AttributeError:
+        return default
+
+
+class StyleFields(object):
+    """Generate Fields based on the specified style and processors.
+
+    Parameters
+    ----------
+    style : dict
+        A style that follows the schema defined in pyout.elements.
+    procgen : StyleProcessors instance
+        This instance is used to generate the fields from `style`.
+    """
+
+    _header_attributes = {"align", "width"}
+
+    def __init__(self, style, procgen):
+        self.init_style = style
+        self.procgen = procgen
+
+        self.style = None
+        self.columns = None
+        self.autowidth_columns = {}
+
+        self.fields = None
+
+    def build(self, columns):
+        """Build the style and fields.
+
+        Parameters
+        ----------
+        columns : list of str
+            Column names.
+        """
+        self.columns = columns
+        default = dict(elements.default("default_"),
+                       **_safe_get(self.init_style, "default_", {}))
+        self.style = elements.adopt({c: default for c in columns},
+                                    self.init_style)
+
+        hstyle = None
+        if self.init_style is not None and "header_" in self.init_style:
+            hstyle = {}
+            for col in columns:
+                cstyle = {k: v for k, v in self.style[col].items()
+                          if k in self._header_attributes}
+                hstyle[col] = dict(cstyle, **self.init_style["header_"])
+
+        # Store special keys in _style so that they can be validated.
+        self.style["default_"] = default
+        self.style["header_"] = hstyle
+        self.style["separator_"] = _safe_get(self.init_style, "separator_",
+                                             elements.default("separator_"))
+        elements.validate(self.style)
+        self._setup_fields()
+
+    def _setup_fields(self):
+        self.fields = {}
+        for column in self.columns:
+            cstyle = self.style[column]
+
+            core_procs = []
+            style_width = cstyle["width"]
+            is_auto = style_width == "auto" or _safe_get(style_width, "auto")
+
+            if is_auto:
+                width = _safe_get(style_width, "min", 0)
+                wmax = _safe_get(style_width, "max")
+
+                self.autowidth_columns[column] = {"max": wmax}
+
+                if wmax is not None:
+                    marker = _safe_get(style_width, "marker", True)
+                    core_procs = [self.procgen.truncate(wmax, marker)]
+            elif is_auto is False:
+                raise ValueError("No 'width' specified")
+            else:
+                width = style_width
+                core_procs = [self.procgen.truncate(width)]
+
+            # We are creating a distinction between "core" processors, that we
+            # always want to be active and "default" processors that we want to
+            # be active unless there's an overriding style (i.e., a header is
+            # being written or the `style` argument to __call__ is specified).
+            field = Field(width=width, align=cstyle["align"],
+                          default_keys=["core", "default"],
+                          other_keys=["override"])
+            field.add("pre", "default",
+                      *(self.procgen.pre_from_style(cstyle)))
+            field.add("post", "core", *core_procs)
+            field.add("post", "default",
+                      *(self.procgen.post_from_style(cstyle)))
+            self.fields[column] = field
+
+    @property
+    def has_header(self):
+        """Whether the style specifies that a header.
+        """
+        return self.style["header_"] is not None
+
+    def _set_widths(self, row, proc_group):
+        """Update auto-width Fields based on `row`.
+
+        Parameters
+        ----------
+        row : dict
+        proc_group : {'default', 'override'}
+            Whether to consider 'default' or 'override' key for pre- and
+            post-format processors.
+
+        Returns
+        -------
+        True if any widths required adjustment.
+        """
+        adjusted = False
+        for column in self.columns:
+            if column in self.autowidth_columns:
+                field = self.fields[column]
+                # If we've added any style transform functions as
+                # pre-format processors, we want to measure the width
+                # of their result rather than the raw value.
+                if field.pre[proc_group]:
+                    value = field(row[column], keys=[proc_group],
+                                  exclude_post=True)
+                else:
+                    value = row[column]
+                value_width = len(str(value))
+                wmax = self.autowidth_columns[column]["max"]
+                if value_width > field.width:
+                    if wmax is None or field.width < wmax:
+                        adjusted = True
+                    field.width = value_width
+        return adjusted
+
+    def _proc_group(self, style, adopt=True):
+        """Return whether group is "default" or "override".
+
+        In the case of "override", the self.fields pre-format and post-format
+        processors will be set under the "override" key.
+
+        Parameters
+        ----------
+        style : dict
+            A style that follows the schema defined in pyout.elements.
+        adopt : bool, optional
+            Merge `self.style` and `style`, giving priority to the latter's
+            keys when there are conflicts.  If False, treat `style` as a
+            standalone style.
+        """
+        fields = self.fields
+        if style is not None:
+            if adopt:
+                style = elements.adopt(self.style, style)
+            elements.validate(style)
+
+            for column in self.columns:
+                fields[column].add(
+                    "pre", "override",
+                    *(self.procgen.pre_from_style(style[column])))
+                fields[column].add(
+                    "post", "override",
+                    *(self.procgen.post_from_style(style[column])))
+            return "override"
+        else:
+            return "default"
+
+    def render(self, row, style=None, adopt=True):
+        """Render fields with values from `row`.
+
+        Parameters
+        ----------
+        row : dict
+            A normalized row.
+        style : dict, optional
+            A style that follows the schema defined in pyout.elements.  If
+            None, `self.style` is used.
+        adopt : bool, optional
+            Merge `self.style` and `style`, using the latter's keys when there
+            are conflicts matching keys.  If False, treat `style` as a
+            standalone style.
+
+        Returns
+        -------
+        A tuple with the rendered value (str) and a flag that indicates whether
+        the field widths required adjustment (bool).
+        """
+        group = self._proc_group(style, adopt=adopt)
+        if group == "override":
+            # Override the "default" processor key.
+            proc_keys = ["core", "override"]
+        else:
+            # Use the set of processors defined by _setup_fields.
+            proc_keys = None
+
+        adjusted = self._set_widths(row, group)
+        proc_fields = [self.fields[c](row[c], keys=proc_keys)
+                       for c in self.columns]
+        return self.style["separator_"].join(proc_fields) + "\n", adjusted
