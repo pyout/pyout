@@ -50,6 +50,11 @@ schema = {
             "default": "auto",
             "scope": "column"},
         # Other style elements
+        "aggregate": {
+            "description": """A function that produces a summary value.  This
+            function will be called with all of the column's the (unprocessed)
+            field values and should return a single value to be displayed.""",
+            "scope": "column"},
         "delayed": {
             "description": """Don't wait for this column's value.
             The accessor will be wrapped in a function and called
@@ -75,7 +80,8 @@ schema = {
         # Complete list of column style elements
         "styles": {
             "type": "object",
-            "properties": {"align": {"$ref": "#/definitions/align"},
+            "properties": {"aggregate": {"$ref": "#/definitions/aggregate"},
+                           "align": {"$ref": "#/definitions/align"},
                            "bold": {"$ref": "#/definitions/bold"},
                            "color": {"$ref": "#/definitions/color"},
                            "delayed": {"$ref": "#/definitions/delayed"},
@@ -126,6 +132,16 @@ schema = {
             "description": "Separator used between fields",
             "type": "string",
             "default": " ",
+            "scope": "table"},
+        "summary_": {
+            "description": "Shared attributes for the summary rows",
+            "oneOf": [{"type": "object",
+                       "properties":
+                       {"color": {"$ref": "#/definitions/color"},
+                        "bold": {"$ref": "#/definitions/bold"},
+                        "underline": {"$ref": "#/definitions/underline"}}},
+                      {"type": "null"}],
+            "default": {},
             "scope": "table"}
     },
     # All other keys are column names.

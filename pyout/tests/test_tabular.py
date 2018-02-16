@@ -1087,3 +1087,30 @@ def test_tabular_write_delayed(form):
     assert len(firstin) == 1
 
     assert lines[-1].endswith("foo 1 2 3")
+
+
+@patch("pyout.tabular.Terminal", TestTerminal)
+def test_tabular_summary():
+    fd = StringIO()
+
+    def nbad(xs):
+        return "{:d} failed".format(sum("BAD" == x for x in xs))
+
+    out = Tabular(style={"status": {"aggregate": nbad},
+                         "num": {"aggregate": sum}},
+                  stream=fd)
+
+    out(OrderedDict([("name", "foo"),
+                     ("status", "OK"),
+                     ("num", 2)]))
+    out(OrderedDict([("name", "bar"),
+                     ("status", "BAD"),
+                     ("num", 3)]))
+    out(OrderedDict([("name", "baz"),
+                     ("status", "BAD"),
+                     ("num", 4)]))
+
+    lines = fd.getvalue().splitlines()            #foo
+    assert len([ln for ln in lines if ln.endswith("    0 failed 2")]) == 1
+    assert len([ln for ln in lines if ln.endswith("    1 failed 5")]) == 1
+    assert len([ln for ln in lines if ln.endswith("    2 failed 9")]) == 1

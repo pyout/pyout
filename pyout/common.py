@@ -18,6 +18,7 @@ import six
 
 from pyout import elements
 from pyout.field import Field, Nothing
+from pyout.summary import Summary
 
 NOTHING = Nothing()
 
@@ -251,6 +252,7 @@ class StyleFields(object):
         # Store special keys in _style so that they can be validated.
         self.style["default_"] = default
         self.style["header_"] = self._compose("header_", {"align", "width"})
+        self.style["summary_"] = self._compose("summary_", {"align", "width"})
         self.style["separator_"] = _safe_get(self.init_style, "separator_",
                                              elements.default("separator_"))
         elements.validate(self.style)
@@ -449,6 +451,8 @@ class Content(object):
 
     def __init__(self, fields):
         self.fields = fields
+        self.summary = None
+
         self.columns = None
         self.ids = None
 
@@ -468,6 +472,7 @@ class Content(object):
             A collection of column names that uniquely identify a column.
         """
         self.fields.build(columns)
+        self.summary = Summary(self.fields.style)
         self.columns = columns
         self.ids = ids
 
@@ -485,7 +490,13 @@ class Content(object):
         """
         if self._header:
             yield self._header
-        for i in self._rows:
+
+        if self._rows and self.summary:
+            summary_rows = self.summary.summarize([r.row for r in self._rows])
+        else:
+            summary_rows = []
+
+        for i in chain(self._rows, summary_rows):
             yield i
 
     def __iter__(self):
@@ -557,7 +568,11 @@ class Content(object):
             self._rows.append(ContentRow(row, kwds={"style": style}))
 
         line, adjusted = self.fields.render(row, style)
-        if called_before and adjusted:
+        if called_before and adjusted or self.summary:
+            # For now, we're just overwriting everything if there is a summary,
+            # which does unnecessary work when adjusted is False.  We could
+            # change this function into a generator function that yields
+            # multiple lines and "append"/idx.
             return six.text_type(self), "repaint"
         if not adjusted and prev_idx is not None:
             return line, prev_idx
