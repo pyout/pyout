@@ -352,7 +352,7 @@ class Tabular(object):
             If true, overlay `style` on top of `self._style`.  Otherwise, treat
             `style` as a standalone style.
         repaint : bool, optional
-            Whether to repaint of width check reports that previous widths are
+            Whether to repaint if width check reports that previous widths are
             stale.
         no_write : bool, optional
             Do the check but don't write.  Instead, return the processor keys
