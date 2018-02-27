@@ -8,9 +8,11 @@ actually added.
 
 from __future__ import unicode_literals
 
-from collections import defaultdict, Mapping, Sequence
+from collections import defaultdict, namedtuple
+from collections import Mapping, Sequence, OrderedDict
 from functools import partial
 import inspect
+from itertools import chain
 
 import six
 
@@ -406,3 +408,153 @@ class StyleFields(object):
         proc_fields = [self.fields[c](row[c], keys=proc_keys)
                        for c in self.columns]
         return self.style["separator_"].join(proc_fields) + "\n", adjusted
+
+
+class RedoContent(Exception):
+    """The rendered content is stale and should be re-rendered.
+    """
+    pass
+
+
+class ContentError(Exception):
+    """An error occurred when generating the content representation.
+    """
+    pass
+
+
+ContentRow = namedtuple("ContentRow", ["row", "kwds"])
+
+
+@six.python_2_unicode_compatible
+class Content(object):
+    """Concatenation of rendered fields.
+
+    Parameters
+    ----------
+    fields : StyleField instances
+    """
+
+    def __init__(self, fields):
+        self.fields = fields
+        self.columns = None
+        self.ids = None
+
+        self._header = None
+        self._rows = []
+        self._idmap = {}
+
+    def init_columns(self, columns, ids):
+        """Set up the fields for `columns`.
+
+        Parameters
+        ----------
+        columns : sequence or OrderedDict
+            Names of the column.  In the case of an OrderedDict, a map between
+            short and long names.
+        ids : sequence
+            A collection of column names that uniquely identify a column.
+        """
+        self.fields.build(columns)
+        self.columns = columns
+        self.ids = ids
+
+    def __len__(self):
+        return len(list(self.rows))
+
+    def __bool__(self):
+        return bool(self._rows)
+
+    __nonzero__ = __bool__  # py2
+
+    @property
+    def rows(self):
+        """Data and summary rows.
+        """
+        if self._header:
+            yield self._header
+        for i in self._rows:
+            yield i
+
+    def __iter__(self):
+        adjusted = []
+        for row, kwds in self.rows:
+            line, adj = self.fields.render(row, **kwds)
+            yield line
+            # Continue processing so that we get all the adjustments out of
+            # the way.
+            adjusted.append(adj)
+        if any(adjusted):
+            raise RedoContent
+
+    def __str__(self):
+        try:
+            return "".join(self)
+        except RedoContent:
+            return "".join(self)
+
+    def update(self, row, style):
+        """Modify the content.
+
+        Parameters
+        ----------
+        row : dict
+            A normalized row.  If the names specified by `self.ids` have
+            already been seen in a previous call, the entry for the previous
+            row is updated.  Otherwise, a new entry is appended.
+
+        `style` is passed to `StyleFields.render`.
+
+        Returns
+        -------
+        A tuple of (content, status), where status is either 'append', an
+        integer, or 'repaint'.
+
+          * append: the only change in the content is the addition of a line,
+            and the returned content will consist of just this line.
+
+          * an integer, N: the Nth line of the output needs to be update, and
+            the returned content will consist of just this line.
+
+          * repaint: all lines need to be updated, and the returned content
+            will consist of all the lines.
+        """
+        called_before = bool(self)
+        idkey = tuple(row[idx] for idx in self.ids)
+
+        if not called_before and self.fields.has_header:
+            self._add_header()
+            self._rows.append(ContentRow(row, kwds={"style": style}))
+            self._idmap[idkey] = len(self)
+            return six.text_type(self), "append"
+
+        try:
+            prev_idx = self._idmap[idkey] if idkey in self._idmap else None
+        except TypeError:
+            raise ContentError("ID columns must be hashable")
+
+        if prev_idx is not None:
+            row_update = {k: v for k, v in row.items()
+                          if not isinstance(v, Nothing)}
+            self._rows[prev_idx].row.update(row_update)
+            self._rows[prev_idx].kwds.update({"style": style})
+            # Replace the passed-in row since it may not have the all columns.
+            row = self._rows[prev_idx][0]
+        else:
+            self._idmap[idkey] = len(self._rows)
+            self._rows.append(ContentRow(row, kwds={"style": style}))
+
+        line, adjusted = self.fields.render(row, style)
+        if called_before and adjusted:
+            return six.text_type(self), "repaint"
+        if not adjusted and prev_idx is not None:
+            return line, prev_idx
+        return line, "append"
+
+    def _add_header(self):
+        if isinstance(self.columns, OrderedDict):
+            row = self.columns
+        else:
+            row = dict(zip(self.columns, self.columns))
+        self._header = ContentRow(row,
+                                  kwds={"style": self.fields.style["header_"],
+                                        "adopt": False})

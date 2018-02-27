@@ -5,7 +5,7 @@ This module defines the Tabular entry point.
 
 from __future__ import unicode_literals
 
-from collections import Mapping, OrderedDict, Sequence
+from collections import Mapping, OrderedDict
 from contextlib import contextmanager
 from functools import partial
 import inspect
@@ -15,7 +15,7 @@ from multiprocessing.dummy import Pool
 from blessings import Terminal
 
 from pyout.field import TermProcessors
-from pyout.common import RowNormalizer, StyleFields
+from pyout.common import Content, RowNormalizer, StyleFields
 
 
 class Tabular(object):
@@ -70,22 +70,20 @@ class Tabular(object):
     def __init__(self, columns=None, style=None, stream=None, force_styling=False):
         self.term = Terminal(stream=stream, force_styling=force_styling)
 
-        self._rows = []
         self._columns = columns
         self._ids = None
+
+        self._content = Content(StyleFields(style, TermProcessors(self.term)))
+        self._last_content_len = 0
         self._normalizer = None
-
-        self._sfields = StyleFields(style, TermProcessors(self.term))
-
-        if columns is not None:
-            self._init_after_columns()
 
         self._pool = None
         self._lock = None
 
-    def _init_after_columns(self):
-        self._sfields.build(self._columns)
-        self._normalizer = RowNormalizer(self._columns, self._sfields.style)
+    def _init_prewrite(self):
+        self._content.init_columns(self._columns, self.ids)
+        self._normalizer = RowNormalizer(self._columns,
+                                         self._content.fields.style)
 
     def __enter__(self):
         return self
@@ -101,6 +99,8 @@ class Tabular(object):
         """
         if self._ids is None:
             if self._columns:
+                if isinstance(self._columns, OrderedDict):
+                    return [list(self._columns.keys())[0]]
                 return [self._columns[0]]
         else:
             return self._ids
@@ -122,8 +122,8 @@ class Tabular(object):
         """Acquire and release the lock around output calls.
 
         This should allow multiple threads or processes to write output
-        reliably.  Code that modifies the `_rows` attribute should also do so
-        within this context.
+        reliably.  Code that modifies the `_content` attribute should also do
+        so within this context.
         """
         if self._lock:
             self._lock.acquire()
@@ -133,66 +133,34 @@ class Tabular(object):
             if self._lock:
                 self._lock.release()
 
-    def _write(self, content):
-        self.term.stream.write(content)
-
-    def _check_and_write(self, row, style, adopt=True,
-                         repaint=True, no_write=False):
-        """Main internal entry point for writing a row.
-
-        Parameters
-        ----------
-        row : dict
-           Data to write.
-        style : dict or None
-            Overriding style or None.
-        adopt : bool, optional
-            If true, overlay `style` on top of `self._style`.  Otherwise, treat
-            `style` as a standalone style.
-        repaint : bool, optional
-            Whether to repaint if width check reports that previous widths are
-            stale.
-        no_write : bool, optional
-            Do the check but don't write.  Instead, return the processor keys
-            that can be used to call self._writerow directly.
-        """
-        repainted = False
-        line, adjusted = self._sfields.render(row, style, adopt=adopt)
-        if adjusted and repaint:
-            self._repaint()
-            repainted = True
-
-        if no_write:
-            return line, repainted
-        self._write(line)
-
-    def _maybe_write_header(self):
-        if not self._sfields.has_header:
-            return
-
-        if isinstance(self._columns, OrderedDict):
-            row = self._columns
-        else:
-            row = dict(zip(self._columns, self._columns))
-
-        # Set repaint=False because we're at the header, so there
-        # aren't any previous lines to update.
-        self._check_and_write(row, self._sfields.style["header_"],
-                              adopt=False, repaint=False)
+    def _write(self, row, style=None):
+        with self._write_lock():
+            content, status = self._content.update(row, style)
+            if isinstance(status, int):
+                with self._moveback(self._last_content_len - status):
+                    self.term.stream.write(content)
+            else:
+                if status == "repaint":
+                    self._move_to_firstrow()
+                self.term.stream.write(content)
+            self._last_content_len = len(self._content)
 
     def _start_callables(self, row, callables):
         """Start running `callables` asynchronously.
         """
-        id_vals = [row[c] for c in self.ids]
+        id_vals = {c: row[c] for c in self.ids}
+
         def callback(tab, cols, result):
             if isinstance(result, Mapping):
-                tab.rewrite(id_vals, result)
+                pass
             elif isinstance(result, tuple):
-                tab.rewrite(id_vals, dict(zip(cols, result)))
+                result = dict(zip(cols, result))
             elif len(cols) == 1:
                 # Don't bother raising an exception if cols != 1
                 # because it would be lost in the thread.
-                tab.rewrite(id_vals, {cols[0]: result})
+                result = {cols[0]: result}
+            result.update(id_vals)
+            tab._write(result)
 
         if self._pool is None:
             self._pool = Pool()
@@ -256,15 +224,11 @@ class Tabular(object):
         """
         if self._columns is None:
             self._columns = self._infer_columns(row)
-            self._init_after_columns()
+        if self._normalizer is None:
+            self._init_prewrite()
 
         callables, row = self._normalizer(row)
-
-        with self._write_lock():
-            if not self._rows:
-                self._maybe_write_header()
-            self._check_and_write(row, style)
-            self._rows.append(row)
+        self._write(row, style)
         if callables:
             self._start_callables(row, callables)
 
@@ -283,19 +247,8 @@ class Tabular(object):
                 flat.append(column)
         return flat
 
-    def _repaint(self):
-        if self._rows or self._sfields.has_header:
-            self._move_to_firstrow()
-            self.term.stream.write(self.term.clear_eol)
-            self._maybe_write_header()
-            for row in self._rows:
-                self.term.stream.write(self.term.clear_eol)
-                line, _ = self._sfields.render(row)
-                self._write(line)
-
     def _move_to_firstrow(self):
-        ntimes = len(self._rows) + self._sfields.has_header
-        self.term.stream.write(self.term.move_up * ntimes)
+        self.term.stream.write(self.term.move_up * self._last_content_len)
 
     @contextmanager
     def _moveback(self, n):
@@ -305,46 +258,3 @@ class Tabular(object):
         finally:
             self.term.stream.write(self.term.move_down * (n - 1))
             self.term.stream.flush()
-
-    # FIXME: This will break with stderr and when the output scrolls.  Maybe we
-    # could check term height and repaint?
-    def rewrite(self, ids, values, style=None):
-        """Rewrite a row.
-
-        Parameters
-        ----------
-        ids : dict or sequence
-            The keys are the column names that in combination uniquely identify
-            a row when matched for the values.
-
-            If the id column names are set through the `ids` property, a
-            sequence of values can be passed instead of a dict.
-        values : dict
-            The keys are the columns to be updated, and the values are the new
-            values.
-        style : dict
-            A new style dictionary to use for the new row.  All unspecified
-            style elements are taken from the instance's `style`.
-        """
-        if isinstance(ids, Sequence):
-            ids = dict(zip(self.ids, ids))
-
-        with self._write_lock():
-            nback = None
-            for rev_idx, row in enumerate(reversed(self._rows), 1):
-                if all(row[k] == v for k, v in ids.items()):
-                    nback = rev_idx
-                    break
-            if nback is None:
-                raise ValueError("Could not find row for {}".format(ids))
-
-            idx = len(self._rows) - nback
-            self._rows[idx].update(values)
-
-            # Set no_write=True because there is no reason to go back
-            # and rewrite row if we've already repainted.
-            line, repainted = self._check_and_write(self._rows[idx], style,
-                                                    no_write=True)
-            if not repainted:
-                with self._moveback(nback):
-                    self._write(line)

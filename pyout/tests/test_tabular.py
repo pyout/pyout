@@ -15,6 +15,7 @@ import pytest
 
 from pyout import Tabular
 from pyout.field import StyleFunctionError
+from pyout.common import ContentError
 
 # TestTerminal, unicode_cap, and unicode_parm are copied from
 # blessings' tests.
@@ -374,27 +375,11 @@ def test_tabular_rewrite():
     for row in data:
         out(row)
 
-    out.rewrite({"name": "foo"}, {"status": "installed"})
+    out({"name": "foo", "status": "installed"})
 
     expected = unicode_cap("cuu1") * 2 + unicode_cap("el") + "foo installed"
     assert eq_repr(fd.getvalue().strip().splitlines()[-1],
                    expected)
-
-
-@patch("pyout.tabular.Terminal", TestTerminal)
-def test_tabular_rewrite_notfound():
-    fd = StringIO()
-    out = Tabular(["name", "status"],
-                  stream=fd, force_styling=True)
-    data = [{"name": "foo", "status": "unknown"},
-            {"name": "bar", "status": "installed"}]
-    for row in data:
-        out(row)
-
-    with pytest.raises(ValueError):
-        out.rewrite({"name": "not here"}, {"status": "installed"},
-                    style={"name": {"width": 3},
-                           "status": {"width": 9}})
 
 
 @patch("pyout.tabular.Terminal", TestTerminal)
@@ -405,13 +390,15 @@ def test_tabular_rewrite_multi_id():
                          "type": {"width": 1},
                          "status": {"width": 9}},
                   stream=fd, force_styling=True)
+    out.ids = ["name", "type"]
+
     data = [{"name": "foo", "type": "0", "status": "unknown"},
             {"name": "foo", "type": "1", "status": "unknown"},
             {"name": "bar", "type": "2", "status": "installed"}]
     for row in data:
         out(row)
 
-    out.rewrite({"name": "foo", "type": "0"}, {"status": "installed"})
+    out({"name": "foo", "type": "0", "status": "installed"})
 
     expected = unicode_cap("cuu1") * 3 + unicode_cap("el") + "foo 0 installed"
     assert eq_repr(fd.getvalue().strip().splitlines()[-1],
@@ -431,40 +418,11 @@ def test_tabular_rewrite_multi_value():
     for row in data:
         out(row)
 
-    out.rewrite({"name": "foo"}, {"status": "installed", "type": "3"})
+    out({"name": "foo", "status": "installed", "type": "3"})
 
     expected = unicode_cap("cuu1") * 2 + unicode_cap("el") + "foo 3 installed"
     assert eq_repr(fd.getvalue().strip().splitlines()[-1],
                    expected)
-
-
-@patch("pyout.tabular.Terminal", TestTerminal)
-def test_tabular_rewrite_with_ids_property():
-    def write():
-        data = [{"name": "foo", "type": "0", "status": "unknown"},
-                {"name": "foo", "type": "1", "status": "unknown"},
-                {"name": "bar", "type": "2", "status": "installed"}]
-
-        fd = StringIO()
-        out = Tabular(["name", "type", "status"],
-                      style={"name": {"width": 3},
-                             "type": {"width": 1},
-                             "status": {"width": 9}},
-                      stream=fd, force_styling=True)
-        for row in data:
-            out(row)
-        return fd, out
-
-    fd_param, out_param = write()
-    fd_prop, out_prop = write()
-    out_prop.ids = ["name", "type"]
-
-    assert eq_repr(fd_param.getvalue(), fd_prop.getvalue())
-
-    out_param.rewrite({"name": "foo", "type": "0"}, {"status": "installed"})
-    out_prop.rewrite(["foo", "0"], {"status": "installed"})
-
-    assert eq_repr(fd_param.getvalue(), fd_prop.getvalue())
 
 
 @patch("pyout.tabular.Terminal", TestTerminal)
@@ -479,7 +437,7 @@ def test_tabular_rewrite_auto_width():
     for row in data:
         out(row)
 
-    out.rewrite({"name": "bar"}, {"status": "installed"})
+    out({"name": "bar", "status": "installed"})
 
     lines = fd.getvalue().splitlines()
     assert len([ln for ln in lines if ln.endswith("foo unknown  ")]) == 1
@@ -487,67 +445,12 @@ def test_tabular_rewrite_auto_width():
 
 
 @patch("pyout.tabular.Terminal", TestTerminal)
-def test_tabular_rewrite_data_as_list():
-    def init():
-        fd = StringIO()
-        out = Tabular(["name", "status"],
-                      style={"name": {"width": 3},
-                             "status": {"width": 9}},
-                      stream=fd)
-        return fd, out
-
-    fd_list, out_list = init()
-    out_list(["foo", "unknown"])
-    out_list(["bar", "installed"])
-    out_list.rewrite({"name": "foo"}, {"status": "installed"})
-
-    fd_dict, out_dict = init()
-    out_dict({"name": "foo", "status": "unknown"})
-    out_dict({"name": "bar", "status": "installed"})
-    out_dict.rewrite({"name": "foo"}, {"status": "installed"})
-
-    assert fd_list.getvalue() == fd_dict.getvalue()
-
-
-@patch("pyout.tabular.Terminal", TestTerminal)
-def test_tabular_repaint():
+def test_tabular_non_hashable_id_error():
     fd = StringIO()
-    out = Tabular(["name", "status"],
-                  style={"name": {"width": 3},
-                         "status": {"width": 9}},
-                  stream=fd, force_styling=True)
-    data = [{"name": "foo", "status": "unknown"},
-            {"name": "bar", "status": "installed"}]
-    for row in data:
-        out(row)
-    out._repaint()
-
-    lines = fd.getvalue().splitlines()
-    assert len(lines) == 2 * len(data)
-    assert unicode_cap("el") + "bar installed" in lines
-
-
-@patch("pyout.tabular.Terminal", TestTerminal)
-def test_tabular_repaint_with_header():
-    fd = StringIO()
-    out = Tabular(["name", "status"],
-                  style={"header_": {},
-                         "name": {"width": 4},
-                         "status": {"width": 9}},
-                  stream=fd, force_styling=True)
-    data = [{"name": "foo", "status": "unknown"},
-            {"name": "bar", "status": "installed"}]
-    for row in data:
-        out(row)
-    out._repaint()
-
-    lines = fd.getvalue().splitlines()
-
-    assert len(lines) == 2 * (len(data) + 1)
-    assert unicode_cap("el") + "bar  installed" in lines
-
-    header = unicode_cap("cuu1") * 3 + unicode_cap("el") + "name status   "
-    assert header in lines
+    out = Tabular(stream=fd)
+    out.ids = ["status"]
+    with pytest.raises(ContentError):
+        out({"name": "foo", "status": [0, 1]})
 
 
 @patch("pyout.tabular.Terminal", TestTerminal)
@@ -608,8 +511,9 @@ def test_tabular_write_lookup_non_hashable():
     fd = StringIO()
     out = Tabular(style={"status": {"color": {"lookup": {"BAD": "red"}}}},
                   stream=fd)
-    out(OrderedDict([("status", [0, 1])]))
-    expected = ("[0, 1]\n")
+    out(OrderedDict([("name", "foo"),
+                     ("status", [0, 1])]))
+    expected = ("foo [0, 1]\n")
     assert eq_repr(fd.getvalue(), expected)
 
 
