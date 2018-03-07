@@ -78,6 +78,9 @@ class Field(object):
     def add(self, kind, key, *values):
         """Add processor functions.
 
+        Any previous list of processors for `kind` and `key` will be
+        overwritten.
+
         Parameters
         ----------
         kind : {"pre", "post"}
@@ -94,7 +97,7 @@ class Field(object):
         else:
             raise ValueError("kind is not 'pre' or 'post'")
         self._check_if_registered(key)
-        procs[key].extend(values)
+        procs[key] = values
 
     @property
     def width(self):
