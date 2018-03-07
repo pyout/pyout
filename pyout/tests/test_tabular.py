@@ -244,7 +244,7 @@ def test_tabular_write_header_with_style():
          "status": "installed"})
 
     expected = unicode_cap("smul") + "name" + unicode_cap("sgr0") + " " + \
-               unicode_cap("smul") + "status   " + unicode_cap("sgr0") + \
+               unicode_cap("smul") + "status" + unicode_cap("sgr0") + "   " + \
                "\nfoo  " + unicode_parm("setaf", COLORNUMS["green"]) + \
                "installed" + unicode_cap("sgr0") + "\n"
     assert eq_repr(fd.getvalue(), expected)
@@ -321,6 +321,32 @@ def test_tabular_write_multicolor():
                unicode_cap("sgr0") + " " + \
                unicode_parm("setaf", COLORNUMS["white"]) + "unknown" + \
                unicode_cap("sgr0") + "\n"
+    assert eq_repr(fd.getvalue(), expected)
+
+
+@patch("pyout.tabular.Terminal", TestTerminal)
+def test_tabular_write_empty_string_nostyle():
+    fd = StringIO()
+    out = Tabular(style={"name": {"color": "green"}},
+                  stream=fd, force_styling=True)
+    out({"name": ""})
+    assert eq_repr(fd.getvalue(), "\n")
+
+
+@patch("pyout.tabular.Terminal", TestTerminal)
+def test_tabular_write_style_flanking():
+    fd = StringIO()
+    out = Tabular(columns=["name", "status"],
+                  style={"status": {"underline": True,
+                                    "align": "center",
+                                    "width": 7},
+                         # Use "," to more easily see spaces in fields.
+                         "separator_": ",",},
+                  stream=fd, force_styling=True)
+    out({"name": "foo", "status": "bad"})
+    # The text is style but not the flanking whitespace.
+    expected = "foo," + "  " + \
+               unicode_cap("smul") + "bad" + unicode_cap("sgr0") + "  \n"
     assert eq_repr(fd.getvalue(), expected)
 
 
@@ -536,7 +562,7 @@ def test_tabular_write_lookup_color():
 
     expected = "foo " + "OK    \n" + \
                "bar " + unicode_parm("setaf", COLORNUMS["red"]) + \
-               "BAD   " + unicode_cap("sgr0") + "\n"
+               "BAD" + unicode_cap("sgr0") + "   \n"
     assert eq_repr(fd.getvalue(), expected)
 
 
@@ -554,7 +580,7 @@ def test_tabular_write_lookup_bold():
 
     expected = "foo " + "OK    \n" + \
                "bar " + unicode_cap("bold") + \
-               "BAD   " + unicode_cap("sgr0") + "\n"
+               "BAD" + unicode_cap("sgr0") + "   \n"
     assert eq_repr(fd.getvalue(), expected)
 
 
@@ -601,9 +627,9 @@ def test_tabular_write_intervals_color():
                      ("percent", 33)]))
 
     expected = "foo " + unicode_parm("setaf", COLORNUMS["green"]) + \
-               "88     " + unicode_cap("sgr0") + "\n" + \
+               "88" + unicode_cap("sgr0") + "     \n" + \
                "bar " + unicode_parm("setaf", COLORNUMS["red"]) + \
-               "33     " + unicode_cap("sgr0") + "\n"
+               "33" + unicode_cap("sgr0") + "     \n"
     assert eq_repr(fd.getvalue(), expected)
 
 
@@ -622,9 +648,9 @@ def test_tabular_write_intervals_color_open_ended():
                      ("percent", 33)]))
 
     expected = "foo " + unicode_parm("setaf", COLORNUMS["green"]) + \
-               "88     " + unicode_cap("sgr0") + "\n" + \
+               "88" + unicode_cap("sgr0") + "     \n" + \
                "bar " + unicode_parm("setaf", COLORNUMS["red"]) + \
-               "33     " + unicode_cap("sgr0") + "\n"
+               "33" + unicode_cap("sgr0") + "     \n"
     assert eq_repr(fd.getvalue(), expected)
 
 
@@ -643,7 +669,7 @@ def test_tabular_write_intervals_color_outside_intervals():
 
     expected = "foo 88     \n" + \
                "bar " + unicode_parm("setaf", COLORNUMS["red"]) + \
-               "33     " + unicode_cap("sgr0") + "\n"
+               "33" + unicode_cap("sgr0") + "     \n"
     assert eq_repr(fd.getvalue(), expected)
 
 

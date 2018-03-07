@@ -2,6 +2,7 @@
 """
 from itertools import chain
 from collections import defaultdict
+import re
 import sys
 
 import six
@@ -201,17 +202,19 @@ class StyleProcessors(object):
                   ("underline", bool),
                   ("color", str)]
 
-    def translate(self, name):
-        """Translate a style key for a given output type.
+    def render(self, key, value):
+        """Render `value` according to a style key.
 
         Parameters
         ----------
-        name : str
+        key : str
             A style key (e.g., "bold").
+        value : str
+            The value to render.
 
         Returns
         -------
-        An output-specific translation of `name`.
+        An output-specific styling of `value` (str).
         """
         raise NotImplementedError
 
@@ -281,14 +284,14 @@ class StyleProcessors(object):
         Parameters
         ----------
         key : str
-            A style key to be translated.
+            A style key to be applied to the result.
 
         Returns
         -------
         A function.
         """
         def by_key_fn(_, result):
-            return self.translate(key) + result
+            return self.render(key, result)
         return by_key_fn
 
     def by_lookup(self, mapping, key=None):
@@ -301,8 +304,8 @@ class StyleProcessors(object):
             map from the field value to a value that indicates whether the
             processor should style its result.
         key : str, optional
-            A style key to be translated.  If not given, the value from
-            `mapping` is used.
+            A style key to be applied to the result.  If not given, the value
+            from `mapping` is used.
 
         Returns
         -------
@@ -318,7 +321,7 @@ class StyleProcessors(object):
 
             if not lookup_value:
                 return result
-            return self.translate(key or lookup_value) + result
+            return self.render(key or lookup_value, result)
         return by_lookup_fn
 
     def by_interval_lookup(self, intervals, key=None):
@@ -331,8 +334,8 @@ class StyleProcessors(object):
             the start of the interval (inclusive) , end is the end of the
             interval, and key is a style key.
         key : str, optional
-            A style key to be translated.  If not given, the value from
-            `mapping` is used.
+            A style key to be applied to the result.  If not given, the value
+            from `mapping` is used.
 
         Returns
         -------
@@ -353,7 +356,7 @@ class StyleProcessors(object):
                 if start <= value < end:
                     if not lookup_value:
                         return result
-                    return self.translate(key or lookup_value) + result
+                    return self.render(key or lookup_value, result)
             return result
         return by_interval_lookup_fn
 
@@ -406,6 +409,9 @@ class StyleProcessors(object):
         -------
         A generator object.
         """
+        flanks = Flanks()
+        yield flanks.split_flanks
+
         for key, key_type in self.style_keys:
             if key not in column_style:
                 continue
@@ -425,6 +431,36 @@ class StyleProcessors(object):
                 yield self.by_interval_lookup(column_style[key][vtype],
                                               attr_key)
 
+        yield flanks.join_flanks
+
+
+class Flanks(object):
+    """A pair of processors that split and rejoin flanking whitespace.
+    """
+
+    flank_re = re.compile(r"(\s*)(.*\S)(\s*)\Z")
+
+    def __init__(self):
+        self.left, self.right = None, None
+
+    def split_flanks(self, _, result):
+        """Return `result` without flanking whitespace.
+        """
+        if not result.strip():
+            self.left, self.right = "", ""
+            return result
+
+        match = self.flank_re.match(result)
+        assert match, "This regexp should always match"
+        self.left, self.right = match.group(1), match.group(3)
+        return match.group(2)
+
+    def join_flanks(self, _, result):
+        """Add whitespace from last `split_flanks` call back to `result`.
+        """
+        return self.left + result + self.right
+
+
 
 class TermProcessors(StyleProcessors):
     """Generate Field.processors for styled Terminal output.
@@ -437,19 +473,26 @@ class TermProcessors(StyleProcessors):
     def __init__(self, term):
         self.term = term
 
-    def translate(self, name):
-        """Translate a style key into a Terminal code.
+    def render(self, key, value):
+        """Prepend terminal code for `key` to `value`.
 
         Parameters
         ----------
-        name : str
+        key : str
             A style key (e.g., "bold").
+        value : str
+            The value to render.
 
         Returns
         -------
-        An output-specific translation of `name` (e.g., "\x1b[1m").
+        The code for `key` (e.g., "\x1b[1m" for bold) plus the
+        original value.
         """
-        return str(getattr(self.term, name))
+        if not value.strip():
+            # We've got an empty string.  Don't bother adding any
+            # codes.
+            return value
+        return str(getattr(self.term, key)) + value
 
     def _maybe_reset(self):
         def maybe_reset_fn(_, result):
@@ -462,5 +505,7 @@ class TermProcessors(StyleProcessors):
         """A Terminal-specific reset to StyleProcessors.post_from_style.
         """
         for proc in super(TermProcessors, self).post_from_style(column_style):
+            if proc.__name__ == "join_flanks":
+                # Reset any codes before adding back whitespace.
+                yield self._maybe_reset()
             yield proc
-        yield self._maybe_reset()
