@@ -40,6 +40,20 @@ def eq_repr(a, b):
     return repr(a) == repr(b)
 
 
+class AttrData(object):
+    """Store `kwargs` as attributes.
+
+    For testing tabular calls to construct row's data from an objects
+    attributes.
+
+    This doesn't use __getattr__ to map dict keys to attributes because then
+    we'd have to handle a KeyError for the "missing" column tests.
+    """
+    def __init__(self, **kwargs):
+        for attr, value in kwargs.items():
+            setattr(self, attr, value)
+
+
 @patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_color():
     fd = StringIO()
@@ -90,9 +104,7 @@ def test_tabular_write_list_value():
 
 @patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_missing_column_missing_object_data():
-    class Data(object):
-        name = "solo"
-    data = Data()
+    data = AttrData(name="solo")
 
     fd = StringIO()
     out = Tabular(columns=["name", "status"],
@@ -176,22 +188,14 @@ def test_tabular_write_header():
 
 @patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_data_as_object():
-    class Data(object):
-        def __init__(self, data):
-            self._data = data
-
-        def __getattr__(self, name):
-            return self._data[name]
-
-
     fd = StringIO()
     out = Tabular(["name", "status"],
                   style={"name": {"width": 3},
                          "status": {"width": 9}},
                   stream=fd)
 
-    out(Data({"name": "foo", "status": "installed"}))
-    out(Data({"name": "bar", "status": "unknown"}))
+    out(AttrData(name="foo", status="installed"))
+    out(AttrData(name="bar", status="unknown"))
 
     expected = "foo installed\nbar unknown  \n"
     assert fd.getvalue() == expected
@@ -1115,3 +1119,39 @@ def test_tabular_write_wait_noop_if_nothreads():
         expected = ("foo done\n"
                     "bar ok  \n")
         assert eq_repr(fd.getvalue(), expected)
+
+
+@pytest.mark.timeout(10)
+@pytest.mark.parametrize("form", ["dict", "list", "attrs"])
+@patch("pyout.tabular.Terminal", TestTerminal)
+def test_tabular_write_delayed(form):
+    data = OrderedDict([("name", "foo"),
+                        ("paired0", 1),
+                        ("paired1", 2),
+                        ("solo", 3)])
+
+    if form == "dict":
+        row = data
+    elif form == "list":
+        row = list(data.values())
+    elif form == "attrs":
+        row = AttrData(**data)
+
+    fd = StringIO()
+    out = Tabular(list(data.keys()),
+                  style={"paired0": {"delayed": "pair"},
+                         "paired1": {"delayed": "pair"},
+                         "solo": {"delayed": True}},
+                  stream=fd)
+    with out:
+        out(row)
+    lines = fd.getvalue().splitlines()
+    assert lines[0] == "foo   "
+
+    # Either paired0/paired1 came in first or solo came in first, but
+    # paired0/paired1 should arrive together.
+    firstin = [ln for ln in lines
+               if ln.endswith("foo 1 2 ") or ln.endswith("foo   3")]
+    assert len(firstin) == 1
+
+    assert lines[-1].endswith("foo 1 2 3")

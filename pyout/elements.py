@@ -58,6 +58,7 @@ schema = {
             "properties": {"align": {"$ref": "#/definitions/align"},
                            "bold": {"$ref": "#/definitions/bold"},
                            "color": {"$ref": "#/definitions/color"},
+                           "delayed": {"$ref": "#/definitions/delayed"},
                            "missing": {"$ref": "#/definitions/missing"},
                            "transform": {"$ref": "#/definitions/transform"},
                            "underline": {"$ref": "#/definitions/underline"},
@@ -81,6 +82,15 @@ schema = {
             "type": "object",
             "properties": {"lookup": {"type": "object"}},
             "additionalProperties": False},
+        "delayed": {
+            "description": """Don't wait for this column's value.
+            The accessor will be wrapped in a function and called
+            asynchronously.  This can be set to a string to mark columns as
+            part of a "group".  All columns within a group will be accessed
+            within the same callable.  True means to access the column's value
+            in its own callable (i.e. independently of other columns).""",
+            "type": ["boolean", "string"],
+            "scope": "field"},
         "transform": {
             "description": """An arbitrary function.
             This function will be called with the (unprocessed) field value as
