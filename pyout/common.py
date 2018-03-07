@@ -224,8 +224,6 @@ class StyleFields(object):
         This instance is used to generate the fields from `style`.
     """
 
-    _header_attributes = {"align", "width"}
-
     def __init__(self, style, procgen):
         self.init_style = style
         self.procgen = procgen
@@ -250,21 +248,36 @@ class StyleFields(object):
         self.style = elements.adopt({c: default for c in columns},
                                     self.init_style)
 
-        hstyle = None
-        if self.init_style is not None and "header_" in self.init_style:
-            hstyle = {}
-            for col in columns:
-                cstyle = {k: v for k, v in self.style[col].items()
-                          if k in self._header_attributes}
-                hstyle[col] = dict(cstyle, **self.init_style["header_"])
-
         # Store special keys in _style so that they can be validated.
         self.style["default_"] = default
-        self.style["header_"] = hstyle
+        self.style["header_"] = self._compose("header_", {"align", "width"})
         self.style["separator_"] = _safe_get(self.init_style, "separator_",
                                              elements.default("separator_"))
         elements.validate(self.style)
         self._setup_fields()
+
+    def _compose(self, name, attributes):
+        """Construct a style taking `attributes` from the column styles.
+
+        Parameters
+        ----------
+        name : str
+            Name of main style (e.g., "header_").
+        attributes : set of str
+            Adopt these elements from the column styles.
+
+        Returns
+        -------
+        The composite style for `name`.
+        """
+        name_style = _safe_get(self.init_style, name, elements.default(name))
+        if self.init_style is not None and name_style is not None:
+            result = {}
+            for col in self.columns:
+                cstyle = {k: v for k, v in self.style[col].items()
+                          if k in attributes}
+                result[col] = dict(cstyle, **name_style)
+            return result
 
     def _setup_fields(self):
         self.fields = {}
