@@ -78,7 +78,6 @@ class RowNormalizer(object):
             else:
                 self.nothings[column] = NOTHING
 
-
     def __call__(self, row):
         """Normalize `row`
 
