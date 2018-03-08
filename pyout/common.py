@@ -6,9 +6,13 @@ amount of general logic that should be extracted if any other outputter is
 actually added.
 """
 
+from __future__ import unicode_literals
+
 from collections import defaultdict, Mapping, Sequence
 from functools import partial
 import inspect
+
+import six
 
 from pyout import elements
 from pyout.field import Field, Nothing
@@ -330,7 +334,7 @@ class StyleFields(object):
                                   exclude_post=True)
                 else:
                     value = row[column]
-                value_width = len(str(value))
+                value_width = len(six.text_type(value))
                 wmax = self.autowidth_columns[column]["max"]
                 if value_width > field.width:
                     if wmax is None or field.width < wmax:

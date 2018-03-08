@@ -1,5 +1,7 @@
 """Define a "field" based on a sequence of processor functions.
 """
+from __future__ import unicode_literals
+
 from itertools import chain
 from collections import defaultdict
 import re
@@ -105,12 +107,12 @@ class Field(object):
 
     def _build_format(self):
         align = self._align_values[self._align]
-        return "".join(["{:", align, str(self.width), "}"])
+        return "".join(["{:", align, six.text_type(self.width), "}"])
 
     def _format(self, _, result):
         """Wrap format call as a two-argument processor function.
         """
-        return self._fmt.format(str(result))
+        return self._fmt.format(six.text_type(result))
 
     def __call__(self, value, keys=None, exclude_post=False):
         """Render `value` by feeding it through the processors.
@@ -144,6 +146,7 @@ class Field(object):
         return result
 
 
+@six.python_2_unicode_compatible
 class Nothing(object):
     """Internal class to represent missing values.
 
@@ -165,10 +168,10 @@ class Nothing(object):
         return self._text
 
     def __add__(self, right):
-        return str(self) + right
+        return six.text_type(self) + right
 
     def __radd__(self, left):
-        return left + str(self)
+        return left + six.text_type(self)
 
     def __bool__(self):
         return False
@@ -176,7 +179,7 @@ class Nothing(object):
     __nonzero__ = __bool__  # py2
 
     def __format__(self, format_spec):
-        return str.__format__(self._text, format_spec)
+        return self._text.__format__(format_spec)
 
 
 class StyleFunctionError(Exception):
@@ -492,7 +495,7 @@ class TermProcessors(StyleProcessors):
             # We've got an empty string.  Don't bother adding any
             # codes.
             return value
-        return str(getattr(self.term, key)) + value
+        return six.text_type(getattr(self.term, key)) + value
 
     def _maybe_reset(self):
         def maybe_reset_fn(_, result):

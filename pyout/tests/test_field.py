@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+
+from __future__ import unicode_literals
+
+import six
+
 import pytest
 from pyout.field import Field, Nothing, StyleProcessors
 
@@ -37,12 +42,14 @@ def test_field_processors():
         field.add("pre", "not registered key")
 
 
-@pytest.mark.parametrize("text", ["", "-"], ids=["text=''", "text='-'"])
+@pytest.mark.parametrize("text",
+                         ["", "-", "…"],
+                         ids=["text=''", "text='-'", "text='…'"])
 def test_something_about_nothing(text):
     nada = Nothing(text=text)
     assert not nada
 
-    assert str(nada) == text
+    assert six.text_type(nada) == text
     assert "{:5}".format(nada) == "{:5}".format(text)
     assert "x" + nada  == "x" + text
     assert nada + "x"  == text + "x"
@@ -57,11 +64,11 @@ def test_truncate_mark_true():
 
 
 def test_truncate_mark_string():
-    fn = StyleProcessors.truncate(7, marker=u"…")
+    fn = StyleProcessors.truncate(7, marker="…")
 
     assert fn(None, "abc") == "abc"
     assert fn(None, "abcdefg") == "abcdefg"
-    assert fn(None, "abcdefgh") == u"abcdef…"
+    assert fn(None, "abcdefgh") == "abcdef…"
 
 
 def test_truncate_mark_short():

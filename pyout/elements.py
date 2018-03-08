@@ -1,6 +1,8 @@
 """Style elements and schema validation.
 """
 
+from __future__ import unicode_literals
+
 from collections import Mapping
 
 schema = {

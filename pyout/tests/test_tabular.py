@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from __future__ import unicode_literals
+
 from collections import OrderedDict
 from curses import tigetstr, tparm
 from functools import partial
@@ -765,7 +767,7 @@ def test_tabular_write_transform_autowidth():
 @patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_transform_on_header():
     fd = StringIO()
-    out = Tabular(style={"header_": {"transform": str.upper},
+    out = Tabular(style={"header_": {"transform": lambda x: x.upper()},
                          "name": {"width": 4},
                          "val": {"width": 3}},
                   stream=fd)
@@ -874,8 +876,8 @@ def test_tabular_write_autowidth_min():
     assert len([ln for ln in lines if ln.endswith("fooab OK    /tmp/a")]) == 1
 
 
-@pytest.mark.parametrize("marker", [True, False, u"…"],
-                         ids=["marker=True", "marker=False", u"marker=…"])
+@pytest.mark.parametrize("marker", [True, False, "…"],
+                         ids=["marker=True", "marker=False", "marker=…"])
 @patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_write_autowidth_min_max(marker):
     fd = StringIO()
@@ -892,7 +894,7 @@ def test_tabular_write_autowidth_min_max(marker):
     if marker is True:
         assert fd.getvalue() == "foo U  /t...\n"
     elif marker:
-        assert fd.getvalue() == u"foo U  /tmp…\n"
+        assert fd.getvalue() == "foo U  /tmp…\n"
     else:
         assert fd.getvalue() == "foo U  /tmp/\n"
 
@@ -905,8 +907,8 @@ def test_tabular_write_autowidth_min_max(marker):
         assert len([ln for ln in lines if ln.endswith("foo U       /t...")]) == 1
         assert len([ln for ln in lines if ln.endswith("bar BAD!... /t...")]) == 1
     elif marker:
-        assert len([ln for ln in lines if ln.endswith(u"foo U       /tmp…")]) == 1
-        assert len([ln for ln in lines if ln.endswith(u"bar BAD!... /tmp…")]) == 1
+        assert len([ln for ln in lines if ln.endswith("foo U       /tmp…")]) == 1
+        assert len([ln for ln in lines if ln.endswith("bar BAD!... /tmp…")]) == 1
     else:
         assert len([ln for ln in lines if ln.endswith("foo U       /tmp/")]) == 1
         assert len([ln for ln in lines if ln.endswith("bar BAD!... /tmp/")]) == 1
