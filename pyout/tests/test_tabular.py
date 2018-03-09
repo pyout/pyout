@@ -1096,12 +1096,13 @@ def test_tabular_summary():
     def nbad(xs):
         return "{:d} failed".format(sum("BAD" == x for x in xs))
 
-    out = Tabular(style={"status": {"aggregate": nbad},
+    out = Tabular(style={"header_": {},
+                         "status": {"aggregate": nbad},
                          "num": {"aggregate": sum}},
                   stream=fd)
 
     out(OrderedDict([("name", "foo"),
-                     ("status", "OK"),
+                     ("status", "BAD"),
                      ("num", 2)]))
     out(OrderedDict([("name", "bar"),
                      ("status", "BAD"),
@@ -1110,7 +1111,13 @@ def test_tabular_summary():
                      ("status", "BAD"),
                      ("num", 4)]))
 
-    lines = fd.getvalue().splitlines()            #foo
-    assert len([ln for ln in lines if ln.endswith("    0 failed 2")]) == 1
-    assert len([ln for ln in lines if ln.endswith("    1 failed 5")]) == 1
-    assert len([ln for ln in lines if ln.endswith("    2 failed 9")]) == 1
+    # Update "foo".
+    out(OrderedDict([("name", "foo"),
+                     ("status", "OK"),
+                     ("num", 10)]))
+
+    lines = fd.getvalue().splitlines()            #name         #num
+    assert len([ln for ln in lines if ln.endswith("     1 failed 2  ")]) == 1
+    assert len([ln for ln in lines if ln.endswith("     2 failed 5  ")]) == 1
+    assert len([ln for ln in lines if ln.endswith("     3 failed 9  ")]) == 1
+    assert len([ln for ln in lines if ln.endswith("     2 failed 17 ")]) == 1

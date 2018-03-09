@@ -548,7 +548,7 @@ class Content(object):
         if not called_before and self.fields.has_header:
             self._add_header()
             self._rows.append(ContentRow(row, kwds={"style": style}))
-            self._idmap[idkey] = len(self)
+            self._idmap[idkey] = 0
             return six.text_type(self), "append"
 
         try:
