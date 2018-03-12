@@ -143,7 +143,13 @@ class Tabular(object):
                 if status == "repaint":
                     self._move_to_firstrow()
                 self.term.stream.write(content)
-            self._last_content_len = len(self._content)
+
+            new_content_len = len(self._content)
+            if new_content_len - self._last_content_len < 0:
+                # We now have fewer lines.  Remove the stale lines.
+                self.term.stream.write(self.term.clear_eos)
+                self.term.stream.flush()
+            self._last_content_len = new_content_len
 
     def _start_callables(self, row, callables):
         """Start running `callables` asynchronously.

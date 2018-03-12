@@ -1139,3 +1139,25 @@ def test_tabular_summary():
     assert len([ln for ln in lines if ln.endswith("     2 failed 5  ")]) == 1
     assert len([ln for ln in lines if ln.endswith("     3 failed 9  ")]) == 1
     assert len([ln for ln in lines if ln.endswith("     2 failed 17 ")]) == 1
+
+
+@patch("pyout.tabular.Terminal", TestTerminal)
+def test_tabular_shrinking_summary():
+    fd = StringIO()
+
+    def counts(values):
+        from collections import Counter
+        cnt = Counter(values)
+        return ["{}: {:d}".format(k, cnt[k]) for k in sorted(cnt.keys())]
+
+    out = Tabular(["name", "status"],
+                  style={"status": {"aggregate": counts}},
+                  force_styling=True, stream=fd)
+
+    out({"name": "foo", "status": "unknown"})
+    out({"name": "bar", "status": "ok"})
+    # Remove the only occurrence of "unknown".
+    out({"name": "foo", "status": "ok"})
+
+    lines = fd.getvalue().splitlines()
+    assert len([ln for ln in lines if ln.startswith(unicode_cap("ed"))]) == 1
