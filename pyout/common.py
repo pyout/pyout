@@ -131,9 +131,9 @@ class RowNormalizer(object):
         def delay(cols):
             return lambda: {c: getter(row, c) for c in cols}
 
-        for columns in self.delayed.values():
-            key = columns[0] if len(columns) == 1 else tuple(columns)
-            row_norm[key] = delay(columns)
+        for cols in self.delayed.values():
+            key = cols[0] if len(cols) == 1 else tuple(cols)
+            row_norm[key] = delay(cols)
         return row_norm
 
     @staticmethod
@@ -251,7 +251,8 @@ class StyleFields(object):
         # Store special keys in _style so that they can be validated.
         self.style["default_"] = default
         self.style["header_"] = self._compose("header_", {"align", "width"})
-        self.style["aggregate_"] = self._compose("aggregate_", {"align", "width"})
+        self.style["aggregate_"] = self._compose("aggregate_",
+                                                 {"align", "width"})
         self.style["separator_"] = _safe_get(self.init_style, "separator_",
                                              elements.default("separator_"))
         elements.validate(self.style)

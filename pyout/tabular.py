@@ -67,7 +67,8 @@ class Tabular(object):
     ...     style={"status": {"color": "red", "bold": True}})
     """
 
-    def __init__(self, columns=None, style=None, stream=None, force_styling=False):
+    def __init__(self, columns=None, style=None, stream=None,
+                 force_styling=False):
         self.term = Terminal(stream=stream, force_styling=force_styling)
 
         self._columns = columns

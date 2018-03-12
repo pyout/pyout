@@ -190,7 +190,7 @@ class StyleFunctionError(Exception):
     """
     def __init__(self, function, exc_type, exc_value):
         msg = "{} raised {}\n  {}".format(function, exc_type.__name__,
-                                            exc_value)
+                                          exc_value)
         super(StyleFunctionError, self).__init__(msg)
 
 
@@ -465,7 +465,6 @@ class Flanks(object):
         """Add whitespace from last `split_flanks` call back to `result`.
         """
         return self.left + result + self.right
-
 
 
 class TermProcessors(StyleProcessors):
