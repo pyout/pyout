@@ -383,6 +383,24 @@ def test_tabular_rewrite():
 
 
 @patch("pyout.tabular.Terminal", TestTerminal)
+def test_tabular_rewrite_with_header():
+    fd = StringIO()
+    out = Tabular(["name", "status"],
+                  style={"header_": {},
+                         "status": {"width": 9}},
+                  stream=fd, force_styling=True)
+    data = [{"name": "foo", "status": "unknown"},
+            {"name": "bar", "status": "unknown"}]
+    for row in data:
+        out(row)
+    out({"name": "bar", "status": "installed"})
+
+    expected = unicode_cap("cuu1") * 1 + unicode_cap("el") + "bar  installed"
+    assert eq_repr(fd.getvalue().strip().splitlines()[-1],
+                   expected)
+
+
+@patch("pyout.tabular.Terminal", TestTerminal)
 def test_tabular_rewrite_multi_id():
     fd = StringIO()
     out = Tabular(["name", "type", "status"],

@@ -575,7 +575,7 @@ class Content(object):
             # multiple lines and "append"/idx.
             return six.text_type(self), "repaint"
         if not adjusted and prev_idx is not None:
-            return line, prev_idx
+            return line, prev_idx + self.fields.has_header
         return line, "append"
 
     def _add_header(self):
