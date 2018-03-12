@@ -446,7 +446,7 @@ class Content(object):
 
     Parameters
     ----------
-    fields : StyleField instances
+    fields : StyleField instance
     """
 
     def __init__(self, fields):
@@ -530,8 +530,8 @@ class Content(object):
 
         Returns
         -------
-        A tuple of (content, status), where status is either 'append', an
-        integer, or 'repaint'.
+        A tuple of (content, status), where status is 'append', an integer, or
+        'repaint'.
 
           * append: the only change in the content is the addition of a line,
             and the returned content will consist of just this line.
@@ -561,7 +561,7 @@ class Content(object):
                           if not isinstance(v, Nothing)}
             self._rows[prev_idx].row.update(row_update)
             self._rows[prev_idx].kwds.update({"style": style})
-            # Replace the passed-in row since it may not have the all columns.
+            # Replace the passed-in row since it may not have all the columns.
             row = self._rows[prev_idx][0]
         else:
             self._idmap[idkey] = len(self._rows)
