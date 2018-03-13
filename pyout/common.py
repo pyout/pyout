@@ -499,9 +499,9 @@ class Content(object):
         for i in chain(self._rows, summary_rows):
             yield i
 
-    def __iter__(self):
+    def _render(self, rows):
         adjusted = []
-        for row, kwds in self.rows:
+        for row, kwds in rows:
             line, adj = self.fields.render(row, **kwds)
             yield line
             # Continue processing so that we get all the adjustments out of
@@ -512,9 +512,9 @@ class Content(object):
 
     def __str__(self):
         try:
-            return "".join(self)
+            return "".join(self._render(self.rows))
         except RedoContent:
-            return "".join(self)
+            return "".join(self._render(self.rows))
 
     def update(self, row, style):
         """Modify the content.
