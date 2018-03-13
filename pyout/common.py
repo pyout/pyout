@@ -12,7 +12,6 @@ from collections import defaultdict, namedtuple
 from collections import Mapping, Sequence, OrderedDict
 from functools import partial
 import inspect
-from itertools import chain
 
 import six
 
@@ -472,7 +471,6 @@ class Content(object):
             A collection of column names that uniquely identify a column.
         """
         self.fields.build(columns)
-        self.summary = Summary(self.fields.style)
         self.columns = columns
         self.ids = ids
 
@@ -490,13 +488,7 @@ class Content(object):
         """
         if self._header:
             yield self._header
-
-        if self._rows and self.summary:
-            summary_rows = self.summary.summarize([r.row for r in self._rows])
-        else:
-            summary_rows = []
-
-        for i in chain(self._rows, summary_rows):
+        for i in self._rows:
             yield i
 
     def _render(self, rows):
@@ -568,11 +560,7 @@ class Content(object):
             self._rows.append(ContentRow(row, kwds={"style": style}))
 
         line, adjusted = self.fields.render(row, style)
-        if called_before and adjusted or self.summary:
-            # For now, we're just overwriting everything if there is a summary,
-            # which does unnecessary work when adjusted is False.  We could
-            # change this function into a generator function that yields
-            # multiple lines and "append"/idx.
+        if called_before and adjusted:
             return six.text_type(self), "repaint"
         if not adjusted and prev_idx is not None:
             return line, prev_idx + self.fields.has_header
@@ -586,3 +574,33 @@ class Content(object):
         self._header = ContentRow(row,
                                   kwds={"style": self.fields.style["header_"],
                                         "adopt": False})
+
+
+class ContentWithSummary(Content):
+    """Like Content, but append a summary to the return value of `update`.
+    """
+
+    def __init__(self, fields):
+        super(ContentWithSummary, self).__init__(fields)
+        self.summary = None
+
+    def init_columns(self, columns, ids):
+        super(ContentWithSummary, self).init_columns(columns, ids)
+        self.summary = Summary(self.fields.style)
+
+    def update(self, row, style):
+        content, status = super(ContentWithSummary, self).update(row, style)
+        if self.summary:
+            summ_rows = self.summary.summarize([r.row for r in self._rows])
+
+            def join():
+                return "".join(self._render(summ_rows))
+
+            try:
+                summ_content = join()
+            except RedoContent:
+                # If rendering the summary lines triggered an adjustment, we
+                # need to re-render the main content as well.
+                return six.text_type(self), "repaint", join()
+            return content, status, summ_content
+        return content, status, None

@@ -15,7 +15,7 @@ from multiprocessing.dummy import Pool
 from blessings import Terminal
 
 from pyout.field import TermProcessors
-from pyout.common import Content, RowNormalizer, StyleFields
+from pyout.common import ContentWithSummary, RowNormalizer, StyleFields
 
 
 class Tabular(object):
@@ -73,8 +73,10 @@ class Tabular(object):
         self._columns = columns
         self._ids = None
 
-        self._content = Content(StyleFields(style, TermProcessors(self.term)))
+        self._content = ContentWithSummary(
+            StyleFields(style, TermProcessors(self.term)))
         self._last_content_len = 0
+        self._last_summary_len = 0
         self._normalizer = None
 
         self._pool = None
@@ -135,7 +137,16 @@ class Tabular(object):
 
     def _write(self, row, style=None):
         with self._write_lock():
-            content, status = self._content.update(row, style)
+            if self._last_summary_len:
+                # Clear the summary because 1) it has very likely changed, 2)
+                # it makes the counting for row updates simpler, 3) and it is
+                # possible for the summary lines to shrink.
+                #
+                # FIXME: This, like other line counting-based modifications in
+                # pyout, will fail if there is any line wrapping.  We need to
+                # detect the terminal width and somehow handle this.
+                self._clear_last_summary()
+            content, status, summary = self._content.update(row, style)
             if isinstance(status, int):
                 with self._moveback(self._last_content_len - status):
                     self.term.stream.write(content)
@@ -144,12 +155,10 @@ class Tabular(object):
                     self._move_to_firstrow()
                 self.term.stream.write(content)
 
-            new_content_len = len(self._content)
-            if new_content_len - self._last_content_len < 0:
-                # We now have fewer lines.  Remove the stale lines.
-                self.term.stream.write(self.term.clear_eos)
-                self.term.stream.flush()
-            self._last_content_len = new_content_len
+            if summary is not None:
+                self.term.stream.write(summary)
+                self._last_summary_len = len(summary.splitlines())
+            self._last_content_len = len(self._content)
 
     def _start_callables(self, row, callables):
         """Start running `callables` asynchronously.
@@ -264,3 +273,8 @@ class Tabular(object):
         finally:
             self.term.stream.write(self.term.move_down * (n - 1))
             self.term.stream.flush()
+
+    def _clear_last_summary(self):
+        self.term.stream.write(
+            self.term.move_up * self._last_summary_len + self.term.clear_eos)
+        self.term.stream.flush()

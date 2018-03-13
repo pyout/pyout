@@ -1160,4 +1160,6 @@ def test_tabular_shrinking_summary():
     out({"name": "foo", "status": "ok"})
 
     lines = fd.getvalue().splitlines()
-    assert len([ln for ln in lines if ln.startswith(unicode_cap("ed"))]) == 1
+    # Two summary lines shrank to one, so we expect a two move-ups and a clear.
+    expected = unicode_cap("cuu1") * 2 + unicode_cap("ed")
+    assert len([ln for ln in lines if ln.startswith(expected)]) == 1
