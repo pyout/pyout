@@ -251,7 +251,7 @@ class StyleFields(object):
         # Store special keys in _style so that they can be validated.
         self.style["default_"] = default
         self.style["header_"] = self._compose("header_", {"align", "width"})
-        self.style["summary_"] = self._compose("summary_", {"align", "width"})
+        self.style["aggregate_"] = self._compose("aggregate_", {"align", "width"})
         self.style["separator_"] = _safe_get(self.init_style, "separator_",
                                              elements.default("separator_"))
         elements.validate(self.style)

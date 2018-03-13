@@ -73,6 +73,6 @@ class Summary(object):
                     sumrow[column] = ""
 
             summary_rows.append((sumrow,
-                                 {"style": self.style.get("summary_"),
+                                 {"style": self.style.get("aggregate_"),
                                   "adopt": False}))
         return summary_rows

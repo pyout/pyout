@@ -111,6 +111,16 @@ schema = {
     },
     "type": "object",
     "properties": {
+        "aggregate_": {
+            "description": "Shared attributes for the summary rows",
+            "oneOf": [{"type": "object",
+                       "properties":
+                       {"color": {"$ref": "#/definitions/color"},
+                        "bold": {"$ref": "#/definitions/bold"},
+                        "underline": {"$ref": "#/definitions/underline"}}},
+                      {"type": "null"}],
+            "default": {},
+            "scope": "table"},
         "default_": {
             "description": "Default style of columns",
             "oneOf": [{"$ref": "#/definitions/styles"},
@@ -132,16 +142,6 @@ schema = {
             "description": "Separator used between fields",
             "type": "string",
             "default": " ",
-            "scope": "table"},
-        "summary_": {
-            "description": "Shared attributes for the summary rows",
-            "oneOf": [{"type": "object",
-                       "properties":
-                       {"color": {"$ref": "#/definitions/color"},
-                        "bold": {"$ref": "#/definitions/bold"},
-                        "underline": {"$ref": "#/definitions/underline"}}},
-                      {"type": "null"}],
-            "default": {},
             "scope": "table"}
     },
     # All other keys are column names.
