@@ -1,11 +1,13 @@
 """Style elements and schema validation.
 """
 
+from __future__ import unicode_literals
+
 from collections import Mapping
 
 schema = {
     "definitions": {
-        # Styles
+        # Plain style elements
         "align": {
             "description": "Alignment of text",
             "type": "string",
@@ -28,12 +30,6 @@ schema = {
                       {"$ref": "#/definitions/interval"}],
             "default": "black",
             "scope": "field"},
-        "missing": {
-            "description": "Text to display for missing values",
-            "type": "string",
-            "default": "",
-            "scope": "column"
-        },
         "underline": {
             "description": "Whether text is underlined",
             "oneOf": [{"type": "boolean"},
@@ -53,9 +49,39 @@ schema = {
                            "min": {"type": ["integer", "null"]}}}],
             "default": "auto",
             "scope": "column"},
+        # Other style elements
+        "aggregate": {
+            "description": """A function that produces a summary value.  This
+            function will be called with all of the column's the (unprocessed)
+            field values and should return a single value to be displayed.""",
+            "scope": "column"},
+        "delayed": {
+            "description": """Don't wait for this column's value.
+            The accessor will be wrapped in a function and called
+            asynchronously.  This can be set to a string to mark columns as
+            part of a "group".  All columns within a group will be accessed
+            within the same callable.  True means to access the column's value
+            in its own callable (i.e. independently of other columns).""",
+            "type": ["boolean", "string"],
+            "scope": "field"},
+        "missing": {
+            "description": "Text to display for missing values",
+            "type": "string",
+            "default": "",
+            "scope": "column"
+        },
+        "transform": {
+            "description": """An arbitrary function.
+            This function will be called with the (unprocessed) field value as
+            the single argument and should return a transformed value.  Note:
+            This function should not have side-effects because it may be called
+            multiple times.""",
+            "scope": "field"},
+        # Complete list of column style elements
         "styles": {
             "type": "object",
-            "properties": {"align": {"$ref": "#/definitions/align"},
+            "properties": {"aggregate": {"$ref": "#/definitions/aggregate"},
+                           "align": {"$ref": "#/definitions/align"},
                            "bold": {"$ref": "#/definitions/bold"},
                            "color": {"$ref": "#/definitions/color"},
                            "delayed": {"$ref": "#/definitions/delayed"},
@@ -64,7 +90,7 @@ schema = {
                            "underline": {"$ref": "#/definitions/underline"},
                            "width": {"$ref": "#/definitions/width"}},
             "additionalProperties": False},
-        # Mapping types
+        # Mapping elements
         "interval": {
             "description": "Map a value within an interval to a style",
             "type": "object",
@@ -81,26 +107,20 @@ schema = {
             "description": "Map a value to a style",
             "type": "object",
             "properties": {"lookup": {"type": "object"}},
-            "additionalProperties": False},
-        "delayed": {
-            "description": """Don't wait for this column's value.
-            The accessor will be wrapped in a function and called
-            asynchronously.  This can be set to a string to mark columns as
-            part of a "group".  All columns within a group will be accessed
-            within the same callable.  True means to access the column's value
-            in its own callable (i.e. independently of other columns).""",
-            "type": ["boolean", "string"],
-            "scope": "field"},
-        "transform": {
-            "description": """An arbitrary function.
-            This function will be called with the (unprocessed) field value as
-            the single argument and should return a transformed value.  Note:
-            This function should not have side-effects because it may be called
-            multiple times.""",
-            "scope": "field"}
+            "additionalProperties": False}
     },
     "type": "object",
     "properties": {
+        "aggregate_": {
+            "description": "Shared attributes for the summary rows",
+            "oneOf": [{"type": "object",
+                       "properties":
+                       {"color": {"$ref": "#/definitions/color"},
+                        "bold": {"$ref": "#/definitions/bold"},
+                        "underline": {"$ref": "#/definitions/underline"}}},
+                      {"type": "null"}],
+            "default": {},
+            "scope": "table"},
         "default_": {
             "description": "Default style of columns",
             "oneOf": [{"$ref": "#/definitions/styles"},

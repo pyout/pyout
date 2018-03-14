@@ -6,12 +6,18 @@ amount of general logic that should be extracted if any other outputter is
 actually added.
 """
 
-from collections import defaultdict, Mapping, Sequence
+from __future__ import unicode_literals
+
+from collections import defaultdict, namedtuple
+from collections import Mapping, Sequence, OrderedDict
 from functools import partial
 import inspect
 
+import six
+
 from pyout import elements
 from pyout.field import Field, Nothing
+from pyout.summary import Summary
 
 NOTHING = Nothing()
 
@@ -218,8 +224,6 @@ class StyleFields(object):
         This instance is used to generate the fields from `style`.
     """
 
-    _header_attributes = {"align", "width"}
-
     def __init__(self, style, procgen):
         self.init_style = style
         self.procgen = procgen
@@ -244,21 +248,37 @@ class StyleFields(object):
         self.style = elements.adopt({c: default for c in columns},
                                     self.init_style)
 
-        hstyle = None
-        if self.init_style is not None and "header_" in self.init_style:
-            hstyle = {}
-            for col in columns:
-                cstyle = {k: v for k, v in self.style[col].items()
-                          if k in self._header_attributes}
-                hstyle[col] = dict(cstyle, **self.init_style["header_"])
-
         # Store special keys in _style so that they can be validated.
         self.style["default_"] = default
-        self.style["header_"] = hstyle
+        self.style["header_"] = self._compose("header_", {"align", "width"})
+        self.style["aggregate_"] = self._compose("aggregate_", {"align", "width"})
         self.style["separator_"] = _safe_get(self.init_style, "separator_",
                                              elements.default("separator_"))
         elements.validate(self.style)
         self._setup_fields()
+
+    def _compose(self, name, attributes):
+        """Construct a style taking `attributes` from the column styles.
+
+        Parameters
+        ----------
+        name : str
+            Name of main style (e.g., "header_").
+        attributes : set of str
+            Adopt these elements from the column styles.
+
+        Returns
+        -------
+        The composite style for `name`.
+        """
+        name_style = _safe_get(self.init_style, name, elements.default(name))
+        if self.init_style is not None and name_style is not None:
+            result = {}
+            for col in self.columns:
+                cstyle = {k: v for k, v in self.style[col].items()
+                          if k in attributes}
+                result[col] = dict(cstyle, **name_style)
+            return result
 
     def _setup_fields(self):
         self.fields = {}
@@ -330,7 +350,7 @@ class StyleFields(object):
                                   exclude_post=True)
                 else:
                     value = row[column]
-                value_width = len(str(value))
+                value_width = len(six.text_type(value))
                 wmax = self.autowidth_columns[column]["max"]
                 if value_width > field.width:
                     if wmax is None or field.width < wmax:
@@ -402,3 +422,185 @@ class StyleFields(object):
         proc_fields = [self.fields[c](row[c], keys=proc_keys)
                        for c in self.columns]
         return self.style["separator_"].join(proc_fields) + "\n", adjusted
+
+
+class RedoContent(Exception):
+    """The rendered content is stale and should be re-rendered.
+    """
+    pass
+
+
+class ContentError(Exception):
+    """An error occurred when generating the content representation.
+    """
+    pass
+
+
+ContentRow = namedtuple("ContentRow", ["row", "kwds"])
+
+
+@six.python_2_unicode_compatible
+class Content(object):
+    """Concatenation of rendered fields.
+
+    Parameters
+    ----------
+    fields : StyleField instance
+    """
+
+    def __init__(self, fields):
+        self.fields = fields
+        self.summary = None
+
+        self.columns = None
+        self.ids = None
+
+        self._header = None
+        self._rows = []
+        self._idmap = {}
+
+    def init_columns(self, columns, ids):
+        """Set up the fields for `columns`.
+
+        Parameters
+        ----------
+        columns : sequence or OrderedDict
+            Names of the column.  In the case of an OrderedDict, a map between
+            short and long names.
+        ids : sequence
+            A collection of column names that uniquely identify a column.
+        """
+        self.fields.build(columns)
+        self.columns = columns
+        self.ids = ids
+
+    def __len__(self):
+        return len(list(self.rows))
+
+    def __bool__(self):
+        return bool(self._rows)
+
+    __nonzero__ = __bool__  # py2
+
+    @property
+    def rows(self):
+        """Data and summary rows.
+        """
+        if self._header:
+            yield self._header
+        for i in self._rows:
+            yield i
+
+    def _render(self, rows):
+        adjusted = []
+        for row, kwds in rows:
+            line, adj = self.fields.render(row, **kwds)
+            yield line
+            # Continue processing so that we get all the adjustments out of
+            # the way.
+            adjusted.append(adj)
+        if any(adjusted):
+            raise RedoContent
+
+    def __str__(self):
+        try:
+            return "".join(self._render(self.rows))
+        except RedoContent:
+            return "".join(self._render(self.rows))
+
+    def update(self, row, style):
+        """Modify the content.
+
+        Parameters
+        ----------
+        row : dict
+            A normalized row.  If the names specified by `self.ids` have
+            already been seen in a previous call, the entry for the previous
+            row is updated.  Otherwise, a new entry is appended.
+
+        `style` is passed to `StyleFields.render`.
+
+        Returns
+        -------
+        A tuple of (content, status), where status is 'append', an integer, or
+        'repaint'.
+
+          * append: the only change in the content is the addition of a line,
+            and the returned content will consist of just this line.
+
+          * an integer, N: the Nth line of the output needs to be update, and
+            the returned content will consist of just this line.
+
+          * repaint: all lines need to be updated, and the returned content
+            will consist of all the lines.
+        """
+        called_before = bool(self)
+        idkey = tuple(row[idx] for idx in self.ids)
+
+        if not called_before and self.fields.has_header:
+            self._add_header()
+            self._rows.append(ContentRow(row, kwds={"style": style}))
+            self._idmap[idkey] = 0
+            return six.text_type(self), "append"
+
+        try:
+            prev_idx = self._idmap[idkey] if idkey in self._idmap else None
+        except TypeError:
+            raise ContentError("ID columns must be hashable")
+
+        if prev_idx is not None:
+            row_update = {k: v for k, v in row.items()
+                          if not isinstance(v, Nothing)}
+            self._rows[prev_idx].row.update(row_update)
+            self._rows[prev_idx].kwds.update({"style": style})
+            # Replace the passed-in row since it may not have all the columns.
+            row = self._rows[prev_idx][0]
+        else:
+            self._idmap[idkey] = len(self._rows)
+            self._rows.append(ContentRow(row, kwds={"style": style}))
+
+        line, adjusted = self.fields.render(row, style)
+        if called_before and adjusted:
+            return six.text_type(self), "repaint"
+        if not adjusted and prev_idx is not None:
+            return line, prev_idx + self.fields.has_header
+        return line, "append"
+
+    def _add_header(self):
+        if isinstance(self.columns, OrderedDict):
+            row = self.columns
+        else:
+            row = dict(zip(self.columns, self.columns))
+        self._header = ContentRow(row,
+                                  kwds={"style": self.fields.style["header_"],
+                                        "adopt": False})
+
+
+class ContentWithSummary(Content):
+    """Like Content, but append a summary to the return value of `update`.
+    """
+
+    def __init__(self, fields):
+        super(ContentWithSummary, self).__init__(fields)
+        self.summary = None
+
+    def init_columns(self, columns, ids):
+        super(ContentWithSummary, self).init_columns(columns, ids)
+        self.summary = Summary(self.fields.style)
+
+    def update(self, row, style):
+        content, status = super(ContentWithSummary, self).update(row, style)
+        if self.summary:
+            summ_rows = self.summary.summarize([r.row for r in self._rows])
+
+            def join():
+                return "".join(self._render(summ_rows))
+
+            try:
+                summ_content = join()
+            except RedoContent:
+                # If rendering the summary lines triggered an adjustment, we
+                # need to re-render the main content as well.
+                return six.text_type(self), "repaint", join()
+            return content, status, summ_content
+        return content, status, None
