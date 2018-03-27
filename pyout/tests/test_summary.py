@@ -1,5 +1,4 @@
 
-from functools import partial
 from pyout.summary import Summary
 
 

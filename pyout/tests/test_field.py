@@ -51,8 +51,8 @@ def test_something_about_nothing(text):
 
     assert six.text_type(nada) == text
     assert "{:5}".format(nada) == "{:5}".format(text)
-    assert "x" + nada  == "x" + text
-    assert nada + "x"  == text + "x"
+    assert "x" + nada == "x" + text
+    assert nada + "x" == text + "x"
 
 
 def test_truncate_mark_true():

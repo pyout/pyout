@@ -53,7 +53,7 @@ class RowNormalizer(object):
 
     Attributes
     ----------
-    methods : callable
+    method : callable
         A function that takes a row and returns a normalized one.  This is
         chosen at time of the first call.  All subsequent calls should use the
         same kind of row.
@@ -519,7 +519,8 @@ class Content(object):
             already been seen in a previous call, the entry for the previous
             row is updated.  Otherwise, a new entry is appended.
 
-        `style` is passed to `StyleFields.render`.
+        style :
+            Passed to `StyleFields.render`.
 
         Returns
         -------
