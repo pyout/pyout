@@ -344,7 +344,7 @@ def test_tabular_write_style_flanking():
                                     "align": "center",
                                     "width": 7},
                          # Use "," to more easily see spaces in fields.
-                         "separator_": ",",},
+                         "separator_": ","},
                   stream=fd, force_styling=True)
     out({"name": "foo", "status": "bad"})
     # The text is style but not the flanking whitespace.
@@ -531,7 +531,7 @@ def test_tabular_write_lookup_non_hashable():
                   stream=fd)
     out(OrderedDict([("name", "foo"),
                      ("status", [0, 1])]))
-    expected = ("foo [0, 1]\n")
+    expected = "foo [0, 1]\n"
     assert eq_repr(fd.getvalue(), expected)
 
 
@@ -615,7 +615,6 @@ def test_tabular_write_intervals_bold():
                "78" + unicode_cap("sgr0") + "\n" + \
                "bar 33\n"
     assert eq_repr(fd.getvalue(), expected)
-
 
 
 @patch("pyout.tabular.Terminal", TestTerminal)
@@ -735,9 +734,9 @@ def test_tabular_write_width_truncate_long():
                          "status": {"width": 3}},
                   stream=fd)
     out(OrderedDict([("name", "abcdefghijklmnop"),
-                     ("status", "OK"),]))
+                     ("status", "OK")]))
     out(OrderedDict([("name", "bar"),
-                     ("status", "BAD"),]))
+                     ("status", "BAD")]))
 
     expected = ("abcde... OK \n"
                 "bar      BAD\n")
