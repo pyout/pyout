@@ -4,6 +4,7 @@ from __future__ import unicode_literals
 from collections import OrderedDict
 from curses import tigetstr, tparm
 from functools import partial
+import re
 from six.moves import StringIO
 import sys
 import time
@@ -16,6 +17,8 @@ import pytest
 from pyout import Tabular as TheRealTabular
 from pyout.field import StyleFunctionError
 from pyout.common import ContentError
+
+from pyout.tests.utils import assert_contains
 
 # TestTerminal, unicode_cap, and unicode_parm are copied from
 # blessings' tests.
@@ -66,6 +69,18 @@ def eq_repr(a, b):
     """Compare the repr's of `a` and `b` to escape escape codes.
     """
     return repr(a) == repr(b)
+
+
+def eq_repr_noclear(actual, expected):
+    """Like `eq_repr`, but strip clear-related codes from `actual`.
+    """
+    clear_codes = [re.escape(unicode_cap(x)) for x in ["el", "ed", "cuu1"]]
+    match = re.match("(?:{}|{}|{})*(.*)".format(*clear_codes), actual)
+    assert match, "This should always match"
+    return eq_repr(match.group(1), expected)
+
+
+assert_contains_nc = partial(assert_contains, cmp=eq_repr_noclear)
 
 
 class AttrData(object):
@@ -402,8 +417,7 @@ def test_tabular_rewrite_auto_width():
     out({"name": "bar", "status": "installed"})
 
     lines = out.stdout.splitlines()
-    assert len([ln for ln in lines if ln.endswith("foo unknown  ")]) == 1
-    assert len([ln for ln in lines if ln.endswith("baz unknown  ")]) == 1
+    assert_contains_nc(lines, "foo unknown  ", "baz unknown  ")
 
 
 def test_tabular_non_hashable_id_error():
@@ -577,8 +591,7 @@ def test_tabular_write_transform_autowidth():
                      ("val", "7800")]))
 
     lines = out.stdout.splitlines()
-    assert len([ln for ln in lines if ln.endswith("foo 330330  ")]) == 1
-    assert len([ln for ln in lines if ln.endswith("bar 78007800")]) == 1
+    assert_contains_nc(lines, "foo 330330  ", "bar 78007800")
 
 
 def test_tabular_write_transform_on_header():
@@ -642,8 +655,7 @@ def test_tabular_write_autowidth():
                      ("path", "/tmp/b")]))
 
     lines = out.stdout.splitlines()
-    assert "bar   BAD /tmp/b" in lines
-    assert len([ln for ln in lines if ln.endswith("fooab OK  /tmp/a")]) == 1
+    assert_contains_nc(lines, "bar   BAD /tmp/b", "fooab OK  /tmp/a")
 
 
 def test_tabular_write_autowidth_with_header():
@@ -656,7 +668,7 @@ def test_tabular_write_autowidth_with_header():
                      ("status", "OK")]))
 
     lines = out.stdout.splitlines()
-    assert len([ln for ln in lines if ln.endswith("name   status")]) == 1
+    assert_contains_nc(lines, "name   status")
 
 
 def test_tabular_write_autowidth_min():
@@ -671,8 +683,7 @@ def test_tabular_write_autowidth_min():
                      ("path", "/tmp/b")]))
 
     lines = out.stdout.splitlines()
-    assert "bar   BAD   /tmp/b" in lines
-    assert len([ln for ln in lines if ln.endswith("fooab OK    /tmp/a")]) == 1
+    assert_contains_nc(lines, "bar   BAD   /tmp/b", "fooab OK    /tmp/a")
 
 
 @pytest.mark.parametrize("marker", [True, False, "…"],
@@ -700,14 +711,17 @@ def test_tabular_write_autowidth_min_max(marker):
 
     lines = out.stdout.splitlines()
     if marker is True:
-        assert len([ln for ln in lines if ln.endswith("foo U       /t...")]) == 1
-        assert len([ln for ln in lines if ln.endswith("bar BAD!... /t...")]) == 1
+        assert_contains_nc(lines,
+                           "foo U       /t...",
+                           "bar BAD!... /t...")
     elif marker:
-        assert len([ln for ln in lines if ln.endswith("foo U       /tmp…")]) == 1
-        assert len([ln for ln in lines if ln.endswith("bar BAD!... /tmp…")]) == 1
+        assert_contains_nc(lines,
+                           "foo U       /tmp…",
+                           "bar BAD!... /tmp…")
     else:
-        assert len([ln for ln in lines if ln.endswith("foo U       /tmp/")]) == 1
-        assert len([ln for ln in lines if ln.endswith("bar BAD!... /tmp/")]) == 1
+        assert_contains_nc(lines,
+                           "foo U       /tmp/",
+                           "bar BAD!... /tmp/")
 
 
 def test_tabular_write_autowidth_min_max_with_header():
@@ -719,14 +733,13 @@ def test_tabular_write_autowidth_min_max_with_header():
                      ("status", "U")]))
 
     lines0 = out.stdout.splitlines()
-    assert len([ln for ln in lines0 if ln.endswith("name status")]) == 1
-    assert len([ln for ln in lines0 if ln.endswith("foo  U     ")]) == 1
+    assert_contains_nc(lines0, "name status", "foo  U     ")
 
     out(OrderedDict([("name", "bar"),
                      ("status", "BAD!!!!!!!!!!!")]))
 
     lines1 = out.stdout.splitlines()
-    assert len([ln for ln in lines1 if ln.endswith("bar  BAD!!...")]) == 1
+    assert_contains_nc(lines1, "bar  BAD!!...")
 
 
 def test_tabular_write_autowidth_different_data_types_same_output():
@@ -793,8 +806,7 @@ def test_tabular_write_callable_values():
         delay0.now = True
         delay1.now = True
     lines = out.stdout.splitlines()
-    assert len([ln for ln in lines if ln.endswith("foo done    ")]) == 1
-    assert len([ln for ln in lines if ln.endswith("baz over    ")]) == 1
+    assert_contains_nc(lines, "foo done    ", "baz over    ")
 
 
 @pytest.mark.timeout(10)
@@ -811,7 +823,7 @@ def test_tabular_write_callable_transform_nothing():
         assert eq_repr(out.stdout, "foo \n")
         delay0.now = True
     lines = out.stdout.splitlines()
-    assert len([ln for ln in lines if ln.endswith("foo 5")]) == 1
+    assert_contains_nc(lines, "foo 5")
 
 
 @pytest.mark.timeout(10)
@@ -829,7 +841,7 @@ def test_tabular_write_callable_values_multi_return():
 
         delay.now = True
     lines = out.stdout.splitlines()
-    assert len([ln for ln in lines if ln.endswith("foo done /tmp/a")]) == 1
+    assert_contains_nc(lines, "foo done /tmp/a")
 
 
 @pytest.mark.timeout(10)
@@ -853,7 +865,7 @@ def test_tabular_write_callable_values_multicol_key_infer_column(result):
 
         delay.now = True
     lines = out.stdout.splitlines()
-    assert len([ln for ln in lines if ln.endswith("foo done /tmp/a")]) == 1
+    assert_contains_nc(lines, "foo done /tmp/a")
 
 
 def delayed_gen_func(*values):
@@ -881,9 +893,10 @@ def test_tabular_write_generator_function_values(gen_source):
                     "bar ok     \n")
         assert eq_repr(out.stdout, expected)
     lines = out.stdout.splitlines()
-    assert len([ln for ln in lines if ln.endswith("foo update ")]) == 1
-    assert len([ln for ln in lines if ln.endswith("foo finished")]) == 1
-    assert len([ln for ln in lines if ln.endswith("bar ok      ")]) == 1
+    assert_contains_nc(lines,
+                       "foo update ",
+                       "foo finished",
+                       "bar ok      ")
 
 
 @pytest.mark.timeout(10)
@@ -904,9 +917,10 @@ def test_tabular_write_generator_values_multireturn():
                     "bar ok  na \n")
         assert eq_repr(out.stdout, expected)
     lines = out.stdout.splitlines()
-    assert len([ln for ln in lines if ln.endswith("foo working ...")]) == 1
-    assert len([ln for ln in lines if ln.endswith("foo working /tmp/a")]) == 1
-    assert len([ln for ln in lines if ln.endswith("foo done    /tmp/b")]) == 1
+    assert_contains_nc(lines,
+                       "foo working ...",
+                       "foo working /tmp/a",
+                       "foo done    /tmp/b")
 
 
 def test_tabular_write_wait_noop_if_nothreads():
@@ -946,10 +960,11 @@ def test_tabular_write_delayed(form):
     # Either paired0/paired1 came in first or solo came in first, but
     # paired0/paired1 should arrive together.
     firstin = [ln for ln in lines
-               if ln.endswith("foo 1 2 ") or ln.endswith("foo   3")]
+               if eq_repr_noclear(ln, "foo 1 2 ")
+               or eq_repr_noclear(ln, "foo   3")]
     assert len(firstin) == 1
 
-    assert lines[-1].endswith("foo 1 2 3")
+    assert eq_repr_noclear(lines[-1], "foo 1 2 3")
 
 
 def test_tabular_summary():
@@ -976,11 +991,12 @@ def test_tabular_summary():
                      ("status", "OK"),
                      ("num", 10)]))
 
-    lines = out.stdout.splitlines()               #name         #num
-    assert len([ln for ln in lines if ln.endswith("     1 failed 2  ")]) == 1
-    assert len([ln for ln in lines if ln.endswith("     2 failed 5  ")]) == 1
-    assert len([ln for ln in lines if ln.endswith("     3 failed 9  ")]) == 1
-    assert len([ln for ln in lines if ln.endswith("     2 failed 17 ")]) == 1
+    lines = out.stdout.splitlines()
+    assert_contains_nc(lines,
+                       "     1 failed 2  ",
+                       "     2 failed 5  ",
+                       "     3 failed 9  ",
+                       "     2 failed 17 ")
 
 
 def test_tabular_shrinking_summary():
