@@ -65,10 +65,10 @@ def capres(name, value):
     return prefix + value + unicode_cap("sgr0")
 
 
-def eq_repr(a, b):
+def assert_eq_repr(a, b):
     """Compare the repr's of `a` and `b` to escape escape codes.
     """
-    return repr(a) == repr(b)
+    assert repr(a) == repr(b)
 
 
 def eq_repr_noclear(actual, expected):
@@ -77,7 +77,7 @@ def eq_repr_noclear(actual, expected):
     clear_codes = [re.escape(unicode_cap(x)) for x in ["el", "ed", "cuu1"]]
     match = re.match("(?:{}|{}|{})*(.*)".format(*clear_codes), actual)
     assert match, "This should always match"
-    return eq_repr(match.group(1), expected)
+    return repr(match.group(1)) == repr(expected)
 
 
 assert_contains_nc = partial(assert_contains, cmp=eq_repr_noclear)
@@ -104,19 +104,19 @@ def test_tabular_write_color():
     out({"name": "foo"})
 
     expected = capres("green", "foo") + "\n"
-    assert eq_repr(out.stdout, expected)
+    assert_eq_repr(out.stdout, expected)
 
 
 def test_tabular_write_empty_string():
     out = Tabular()
     out({"name": ""})
-    assert eq_repr(out.stdout, "\n")
+    assert_eq_repr(out.stdout, "\n")
 
 
 def test_tabular_write_missing_column():
     out = Tabular(columns=["name", "status"])
     out({"name": "solo"})
-    assert eq_repr(out.stdout, "solo \n")
+    assert_eq_repr(out.stdout, "solo \n")
 
 
 def test_tabular_write_missing_column_missing_text():
@@ -124,13 +124,13 @@ def test_tabular_write_missing_column_missing_text():
                   style={"status":
                          {"missing": "-"}})
     out({"name": "solo"})
-    assert eq_repr(out.stdout, "solo -\n")
+    assert_eq_repr(out.stdout, "solo -\n")
 
 
 def test_tabular_write_list_value():
     out = Tabular(columns=["name", "status"])
     out({"name": "foo", "status": [0, 1]})
-    assert eq_repr(out.stdout, "foo [0, 1]\n")
+    assert_eq_repr(out.stdout, "foo [0, 1]\n")
 
 
 def test_tabular_write_missing_column_missing_object_data():
@@ -140,7 +140,7 @@ def test_tabular_write_missing_column_missing_object_data():
                   style={"status":
                          {"missing": "-"}})
     out(data)
-    assert eq_repr(out.stdout, "solo -\n")
+    assert_eq_repr(out.stdout, "solo -\n")
 
 
 def test_tabular_write_columns_from_orderdict_row():
@@ -155,7 +155,7 @@ def test_tabular_write_columns_from_orderdict_row():
                        ("path", "/tmp/foo")])
     out(row)
 
-    assert eq_repr(out.stdout, "foo 001 installed /tmp/foo\n")
+    assert_eq_repr(out.stdout, "foo 001 installed /tmp/foo\n")
 
 
 @pytest.mark.parametrize("row", [["foo", "ok"],
@@ -172,7 +172,7 @@ def test_tabular_write_columns_orderdict_mapping(row):
 
     expected = ("Long name  Status\n"
                 "foo        ok    \n")
-    assert eq_repr(out.stdout, expected)
+    assert_eq_repr(out.stdout, expected)
 
 
 def test_tabular_write_data_as_list():
@@ -184,7 +184,7 @@ def test_tabular_write_data_as_list():
     out(["bar", "unknown"])
 
     expected = "foo installed\nbar unknown  \n"
-    assert eq_repr(out.stdout, expected)
+    assert_eq_repr(out.stdout, expected)
 
 
 def test_tabular_write_header():
@@ -201,7 +201,7 @@ def test_tabular_write_header():
     expected = ("name       status    \n"
                 "foo        installed \n"
                 "bar        installed \n")
-    assert eq_repr(out.stdout, expected)
+    assert_eq_repr(out.stdout, expected)
 
 
 def test_tabular_write_data_as_object():
@@ -252,7 +252,7 @@ def test_tabular_write_header_with_style():
     expected = capres("smul", "name") + " " + \
                capres("smul", "status") + "   " + "\nfoo  " + \
                capres("green", "installed") + "\n"
-    assert eq_repr(out.stdout, expected)
+    assert_eq_repr(out.stdout, expected)
 
 
 def test_tabular_nondefault_separator():
@@ -269,7 +269,7 @@ def test_tabular_nondefault_separator():
     expected = ("name | status   \n"
                 "foo  | installed\n"
                 "bar  | installed\n")
-    assert eq_repr(out.stdout, expected)
+    assert_eq_repr(out.stdout, expected)
 
 
 def test_tabular_write_data_as_list_no_columns():
@@ -286,7 +286,7 @@ def test_tabular_write_style_override():
         style={"name": {"color": "black", "width": 3}})
 
     expected = capres("black", "foo") + "\n"
-    assert eq_repr(out.stdout, expected)
+    assert_eq_repr(out.stdout, expected)
 
 
 def test_tabular_default_style():
@@ -308,13 +308,13 @@ def test_tabular_write_multicolor():
 
     expected = capres("green", "foo") + " " + \
                capres("white", "unknown") + "\n"
-    assert eq_repr(out.stdout, expected)
+    assert_eq_repr(out.stdout, expected)
 
 
 def test_tabular_write_empty_string_nostyle():
     out = Tabular(style={"name": {"color": "green"}})
     out({"name": ""})
-    assert eq_repr(out.stdout, "\n")
+    assert_eq_repr(out.stdout, "\n")
 
 
 def test_tabular_write_style_flanking():
@@ -327,7 +327,7 @@ def test_tabular_write_style_flanking():
     out({"name": "foo", "status": "bad"})
     # The text is style but not the flanking whitespace.
     expected = "foo," + "  " + capres("smul", "bad") + "  \n"
-    assert eq_repr(out.stdout, expected)
+    assert_eq_repr(out.stdout, expected)
 
 
 def test_tabular_write_align():
@@ -335,7 +335,7 @@ def test_tabular_write_align():
                   style={"name": {"align": "right", "width": 10}})
     out({"name": "foo"})
 
-    assert eq_repr(out.stdout, "       foo\n")
+    assert_eq_repr(out.stdout, "       foo\n")
 
 
 def test_tabular_rewrite():
@@ -349,7 +349,7 @@ def test_tabular_rewrite():
     out({"name": "foo", "status": "installed"})
 
     expected = unicode_cap("cuu1") * 2 + unicode_cap("el") + "foo installed"
-    assert eq_repr(out.stdout.strip().splitlines()[-1],
+    assert_eq_repr(out.stdout.strip().splitlines()[-1],
                    expected)
 
 
@@ -364,7 +364,7 @@ def test_tabular_rewrite_with_header():
     out({"name": "bar", "status": "installed"})
 
     expected = unicode_cap("cuu1") * 1 + unicode_cap("el") + "bar  installed"
-    assert eq_repr(out.stdout.strip().splitlines()[-1],
+    assert_eq_repr(out.stdout.strip().splitlines()[-1],
                    expected)
 
 
@@ -384,7 +384,7 @@ def test_tabular_rewrite_multi_id():
     out({"name": "foo", "type": "0", "status": "installed"})
 
     expected = unicode_cap("cuu1") * 3 + unicode_cap("el") + "foo 0 installed"
-    assert eq_repr(out.stdout.strip().splitlines()[-1],
+    assert_eq_repr(out.stdout.strip().splitlines()[-1],
                    expected)
 
 
@@ -401,7 +401,7 @@ def test_tabular_rewrite_multi_value():
     out({"name": "foo", "status": "installed", "type": "3"})
 
     expected = unicode_cap("cuu1") * 2 + unicode_cap("el") + "foo 3 installed"
-    assert eq_repr(out.stdout.strip().splitlines()[-1],
+    assert_eq_repr(out.stdout.strip().splitlines()[-1],
                    expected)
 
 
@@ -438,7 +438,7 @@ def test_tabular_write_lookup_color():
 
     expected = "foo " + "OK    \n" + \
                "bar " + capres("red", "BAD") + "   \n"
-    assert eq_repr(out.stdout, expected)
+    assert_eq_repr(out.stdout, expected)
 
 
 def test_tabular_write_lookup_bold():
@@ -452,7 +452,7 @@ def test_tabular_write_lookup_bold():
 
     expected = "foo " + "OK    \n" + \
                "bar " + capres("bold", "BAD") + "   \n"
-    assert eq_repr(out.stdout, expected)
+    assert_eq_repr(out.stdout, expected)
 
 
 def test_tabular_write_lookup_bold_false():
@@ -466,7 +466,7 @@ def test_tabular_write_lookup_bold_false():
 
     expected = ("foo OK    \n"
                 "bar BAD   \n")
-    assert eq_repr(out.stdout, expected)
+    assert_eq_repr(out.stdout, expected)
 
 
 def test_tabular_write_lookup_non_hashable():
@@ -474,7 +474,7 @@ def test_tabular_write_lookup_non_hashable():
     out(OrderedDict([("name", "foo"),
                      ("status", [0, 1])]))
     expected = "foo [0, 1]\n"
-    assert eq_repr(out.stdout, expected)
+    assert_eq_repr(out.stdout, expected)
 
 
 def test_tabular_write_intervals_color():
@@ -491,7 +491,7 @@ def test_tabular_write_intervals_color():
 
     expected = "foo " + capres("green", "88") + "     \n" + \
                "bar " + capres("red", "33") + "     \n"
-    assert eq_repr(out.stdout, expected)
+    assert_eq_repr(out.stdout, expected)
 
 
 def test_tabular_write_intervals_color_open_ended():
@@ -507,7 +507,7 @@ def test_tabular_write_intervals_color_open_ended():
 
     expected = "foo " + capres("green", "88") + "     \n" + \
                "bar " + capres("red", "33") + "     \n"
-    assert eq_repr(out.stdout, expected)
+    assert_eq_repr(out.stdout, expected)
 
 
 def test_tabular_write_intervals_color_outside_intervals():
@@ -522,7 +522,7 @@ def test_tabular_write_intervals_color_outside_intervals():
 
     expected = "foo 88     \n" + \
                "bar " + capres("red", "33") + "     \n"
-    assert eq_repr(out.stdout, expected)
+    assert_eq_repr(out.stdout, expected)
 
 
 def test_tabular_write_intervals_bold():
@@ -538,7 +538,7 @@ def test_tabular_write_intervals_bold():
 
     expected = "foo " + capres("bold", "78") + "\n" + \
                "bar 33\n"
-    assert eq_repr(out.stdout, expected)
+    assert_eq_repr(out.stdout, expected)
 
 
 def test_tabular_write_intervals_missing():
@@ -553,7 +553,7 @@ def test_tabular_write_intervals_missing():
     out(OrderedDict([("name", "bar")]))
 
     expected = "foo " + capres("bold", "78") + "\n" + "bar   \n"
-    assert eq_repr(out.stdout, expected)
+    assert_eq_repr(out.stdout, expected)
 
 
 def test_tabular_write_transform():
@@ -565,7 +565,7 @@ def test_tabular_write_transform():
 
     expected = ("foo 033\n"
                 "bar 087\n")
-    assert eq_repr(out.stdout, expected)
+    assert_eq_repr(out.stdout, expected)
 
 
 def test_tabular_write_transform_with_header():
@@ -580,7 +580,7 @@ def test_tabular_write_transform_with_header():
     expected = ("name val\n"
                 "foo  033\n"
                 "bar  087\n")
-    assert eq_repr(out.stdout, expected)
+    assert_eq_repr(out.stdout, expected)
 
 
 def test_tabular_write_transform_autowidth():
@@ -606,7 +606,7 @@ def test_tabular_write_transform_on_header():
     expected = ("NAME VAL\n"
                 "foo  330\n"
                 "bar  780\n")
-    assert eq_repr(out.stdout, expected)
+    assert_eq_repr(out.stdout, expected)
 
 
 def test_tabular_write_transform_func_error():
@@ -801,7 +801,7 @@ def test_tabular_write_callable_values():
         expected = ("foo thinking\n"
                     "bar ok      \n"
                     "baz         \n")
-        assert eq_repr(out.stdout, expected)
+        assert_eq_repr(out.stdout, expected)
 
         delay0.now = True
         delay1.now = True
@@ -820,7 +820,7 @@ def test_tabular_write_callable_transform_nothing():
         # function above, which is designed to take a number, won't be called
         # with it.
         out({"name": "foo", "status": delay0.run})
-        assert eq_repr(out.stdout, "foo \n")
+        assert_eq_repr(out.stdout, "foo \n")
         delay0.now = True
     lines = out.stdout.splitlines()
     assert_contains_nc(lines, "foo 5")
@@ -837,7 +837,7 @@ def test_tabular_write_callable_values_multi_return():
 
         expected = ("foo ... ...\n"
                     "bar ok  na \n")
-        assert eq_repr(out.stdout, expected)
+        assert_eq_repr(out.stdout, expected)
 
         delay.now = True
     lines = out.stdout.splitlines()
@@ -861,7 +861,7 @@ def test_tabular_write_callable_values_multicol_key_infer_column(result):
 
         expected = ("foo ... ...\n"
                     "bar ok  na \n")
-        assert eq_repr(out.stdout, expected)
+        assert_eq_repr(out.stdout, expected)
 
         delay.now = True
     lines = out.stdout.splitlines()
@@ -891,7 +891,7 @@ def test_tabular_write_generator_function_values(gen_source):
 
         expected = ("foo waiting\n"
                     "bar ok     \n")
-        assert eq_repr(out.stdout, expected)
+        assert_eq_repr(out.stdout, expected)
     lines = out.stdout.splitlines()
     assert_contains_nc(lines,
                        "foo update ",
@@ -915,7 +915,7 @@ def test_tabular_write_generator_values_multireturn():
 
         expected = ("foo ... ...\n"
                     "bar ok  na \n")
-        assert eq_repr(out.stdout, expected)
+        assert_eq_repr(out.stdout, expected)
     lines = out.stdout.splitlines()
     assert_contains_nc(lines,
                        "foo working ...",
@@ -930,7 +930,7 @@ def test_tabular_write_wait_noop_if_nothreads():
 
         expected = ("foo done\n"
                     "bar ok  \n")
-        assert eq_repr(out.stdout, expected)
+        assert_eq_repr(out.stdout, expected)
 
 
 @pytest.mark.timeout(10)
