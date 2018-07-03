@@ -28,3 +28,9 @@ def assert_contains(collection, *items, **kwargs):
         if not len([x for x in collection if cmp(x, item)]) == count:
             raise AssertionError("{!r} (x{}) not in {!r}".format(
                 item, count, collection))
+
+
+def assert_eq_repr(a, b):
+    """Compare the repr's of `a` and `b` to escape escape codes.
+    """
+    assert repr(a) == repr(b)

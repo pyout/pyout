@@ -18,7 +18,7 @@ from pyout import Tabular as TheRealTabular
 from pyout.field import StyleFunctionError
 from pyout.common import ContentError
 
-from pyout.tests.utils import assert_contains
+from pyout.tests.utils import assert_contains, assert_eq_repr
 
 # TestTerminal, unicode_cap, and unicode_parm are copied from
 # blessings' tests.
@@ -63,12 +63,6 @@ def capres(name, value):
     else:
         prefix = unicode_cap(name)
     return prefix + value + unicode_cap("sgr0")
-
-
-def assert_eq_repr(a, b):
-    """Compare the repr's of `a` and `b` to escape escape codes.
-    """
-    assert repr(a) == repr(b)
 
 
 def eq_repr_noclear(actual, expected):
