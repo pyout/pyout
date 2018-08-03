@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
+from collections import Counter
 from collections import OrderedDict
 from curses import tigetstr, tparm
 from functools import partial
@@ -996,7 +997,6 @@ def test_tabular_summary():
 def test_tabular_shrinking_summary():
 
     def counts(values):
-        from collections import Counter
         cnt = Counter(values)
         return ["{}: {:d}".format(k, cnt[k]) for k in sorted(cnt.keys())]
 
