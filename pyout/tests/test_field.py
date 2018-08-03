@@ -2,9 +2,9 @@
 
 from __future__ import unicode_literals
 
+import pytest
 import six
 
-import pytest
 from pyout.field import Field
 from pyout.field import Nothing
 from pyout.field import StyleProcessors

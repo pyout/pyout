@@ -7,7 +7,6 @@ from curses import tigetstr
 from curses import tparm
 from functools import partial
 import re
-from six.moves import StringIO
 import sys
 import time
 import traceback
@@ -15,10 +14,11 @@ import traceback
 import blessings
 from mock import patch
 import pytest
+from six.moves import StringIO
 
 from pyout import Tabular as TheRealTabular
-from pyout.field import StyleFunctionError
 from pyout.common import ContentError
+from pyout.field import StyleFunctionError
 
 from pyout.tests.utils import assert_contains
 from pyout.tests.utils import assert_eq_repr

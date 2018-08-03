@@ -2,8 +2,8 @@
 """
 from __future__ import unicode_literals
 
-from itertools import chain
 from collections import defaultdict
+from itertools import chain
 import re
 import sys
 
