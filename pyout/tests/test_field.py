@@ -5,7 +5,9 @@ from __future__ import unicode_literals
 import six
 
 import pytest
-from pyout.field import Field, Nothing, StyleProcessors
+from pyout.field import Field
+from pyout.field import Nothing
+from pyout.field import StyleProcessors
 
 
 def test_field_base():

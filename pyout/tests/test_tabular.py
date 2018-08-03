@@ -3,7 +3,8 @@ from __future__ import unicode_literals
 
 from collections import Counter
 from collections import OrderedDict
-from curses import tigetstr, tparm
+from curses import tigetstr
+from curses import tparm
 from functools import partial
 import re
 from six.moves import StringIO
@@ -19,7 +20,8 @@ from pyout import Tabular as TheRealTabular
 from pyout.field import StyleFunctionError
 from pyout.common import ContentError
 
-from pyout.tests.utils import assert_contains, assert_eq_repr
+from pyout.tests.utils import assert_contains
+from pyout.tests.utils import assert_eq_repr
 
 # TestTerminal, unicode_cap, and unicode_parm are copied from
 # blessings' tests.

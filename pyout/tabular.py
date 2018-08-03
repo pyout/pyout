@@ -5,7 +5,8 @@ This module defines the Tabular entry point.
 
 from __future__ import unicode_literals
 
-from collections import Mapping, OrderedDict
+from collections import Mapping
+from collections import OrderedDict
 from contextlib import contextmanager
 from functools import partial
 import inspect
@@ -14,8 +15,10 @@ from multiprocessing.dummy import Pool
 
 from blessings import Terminal
 
+from pyout.common import ContentWithSummary
+from pyout.common import RowNormalizer
+from pyout.common import StyleFields
 from pyout.field import TermProcessors
-from pyout.common import ContentWithSummary, RowNormalizer, StyleFields
 
 
 class Tabular(object):

@@ -8,15 +8,19 @@ actually added.
 
 from __future__ import unicode_literals
 
-from collections import defaultdict, namedtuple
-from collections import Mapping, Sequence, OrderedDict
+from collections import defaultdict
+from collections import Mapping
+from collections import namedtuple
+from collections import OrderedDict
+from collections import Sequence
 from functools import partial
 import inspect
 
 import six
 
 from pyout import elements
-from pyout.field import Field, Nothing
+from pyout.field import Field
+from pyout.field import Nothing
 from pyout.summary import Summary
 
 NOTHING = Nothing()
