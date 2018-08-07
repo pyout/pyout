@@ -34,7 +34,7 @@ class RowNormalizer(object):
       * any other value will be taken as an object where the column values can
         be accessed via an attribute with the same name
 
-    To normalized a row, it is
+    To normalize a row, it is
 
       * converted to a dict that maps from column names to values
 
@@ -321,7 +321,7 @@ class StyleFields(object):
 
     @property
     def has_header(self):
-        """Whether the style specifies that a header.
+        """Whether the style specifies a header.
         """
         return self.style["header_"] is not None
 
