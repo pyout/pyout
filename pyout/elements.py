@@ -174,13 +174,19 @@ def adopt(style, new_style):
 
 
 class StyleError(Exception):
-    """Exception raised for an invalid style.
+    """Style is invalid or mispecified in some way.
+    """
+    pass
+
+
+class StyleValidationError(StyleError):
+    """Exception raised if the style schema does not validate.
     """
     def __init__(self, original_exception):
         msg = ("Invalid style\n\n{}\n\n\n"
                "See pyout.schema for style definition."
                .format(original_exception))
-        super(StyleError, self).__init__(msg)
+        super(StyleValidationError, self).__init__(msg)
 
 
 def validate(style):
@@ -193,7 +199,7 @@ def validate(style):
 
     Raises
     ------
-    StyleError if `style` is not valid.
+    StyleValidationError if `style` is not valid.
     """
     try:
         import jsonschema
@@ -203,8 +209,8 @@ def validate(style):
     try:
         jsonschema.validate(style, schema)
     except jsonschema.ValidationError as exc:
-        new_exc = StyleError(exc)
+        new_exc = StyleValidationError(exc)
         # Don't dump the original jsonschema exception because it is already
-        # included in the StyleError's message.
+        # included in the StyleValidationError's message.
         new_exc.__cause__ = None
         raise new_exc
