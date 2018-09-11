@@ -290,7 +290,7 @@ class StyleFields(object):
         for column in self.columns:
             cstyle = self.style[column]
 
-            core_procs = []
+            width_procs = []
             style_width = cstyle["width"]
             is_auto = style_width == "auto" or _safe_get(style_width, "auto")
 
@@ -302,23 +302,23 @@ class StyleFields(object):
 
                 if wmax is not None:
                     marker = _safe_get(style_width, "marker", True)
-                    core_procs = [self.procgen.truncate(wmax, marker)]
+                    width_procs = [self.procgen.truncate(wmax, marker)]
             elif is_auto is False:
                 raise ValueError("No 'width' specified")
             else:
                 width = style_width
-                core_procs = [self.procgen.truncate(width)]
+                width_procs = [self.procgen.truncate(width)]
 
-            # We are creating a distinction between "core" processors, that we
+            # We are creating a distinction between "width" processors, that we
             # always want to be active and "default" processors that we want to
             # be active unless there's an overriding style (i.e., a header is
             # being written or the `style` argument to __call__ is specified).
             field = Field(width=width, align=cstyle["align"],
-                          default_keys=["core", "default"],
+                          default_keys=["width", "default"],
                           other_keys=["override"])
             field.add("pre", "default",
                       *(self.procgen.pre_from_style(cstyle)))
-            field.add("post", "core", *core_procs)
+            field.add("post", "width", *width_procs)
             field.add("post", "default",
                       *(self.procgen.post_from_style(cstyle)))
             self.fields[column] = field
@@ -418,7 +418,7 @@ class StyleFields(object):
         group = self._proc_group(style, adopt=adopt)
         if group == "override":
             # Override the "default" processor key.
-            proc_keys = ["core", "override"]
+            proc_keys = ["width", "override"]
         else:
             # Use the set of processors defined by _setup_fields.
             proc_keys = None
