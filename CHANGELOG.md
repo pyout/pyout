@@ -15,6 +15,11 @@ TODO Summary
   This feature can be used to provide a function that takes a field
   value and returns a transformed field value.
 
+- A new style attribute, "width_", has been added to the schema.
+
+  This determines the total width of the table, which is otherwise
+  take as the terminal's width.
+
 - Row values can now be generator functions or generator objects in
   addition to plain values and non-generator functions.
 

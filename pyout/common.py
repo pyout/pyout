@@ -268,6 +268,8 @@ class StyleFields(object):
         self.style["separator_"] = _safe_get(self.init_style, "separator_",
                                              elements.default("separator_"))
         lgr.debug("Validating style %r", self.style)
+        self.style["width_"] = _safe_get(self.init_style, "width_",
+                                         elements.default("width_"))
         elements.validate(self.style)
         self._setup_fields()
 

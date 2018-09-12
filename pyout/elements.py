@@ -142,6 +142,12 @@ schema = {
             "description": "Separator used between fields",
             "type": "string",
             "default": " ",
+            "scope": "table"},
+        "width_": {
+            "description": """Total width of table.
+            This is typically not set directly by the user.""",
+            "default": 90,
+            "type": "integer",
             "scope": "table"}
     },
     # All other keys are column names.
