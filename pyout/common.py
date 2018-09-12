@@ -246,6 +246,7 @@ class StyleFields(object):
         self.autowidth_columns = {}
 
         self.fields = None
+        self._truncaters = {}
 
     def build(self, columns):
         """Build the style and fields.
@@ -302,29 +303,21 @@ class StyleFields(object):
         for column in self.columns:
             lgr.debug("Setting up field for column %r", column)
             cstyle = self.style[column]
-
-            width_procs = []
             style_width = cstyle["width"]
             is_auto = style_width == "auto" or _safe_get(style_width, "auto")
-
             if is_auto:
                 width = _safe_get(style_width, "min", 0)
                 wmax = _safe_get(style_width, "max")
-
                 self.autowidth_columns[column] = {"max": wmax}
-
                 if wmax is not None:
                     lgr.debug("Setting max width of column %r to %d",
                               column, wmax)
-                    marker = _safe_get(style_width, "marker", True)
-                    width_procs = [Truncater(wmax, marker).truncate]
             elif is_auto is False:
                 raise ValueError("No 'width' specified")
             else:
                 lgr.debug("Setting width of column %r to %d",
                           column, style_width)
                 width = style_width
-                width_procs = [Truncater(width).truncate]
 
             # We are creating a distinction between "width" processors, that we
             # always want to be active and "default" processors that we want to
@@ -335,10 +328,13 @@ class StyleFields(object):
                           other_keys=["override"])
             field.add("pre", "default",
                       *(self.procgen.pre_from_style(cstyle)))
-            field.add("post", "width", *width_procs)
+            truncater = Truncater(width,
+                                  _safe_get(style_width, "marker", True))
+            field.add("post", "width", truncater.truncate)
             field.add("post", "default",
                       *(self.procgen.post_from_style(cstyle)))
             self.fields[column] = field
+            self._truncaters[column] = truncater
 
     @property
     def has_header(self):
@@ -365,9 +361,8 @@ class StyleFields(object):
         for column in self.columns:
             if column in self.autowidth_columns:
                 field = self.fields[column]
-                lgr.debug(
-                    "Checking width of column %r (field width: %d)",
-                    column, field.width)
+                lgr.debug("Checking width of column %r (field width: %d)",
+                          column, field.width)
                 # If we've added any style transform functions as
                 # pre-format processors, we want to measure the width
                 # of their result rather than the raw value.
@@ -380,12 +375,16 @@ class StyleFields(object):
                 value_width = len(value)
                 wmax = self.autowidth_columns[column]["max"]
                 if value_width > field.width:
-                    if wmax is None or field.width < wmax:
-                        lgr.debug("Adjusting width of %r column to %d "
-                                  "to accommodate %r",
-                                  column, value_width, value)
+                    width_old = field.width
+                    width_new = min(value_width,
+                                    wmax or value_width)
+                    if width_new > width_old:
                         adjusted = True
-                    field.width = value_width
+                        field.width = width_new
+                        lgr.debug("Adjusting width of %r column from %d to %d "
+                                  "to accommodate value %r",
+                                  column, width_old, field.width, value)
+                        self._truncaters[column].length = field.width
         return adjusted
 
     def _proc_group(self, style, adopt=True):
