@@ -22,6 +22,7 @@ import six
 from pyout import elements
 from pyout.field import Field
 from pyout.field import Nothing
+from pyout.field import Truncater
 from pyout.summary import Summary
 
 lgr = getLogger(__name__)
@@ -316,14 +317,14 @@ class StyleFields(object):
                     lgr.debug("Setting max width of column %r to %d",
                               column, wmax)
                     marker = _safe_get(style_width, "marker", True)
-                    width_procs = [self.procgen.truncate(wmax, marker)]
+                    width_procs = [Truncater(wmax, marker).truncate]
             elif is_auto is False:
                 raise ValueError("No 'width' specified")
             else:
                 lgr.debug("Setting width of column %r to %d",
                           column, style_width)
                 width = style_width
-                width_procs = [self.procgen.truncate(width)]
+                width_procs = [Truncater(width).truncate]
 
             # We are creating a distinction between "width" processors, that we
             # always want to be active and "default" processors that we want to

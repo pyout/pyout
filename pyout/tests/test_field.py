@@ -8,6 +8,7 @@ import six
 from pyout.field import Field
 from pyout.field import Nothing
 from pyout.field import StyleProcessors
+from pyout.field import Truncater
 
 
 def test_field_base():
@@ -58,7 +59,7 @@ def test_something_about_nothing(text):
 
 
 def test_truncate_mark_true():
-    fn = StyleProcessors.truncate(7, marker=True)
+    fn = Truncater(7, marker=True).truncate
 
     assert fn(None, "abc") == "abc"
     assert fn(None, "abcdefg") == "abcdefg"
@@ -66,7 +67,7 @@ def test_truncate_mark_true():
 
 
 def test_truncate_mark_string():
-    fn = StyleProcessors.truncate(7, marker="…")
+    fn = Truncater(7, marker="…").truncate
 
     assert fn(None, "abc") == "abc"
     assert fn(None, "abcdefg") == "abcdefg"
@@ -74,12 +75,12 @@ def test_truncate_mark_string():
 
 
 def test_truncate_mark_short():
-    fn = StyleProcessors.truncate(2, marker=True)
+    fn = Truncater(2, marker=True).truncate
     assert fn(None, "abc") == ".."
 
 
 def test_truncate_nomark():
-    fn = StyleProcessors.truncate(7, marker=False)
+    fn = Truncater(7, marker=False).truncate
 
     assert fn(None, "abc") == "abc"
     assert fn(None, "abcdefg") == "abcdefg"
