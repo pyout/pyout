@@ -4,8 +4,11 @@
 from __future__ import unicode_literals
 
 from collections import Mapping
+from logging import getLogger
 
 from pyout.field import Nothing
+
+lgr = getLogger(__name__)
 
 
 class Summary(object):
@@ -47,6 +50,7 @@ class Summary(object):
 
         summaries = {}
         for col, agg_fn in agg_styles.items():
+            lgr.debug("Summarizing column %r with %r", col, agg_fn)
             colvals = filter(lambda x: not isinstance(x, Nothing),
                              (row[col] for row in rows))
             summaries[col] = agg_fn(list(colvals))

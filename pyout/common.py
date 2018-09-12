@@ -15,6 +15,7 @@ from collections import OrderedDict
 from collections import Sequence
 from functools import partial
 import inspect
+from logging import getLogger
 
 import six
 
@@ -23,6 +24,7 @@ from pyout.field import Field
 from pyout.field import Nothing
 from pyout.summary import Summary
 
+lgr = getLogger(__name__)
 NOTHING = Nothing()
 
 
@@ -78,6 +80,7 @@ class RowNormalizer(object):
             cstyle = style[column]
 
             if "delayed" in cstyle:
+                lgr.debug("Registered delay for column %r", column)
                 value = cstyle["delayed"]
                 group = column if value is True else value
                 self.delayed[group].append(column)
@@ -112,6 +115,7 @@ class RowNormalizer(object):
             getter = self.getter_seq
         else:
             getter = self.getter_attrs
+        lgr.debug("Selecting %s as normalizer", getter.__name__)
         return partial(self._normalize, getter)
 
     def _normalize(self, getter, row):
@@ -137,6 +141,7 @@ class RowNormalizer(object):
 
         for cols in self.delayed.values():
             key = cols[0] if len(cols) == 1 else tuple(cols)
+            lgr.debug("Delaying %r for row %r", cols, row)
             row_norm[key] = delay(cols)
         return row_norm
 
@@ -173,6 +178,9 @@ class RowNormalizer(object):
                 fn = value
 
             if callable(fn) or inspect.isgenerator(fn):
+                lgr.debug("Using %r as the initial value "
+                          "for columns %r in row %r",
+                          initial, columns, row)
                 if not isinstance(columns, tuple):
                     columns = columns,
                 else:
@@ -259,6 +267,7 @@ class StyleFields(object):
                                                  {"align", "width"})
         self.style["separator_"] = _safe_get(self.init_style, "separator_",
                                              elements.default("separator_"))
+        lgr.debug("Validating style %r", self.style)
         elements.validate(self.style)
         self._setup_fields()
 
@@ -288,6 +297,7 @@ class StyleFields(object):
     def _setup_fields(self):
         self.fields = {}
         for column in self.columns:
+            lgr.debug("Setting up field for column %r", column)
             cstyle = self.style[column]
 
             width_procs = []
@@ -301,11 +311,15 @@ class StyleFields(object):
                 self.autowidth_columns[column] = {"max": wmax}
 
                 if wmax is not None:
+                    lgr.debug("Setting max width of column %r to %d",
+                              column, wmax)
                     marker = _safe_get(style_width, "marker", True)
                     width_procs = [self.procgen.truncate(wmax, marker)]
             elif is_auto is False:
                 raise ValueError("No 'width' specified")
             else:
+                lgr.debug("Setting width of column %r to %d",
+                          column, style_width)
                 width = style_width
                 width_procs = [self.procgen.truncate(width)]
 
@@ -343,10 +357,14 @@ class StyleFields(object):
         -------
         True if any widths required adjustment.
         """
+        lgr.debug("Checking width for row %r", row)
         adjusted = False
         for column in self.columns:
             if column in self.autowidth_columns:
                 field = self.fields[column]
+                lgr.debug(
+                    "Checking width of column %r (field width: %d)",
+                    column, field.width)
                 # If we've added any style transform functions as
                 # pre-format processors, we want to measure the width
                 # of their result rather than the raw value.
@@ -355,10 +373,14 @@ class StyleFields(object):
                                   exclude_post=True)
                 else:
                     value = row[column]
-                value_width = len(six.text_type(value))
+                value = six.text_type(value)
+                value_width = len(value)
                 wmax = self.autowidth_columns[column]["max"]
                 if value_width > field.width:
                     if wmax is None or field.width < wmax:
+                        lgr.debug("Adjusting width of %r column to %d "
+                                  "to accommodate %r",
+                                  column, value_width, value)
                         adjusted = True
                     field.width = value_width
         return adjusted
@@ -544,6 +566,7 @@ class Content(object):
         idkey = tuple(row[idx] for idx in self.ids)
 
         if not called_before and self.fields.has_header:
+            lgr.debug("Registering header")
             self._add_header()
             self._rows.append(ContentRow(row, kwds={"style": style}))
             self._idmap[idkey] = 0
@@ -555,6 +578,7 @@ class Content(object):
             raise ContentError("ID columns must be hashable")
 
         if prev_idx is not None:
+            lgr.debug("Updating content for row %r", idkey)
             row_update = {k: v for k, v in row.items()
                           if not isinstance(v, Nothing)}
             self._rows[prev_idx].row.update(row_update)
@@ -562,6 +586,7 @@ class Content(object):
             # Replace the passed-in row since it may not have all the columns.
             row = self._rows[prev_idx][0]
         else:
+            lgr.debug("Adding row %r to content for first time", idkey)
             self._idmap[idkey] = len(self._rows)
             self._rows.append(ContentRow(row, kwds={"style": style}))
 

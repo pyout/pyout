@@ -10,6 +10,7 @@ from collections import OrderedDict
 from contextlib import contextmanager
 from functools import partial
 import inspect
+from logging import getLogger
 import multiprocessing
 from multiprocessing.dummy import Pool
 
@@ -19,6 +20,8 @@ from pyout.common import ContentWithSummary
 from pyout.common import RowNormalizer
 from pyout.common import StyleFields
 from pyout.field import TermProcessors
+
+lgr = getLogger(__name__)
 
 
 class Tabular(object):
@@ -132,11 +135,13 @@ class Tabular(object):
         so within this context.
         """
         if self._lock:
+            lgr.debug("Acquiring write lock")
             self._lock.acquire()
         try:
             yield
         finally:
             if self._lock:
+                lgr.debug("Releasing write lock")
                 self._lock.release()
 
     def _write(self, row, style=None):
@@ -149,19 +154,23 @@ class Tabular(object):
                 # FIXME: This, like other line counting-based modifications in
                 # pyout, will fail if there is any line wrapping.  We need to
                 # detect the terminal width and somehow handle this.
+                lgr.debug("Clearing summary")
                 self._clear_last_summary()
             content, status, summary = self._content.update(row, style)
             if isinstance(status, int):
+                lgr.debug("Overwriting line %d with %r", status, row)
                 with self._moveback(self._last_content_len - status):
                     self.term.stream.write(content)
             else:
                 if status == "repaint":
+                    lgr.debug("Repainting the whole thing.  Blame row %r", row)
                     self._move_to_firstrow()
                 self.term.stream.write(content)
 
             if summary is not None:
                 self.term.stream.write(summary)
                 self._last_summary_len = len(summary.splitlines())
+                lgr.debug("Wrote summary of length %d", self._last_summary_len)
             self._last_content_len = len(self._content)
 
     def _start_callables(self, row, callables):
@@ -243,12 +252,14 @@ class Tabular(object):
         """
         if self._columns is None:
             self._columns = self._infer_columns(row)
+            lgr.debug("Inferred columns: %r", self._columns)
         if self._normalizer is None:
             self._init_prewrite()
 
         callables, row = self._normalizer(row)
         self._write(row, style)
         if callables:
+            lgr.debug("Starting callables for row %r", row)
             self._start_callables(row, callables)
 
     @staticmethod

@@ -4,10 +4,13 @@ from __future__ import unicode_literals
 
 from collections import defaultdict
 from itertools import chain
+from logging import getLogger
 import re
 import sys
 
 import six
+
+lgr = getLogger(__name__)
 
 
 class Field(object):
@@ -131,6 +134,10 @@ class Field(object):
             Whether to return the vaue after the format step rather than
             feeding it through post-format processors.
         """
+        lgr.debug("Rendering field with value %r and %s keys %r",
+                  value,
+                  "default" if keys is None else "non-default",
+                  self.default_keys)
         if keys is None:
             keys = self.default_keys
         for key in keys:
@@ -268,6 +275,8 @@ class StyleProcessors(object):
         def transform_fn(_, result):
             if isinstance(result, Nothing):
                 return result
+
+            lgr.debug("Transforming %r with %r", result, function)
             try:
                 return function(result)
             except:
