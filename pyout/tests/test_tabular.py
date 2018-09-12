@@ -23,10 +23,12 @@ from pyout.field import StyleFunctionError
 from pyout.tests.utils import assert_contains
 from pyout.tests.utils import assert_eq_repr
 
-# TestTerminal, unicode_cap, and unicode_parm are copied from
-# blessings' tests.
 
-TestTerminal = partial(blessings.Terminal, kind='xterm-256color')
+class Terminal(blessings.Terminal):
+
+    def __init__(self, *args, **kwargs):
+        super(Terminal, self).__init__(
+            *args, kind="xterm-256color", **kwargs)
 
 
 class Tabular(TheRealTabular):
@@ -35,13 +37,16 @@ class Tabular(TheRealTabular):
 
     def __init__(self, *args, **kwargs):
         fd = StringIO()
-        with patch("pyout.tabular.Terminal", TestTerminal):
+        with patch("pyout.tabular.Terminal", Terminal):
             super(Tabular, self).__init__(
                 *args, force_styling=True, stream=fd, **kwargs)
 
     @property
     def stdout(self):
         return self.term.stream.getvalue()
+
+
+# unicode_cap, and unicode_parm are copied from blessings' tests.
 
 
 def unicode_cap(cap):
