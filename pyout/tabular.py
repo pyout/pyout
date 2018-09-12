@@ -80,6 +80,10 @@ class Tabular(object):
         self._columns = columns
         self._ids = None
 
+        style = style or {}
+        if "width_" not in style and self.term.width:
+            style["width_"] = self.term.width
+
         self._content = ContentWithSummary(
             StyleFields(style, TermProcessors(self.term)))
         self._last_content_len = 0
@@ -150,10 +154,6 @@ class Tabular(object):
                 # Clear the summary because 1) it has very likely changed, 2)
                 # it makes the counting for row updates simpler, 3) and it is
                 # possible for the summary lines to shrink.
-                #
-                # FIXME: This, like other line counting-based modifications in
-                # pyout, will fail if there is any line wrapping.  We need to
-                # detect the terminal width and somehow handle this.
                 lgr.debug("Clearing summary")
                 self._clear_last_summary()
             content, status, summary = self._content.update(row, style)

@@ -36,6 +36,11 @@ TODO Summary
 
 ### Deprecated
 ### Fixed
+
+- Rows that exceeded the terminal's width wrapped to the next line and
+  broke pyout's line counting logic (used to, e.g., update a previous
+  line).
+
 ### Removed
 ### Security
 

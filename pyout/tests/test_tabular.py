@@ -18,6 +18,7 @@ from six.moves import StringIO
 
 from pyout import Tabular as TheRealTabular
 from pyout.common import ContentError
+from pyout.elements import StyleError
 from pyout.field import StyleFunctionError
 
 from pyout.tests.utils import assert_contains
@@ -29,6 +30,10 @@ class Terminal(blessings.Terminal):
     def __init__(self, *args, **kwargs):
         super(Terminal, self).__init__(
             *args, kind="xterm-256color", **kwargs)
+
+    @property
+    def width(self):
+        return 100
 
 
 class Tabular(TheRealTabular):
@@ -771,6 +776,48 @@ def test_tabular_write_autowidth_auto_false_exception():
     with pytest.raises(ValueError):
         out(OrderedDict([("name", "foo"),
                          ("status", "U")]))
+
+
+def test_tabular_fixed_width_exceeds_total():
+    out = Tabular(style={"width_": 10,
+                         "status": {"width": 20}})
+    with pytest.raises(StyleError):
+        out(OrderedDict([("name", ""), ("status", "")]))
+
+
+def test_tabular_auto_width_exceeds_total():
+    out = Tabular(style={"width_": 13})
+    out(OrderedDict([("name", "foobert"),
+                     ("status", "okiguess"),
+                     ("path", "illbedropped:(")]))
+    assert out.stdout == "foobert o... \n"
+
+
+def test_tabular_auto_width_exceeds_total_multiline():
+    out = Tabular(style={"width_": 15})
+    out(OrderedDict([("name", "abcd"),
+                     ("status", "efg"),
+                     ("path", "t/")]))
+    assert out.stdout == "abcd efg t/\n"
+
+    # name gets truncated because it claims the most width in the table so far.
+    out(OrderedDict([("name", "notme"),
+                     ("status", "metoo"),
+                     ("path", "here")]))
+    lines0 = out.stdout.splitlines()
+    assert_contains_nc(lines0, "n... metoo here")
+
+    out(OrderedDict([("name", "hi"),
+                     ("status", "jk"),
+                     ("path", "lm")]))
+    lines1 = out.stdout.splitlines()
+    assert_contains_nc(lines1, "hi   jk    lm  ")
+
+    out(OrderedDict([("name", "mnopqrs"),
+                     ("status", "tu"),
+                     ("path", "vwxyz")]))
+    lines1 = out.stdout.splitlines()
+    assert_contains_nc(lines1, "m... tu    v...")
 
 
 class Delayed(object):
