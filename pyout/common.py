@@ -22,6 +22,7 @@ import six
 from pyout import elements
 from pyout.field import Field
 from pyout.field import Nothing
+from pyout.field import Truncater
 from pyout.summary import Summary
 
 lgr = getLogger(__name__)
@@ -244,7 +245,9 @@ class StyleFields(object):
         self.columns = None
         self.autowidth_columns = {}
 
+        self.width_separtor = None
         self.fields = None
+        self._truncaters = {}
 
     def build(self, columns):
         """Build the style and fields.
@@ -268,8 +271,14 @@ class StyleFields(object):
         self.style["separator_"] = _safe_get(self.init_style, "separator_",
                                              elements.default("separator_"))
         lgr.debug("Validating style %r", self.style)
+        self.style["width_"] = _safe_get(self.init_style, "width_",
+                                         elements.default("width_"))
         elements.validate(self.style)
         self._setup_fields()
+
+        ngaps = len(self.columns) - 1
+        self.width_separtor = len(self.style["separator_"]) * ngaps
+        lgr.debug("Calculated separator width as %d", self.width_separtor)
 
     def _compose(self, name, attributes):
         """Construct a style taking `attributes` from the column styles.
@@ -299,29 +308,21 @@ class StyleFields(object):
         for column in self.columns:
             lgr.debug("Setting up field for column %r", column)
             cstyle = self.style[column]
-
-            width_procs = []
             style_width = cstyle["width"]
             is_auto = style_width == "auto" or _safe_get(style_width, "auto")
-
             if is_auto:
                 width = _safe_get(style_width, "min", 0)
                 wmax = _safe_get(style_width, "max")
-
                 self.autowidth_columns[column] = {"max": wmax}
-
                 if wmax is not None:
                     lgr.debug("Setting max width of column %r to %d",
                               column, wmax)
-                    marker = _safe_get(style_width, "marker", True)
-                    width_procs = [self.procgen.truncate(wmax, marker)]
             elif is_auto is False:
                 raise ValueError("No 'width' specified")
             else:
                 lgr.debug("Setting width of column %r to %d",
                           column, style_width)
                 width = style_width
-                width_procs = [self.procgen.truncate(width)]
 
             # We are creating a distinction between "width" processors, that we
             # always want to be active and "default" processors that we want to
@@ -332,10 +333,13 @@ class StyleFields(object):
                           other_keys=["override"])
             field.add("pre", "default",
                       *(self.procgen.pre_from_style(cstyle)))
-            field.add("post", "width", *width_procs)
+            truncater = Truncater(width,
+                                  _safe_get(style_width, "marker", True))
+            field.add("post", "width", truncater.truncate)
             field.add("post", "default",
                       *(self.procgen.post_from_style(cstyle)))
             self.fields[column] = field
+            self._truncaters[column] = truncater
 
     @property
     def has_header(self):
@@ -357,14 +361,38 @@ class StyleFields(object):
         -------
         True if any widths required adjustment.
         """
+        width_free = self.style["width_"] - sum(
+            [sum(self.fields[c].width for c in self.columns),
+             self.width_separtor])
+
+        if width_free < 0:
+            width_fixed = sum(
+                [sum(self.fields[c].width for c in self.columns
+                     if c not in self.autowidth_columns),
+                 self.width_separtor])
+            assert width_fixed > self.style["width_"], "bug in width logic"
+            raise elements.StyleError(
+                "Fixed widths specified in style exceed total width")
+        elif width_free == 0:
+            lgr.debug("Not checking widths; no free width left")
+            return False
+
         lgr.debug("Checking width for row %r", row)
         adjusted = False
-        for column in self.columns:
+        for column in sorted(self.columns, key=lambda c: self.fields[c].width):
+            # ^ Sorting the columns by increasing widths isn't necessary; we do
+            # it so that columns that already take up more of the screen don't
+            # continue to grow and use up free width before smaller columns
+            # have a chance to claim some.
+            if width_free < 1:
+                lgr.debug("Giving up on checking widths; no free width left")
+                break
+
             if column in self.autowidth_columns:
                 field = self.fields[column]
-                lgr.debug(
-                    "Checking width of column %r (field width: %d)",
-                    column, field.width)
+                lgr.debug("Checking width of column %r "
+                          "(field width: %d, free width: %d)",
+                          column, field.width, width_free)
                 # If we've added any style transform functions as
                 # pre-format processors, we want to measure the width
                 # of their result rather than the raw value.
@@ -377,12 +405,21 @@ class StyleFields(object):
                 value_width = len(value)
                 wmax = self.autowidth_columns[column]["max"]
                 if value_width > field.width:
-                    if wmax is None or field.width < wmax:
-                        lgr.debug("Adjusting width of %r column to %d "
-                                  "to accommodate %r",
-                                  column, value_width, value)
+                    width_old = field.width
+                    width_available = width_free + field.width
+                    width_new = min(value_width,
+                                    wmax or width_available,
+                                    width_available)
+                    if width_new > width_old:
                         adjusted = True
-                    field.width = value_width
+                        field.width = width_new
+                        lgr.debug("Adjusting width of %r column from %d to %d "
+                                  "to accommodate value %r",
+                                  column, width_old, field.width, value)
+                        self._truncaters[column].length = field.width
+                        width_free -= field.width - width_old
+                        lgr.debug("Free width is %d after processing column %r",
+                                  width_free, column)
         return adjusted
 
     def _proc_group(self, style, adopt=True):
