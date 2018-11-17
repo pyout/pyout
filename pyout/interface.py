@@ -77,7 +77,7 @@ class Writer(object):
             style["width_"] = self._stream.width
 
         self._last_content_len = 0
-        self._last_summary_len = None
+        self._last_summary = None
         self._normalizer = None
 
         self._pool = None
@@ -140,12 +140,13 @@ class Writer(object):
 
     def _write(self, row, style=None):
         with self._write_lock():
-            if self._last_summary_len:
+            if self._last_summary:
+                last_summary_len = len(self._last_summary.splitlines())
                 # Clear the summary because 1) it has very likely changed, 2)
                 # it makes the counting for row updates simpler, 3) and it is
                 # possible for the summary lines to shrink.
                 lgr.debug("Clearing summary")
-                self._stream.clear_last_lines(self._last_summary_len)
+                self._stream.clear_last_lines(last_summary_len)
             content, status, summary = self._content.update(row, style)
             if isinstance(status, int):
                 lgr.debug("Overwriting line %d with %r", status, row)
@@ -159,9 +160,9 @@ class Writer(object):
 
             if summary is not None:
                 self._stream.write(summary)
-                self._last_summary_len = len(summary.splitlines())
-                lgr.debug("Wrote summary of length %d", self._last_summary_len)
+                lgr.debug("Wrote summary")
             self._last_content_len = len(self._content)
+            self._last_summary = summary
 
     def _start_callables(self, row, callables):
         """Start running `callables` asynchronously.
