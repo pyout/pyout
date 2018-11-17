@@ -43,8 +43,9 @@ class Tabular(TheRealTabular):
     """
 
     def __init__(self, *args, **kwargs):
-        with patch("pyout.tabular.Terminal", Terminal):
-            super(Tabular, self).__init__(*args, **kwargs)
+        with patch("pyout.interface.sys.stdout.isatty", return_value=True):
+            with patch("pyout.tabular.Terminal", Terminal):
+                super(Tabular, self).__init__(*args, **kwargs)
 
     @property
     def stdout(self):

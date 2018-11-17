@@ -12,6 +12,7 @@ import inspect
 from logging import getLogger
 import multiprocessing
 from multiprocessing.dummy import Pool
+import sys
 
 import six
 
@@ -83,8 +84,9 @@ class Writer(object):
         self._pool = None
         self._lock = None
 
-        self._mode = "update"
-        self._write_fn = self._write_update
+        self._mode = None
+        self._write_fn = None
+        self.mode = "update" if sys.stdout.isatty() else "final"
 
     def _init_prewrite(self):
         self._content.init_columns(self._columns, self.ids)
