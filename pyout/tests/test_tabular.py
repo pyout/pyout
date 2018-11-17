@@ -29,7 +29,9 @@ class Terminal(blessings.Terminal):
 
     def __init__(self, *args, **kwargs):
         super(Terminal, self).__init__(
-            *args, kind="xterm-256color", **kwargs)
+            *args,
+            stream=StringIO(), force_styling=True, kind="xterm-256color",
+            **kwargs)
 
     @property
     def width(self):
@@ -41,14 +43,12 @@ class Tabular(TheRealTabular):
     """
 
     def __init__(self, *args, **kwargs):
-        fd = StringIO()
         with patch("pyout.tabular.Terminal", Terminal):
-            super(Tabular, self).__init__(
-                *args, force_styling=True, stream=fd, **kwargs)
+            super(Tabular, self).__init__(*args, **kwargs)
 
     @property
     def stdout(self):
-        return self.term.stream.getvalue()
+        return self._stream.term.stream.getvalue()
 
 
 # unicode_cap, and unicode_parm are copied from blessings' tests.
