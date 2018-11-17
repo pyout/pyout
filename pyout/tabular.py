@@ -41,11 +41,6 @@ class Tabular(object):
         Each top-level key should be a column name and the value should be a
         style dict that overrides the `default_style` class attribute.  See the
         "Examples" section below.
-    stream : file object, optional
-        Defaults to standard output.
-
-    force_styling : bool or None
-        Passed to blessings.Terminal.
 
     Attributes
     ----------
@@ -73,9 +68,8 @@ class Tabular(object):
     ...     style={"status": {"color": "red", "bold": True}})
     """
 
-    def __init__(self, columns=None, style=None, stream=None,
-                 force_styling=False):
-        self.term = Terminal(stream=stream, force_styling=force_styling)
+    def __init__(self, columns=None, style=None):
+        self.term = Terminal()
 
         self._columns = columns
         self._ids = None
