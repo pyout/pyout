@@ -16,12 +16,59 @@ from multiprocessing.dummy import Pool
 
 from blessings import Terminal
 
+from pyout import interface
 from pyout.common import ContentWithSummary
 from pyout.common import RowNormalizer
 from pyout.common import StyleFields
 from pyout.field import TermProcessors
 
 lgr = getLogger(__name__)
+
+
+class TerminalStream(interface.Stream):
+    """Stream interface implementation using blessings.Terminal.
+    """
+
+    def __init__(self):
+        self.term = Terminal()
+
+    @property
+    def width(self):
+        """Maximum terminal width.
+        """
+        return self.term.width
+
+    def write(self, text):
+        """Write `text` to terminal.
+        """
+        self.term.stream.write(text)
+
+    def clear_last_lines(self, n):
+        """Clear last N lines of terminal output.
+        """
+        self.term.stream.write(
+            self.term.move_up * n + self.term.clear_eos)
+        self.term.stream.flush()
+
+    @contextmanager
+    def _moveback(self, n):
+        self.term.stream.write(self.term.move_up * n + self.term.clear_eol)
+        try:
+            yield
+        finally:
+            self.term.stream.write(self.term.move_down * (n - 1))
+            self.term.stream.flush()
+
+    def overwrite_line(self, n, text):
+        """Move back N lines and overwrite line with `text`.
+        """
+        with self._moveback(n):
+            self.term.stream.write(text)
+
+    def move_to(self, n):
+        """Move back N lines in terminal.
+        """
+        self.term.stream.write(self.term.move_up * n)
 
 
 class Tabular(object):
@@ -41,10 +88,6 @@ class Tabular(object):
         Each top-level key should be a column name and the value should be a
         style dict that overrides the `default_style` class attribute.  See the
         "Examples" section below.
-
-    Attributes
-    ----------
-    term : blessings.Terminal instance
 
     Examples
     --------
@@ -69,17 +112,17 @@ class Tabular(object):
     """
 
     def __init__(self, columns=None, style=None):
-        self.term = Terminal()
+        self._stream = TerminalStream()
 
         self._columns = columns
         self._ids = None
 
         style = style or {}
-        if "width_" not in style and self.term.width:
-            style["width_"] = self.term.width
+        if "width_" not in style and self._stream.width:
+            style["width_"] = self._stream.width
 
         self._content = ContentWithSummary(
-            StyleFields(style, TermProcessors(self.term)))
+            StyleFields(style, TermProcessors(self._stream.term)))
         self._last_content_len = 0
         self._last_summary_len = 0
         self._normalizer = None
@@ -149,20 +192,20 @@ class Tabular(object):
                 # it makes the counting for row updates simpler, 3) and it is
                 # possible for the summary lines to shrink.
                 lgr.debug("Clearing summary")
-                self._clear_last_summary()
+                self._stream.clear_last_lines(self._last_summary_len)
             content, status, summary = self._content.update(row, style)
             if isinstance(status, int):
                 lgr.debug("Overwriting line %d with %r", status, row)
-                with self._moveback(self._last_content_len - status):
-                    self.term.stream.write(content)
+                self._stream.overwrite_line(self._last_content_len - status,
+                                            content)
             else:
                 if status == "repaint":
                     lgr.debug("Repainting the whole thing.  Blame row %r", row)
-                    self._move_to_firstrow()
-                self.term.stream.write(content)
+                    self._stream.move_to(self._last_content_len)
+                self._stream.write(content)
 
             if summary is not None:
-                self.term.stream.write(summary)
+                self._stream.write(summary)
                 self._last_summary_len = len(summary.splitlines())
                 lgr.debug("Wrote summary of length %d", self._last_summary_len)
             self._last_content_len = len(self._content)
@@ -270,20 +313,3 @@ class Tabular(object):
             else:
                 flat.append(column)
         return flat
-
-    def _move_to_firstrow(self):
-        self.term.stream.write(self.term.move_up * self._last_content_len)
-
-    @contextmanager
-    def _moveback(self, n):
-        self.term.stream.write(self.term.move_up * n + self.term.clear_eol)
-        try:
-            yield
-        finally:
-            self.term.stream.write(self.term.move_down * (n - 1))
-            self.term.stream.flush()
-
-    def _clear_last_summary(self):
-        self.term.stream.write(
-            self.term.move_up * self._last_summary_len + self.term.clear_eos)
-        self.term.stream.flush()

@@ -48,7 +48,7 @@ class Tabular(TheRealTabular):
 
     @property
     def stdout(self):
-        return self.term.stream.getvalue()
+        return self._stream.term.stream.getvalue()
 
 
 # unicode_cap, and unicode_parm are copied from blessings' tests.
