@@ -1066,3 +1066,69 @@ def test_tabular_shrinking_summary():
     # Two summary lines shrank to one, so we expect a two move-ups and a clear.
     expected = unicode_cap("cuu1") * 2 + unicode_cap("ed")
     assert len([ln for ln in lines if ln.startswith(expected)]) == 1
+
+
+def test_tabular_mode_invalid():
+    out = Tabular(["name", "status"])
+    with pytest.raises(ValueError):
+        out.mode = "unknown"
+
+
+def test_tabular_mode_default():
+    data = [OrderedDict([("name", "foo"),
+                         ("status", "OK")]),
+            OrderedDict([("name", "bar"),
+                         ("status", "BAD")])]
+
+    out0 = Tabular()
+    with out0:
+        for row in data:
+            out0(row)
+
+    out1 = Tabular()
+    out1.mode = "update"
+    with out1:
+        for row in data:
+            out1(row)
+
+    assert out0.stdout == out1.stdout
+
+
+def test_tabular_mode_after_write():
+    out = Tabular(["name", "status"])
+    out(["foo", "ok"])
+    with pytest.raises(ValueError):
+        out.mode = "final"
+
+
+def test_tabular_mode_incremental():
+    out = Tabular(["name", "status"],
+                  style={"status": {"aggregate": len}})
+    out.mode = "incremental"
+
+    with out:
+        out({"name": "foo", "status": "ok"})
+        out({"name": "foo", "status": "ko"})
+        out({"name": "bar", "status": "unknown"})
+
+    assert "unknown" in out.stdout
+    lines = out.stdout.splitlines()
+    # Expect 5 lines: first two foos, then a whole repaint (2 lines) due to the
+    # bar, and then one summary lines.
+    assert len(lines) == 5
+
+
+def test_tabular_mode_final():
+    out = Tabular(["name", "status"],
+                  style={"status": {"aggregate": len}})
+    out.mode = "final"
+
+    with out:
+        out({"name": "foo", "status": "unknown"})
+        out({"name": "bar", "status": "ok"})
+        out({"name": "foo", "status": "ok"})
+
+    assert "unknown" not in out.stdout
+    lines = out.stdout.splitlines()
+    # Expect three lines, two regular rows and one summary.
+    assert len(lines) == 3
