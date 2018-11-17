@@ -25,6 +25,12 @@ TODO Summary
   This feature can be used to update previous fields with a sequence
   of new values rather than a one-time update.
 
+- The Tabular class now has a `mode` property.  The default value,
+  "update", means display row values as they come in, going back to
+  update previous lines if needed.  If it is set to "incremental", no
+  previous lines are updated.  If it is set to "final", values are
+  only updated once, at the exit of the context manager.
+
 ### Changed
 
 - `pyout` has been restructured from a single module into a package.

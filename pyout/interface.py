@@ -12,6 +12,7 @@ import inspect
 from logging import getLogger
 import multiprocessing
 from multiprocessing.dummy import Pool
+import sys
 
 import six
 
@@ -77,11 +78,15 @@ class Writer(object):
             style["width_"] = self._stream.width
 
         self._last_content_len = 0
-        self._last_summary_len = None
+        self._last_summary = None
         self._normalizer = None
 
         self._pool = None
         self._lock = None
+
+        self._mode = None
+        self._write_fn = None
+        self.mode = "update" if sys.stdout.isatty() else "final"
 
     def _init_prewrite(self):
         self._content.init_columns(self._columns, self.ids)
@@ -93,6 +98,41 @@ class Writer(object):
 
     def __exit__(self, *args):
         self.wait()
+        if self.mode == "final":
+            self._stream.write(six.text_type(self._content))
+        if self.mode != "update":
+            self._stream.write(six.text_type(self._last_summary))
+
+    @property
+    def mode(self):
+        """Mode of display.
+
+        * update (default): Go back and update the fields.  This includes
+          resizing the automated widths.
+
+        * incremental: Don't go back to update anything.
+
+        * final: finalized representation appropriate for redirecting to file
+        """
+        return self._mode
+
+    @mode.setter
+    def mode(self, value):
+        valid = {"update", "incremental", "final"}
+        if value not in valid:
+            raise ValueError("{!r} is not a valid mode: {!r}"
+                             .format(value, valid))
+        if self._content:
+            raise ValueError("Must set mode before output has been written")
+
+        lgr.debug("Setting write mode to %r", value)
+        self._mode = value
+        if value == "incremental":
+            self._write_fn = self._write_incremental
+        elif value == "final":
+            self._write_fn = self._write_final
+        else:
+            self._write_fn = self._write_update
 
     @property
     def ids(self):
@@ -140,28 +180,45 @@ class Writer(object):
 
     def _write(self, row, style=None):
         with self._write_lock():
-            if self._last_summary_len:
-                # Clear the summary because 1) it has very likely changed, 2)
-                # it makes the counting for row updates simpler, 3) and it is
-                # possible for the summary lines to shrink.
-                lgr.debug("Clearing summary")
-                self._stream.clear_last_lines(self._last_summary_len)
-            content, status, summary = self._content.update(row, style)
-            if isinstance(status, int):
-                lgr.debug("Overwriting line %d with %r", status, row)
-                self._stream.overwrite_line(self._last_content_len - status,
-                                            content)
-            else:
-                if status == "repaint":
-                    lgr.debug("Repainting the whole thing.  Blame row %r", row)
-                    self._stream.move_to(self._last_content_len)
-                self._stream.write(content)
+            self._write_fn(row, style)
 
-            if summary is not None:
-                self._stream.write(summary)
-                self._last_summary_len = len(summary.splitlines())
-                lgr.debug("Wrote summary of length %d", self._last_summary_len)
-            self._last_content_len = len(self._content)
+    def _write_update(self, row, style=None):
+        if self._last_summary:
+            last_summary_len = len(self._last_summary.splitlines())
+            # Clear the summary because 1) it has very likely changed, 2)
+            # it makes the counting for row updates simpler, 3) and it is
+            # possible for the summary lines to shrink.
+            lgr.debug("Clearing summary")
+            self._stream.clear_last_lines(last_summary_len)
+        content, status, summary = self._content.update(row, style)
+        if isinstance(status, int):
+            lgr.debug("Overwriting line %d with %r", status, row)
+            self._stream.overwrite_line(self._last_content_len - status,
+                                        content)
+        else:
+            if status == "repaint":
+                lgr.debug("Repainting the whole thing.  Blame row %r", row)
+                self._stream.move_to(self._last_content_len)
+            self._stream.write(content)
+
+        if summary is not None:
+            self._stream.write(summary)
+            lgr.debug("Wrote summary")
+        self._last_content_len = len(self._content)
+        self._last_summary = summary
+
+    def _write_incremental(self, row, style=None):
+        content, status, summary = self._content.update(row, style)
+        if isinstance(status, int):
+            lgr.debug("Duplicating line %d with %r", status, row)
+        elif status == "repaint":
+            lgr.debug("Duplicating the whole thing.  Blame row %r", row)
+        self._stream.write(content)
+        self._last_summary = summary
+
+    def _write_final(self, row, style=None):
+        _, _, summary = self._content.update(row, style)
+        self._last_summary = summary
 
     def _start_callables(self, row, callables):
         """Start running `callables` asynchronously.
