@@ -13,6 +13,18 @@ TODO Summary
   function that takes a field value and returns a transformed field
   value.
 
+- A new style attribute, "aggregate", can be used to provide a
+  function that summarizes values within a column.  The summary will
+  be displayed at the bottom of the table.
+
+- A new style attribute, "missing", allows customizing the value that
+  is shown for missing values.
+
+- A new style attribute, "delayed", instructs `pyout` to wrap value
+  access in a callable, which is useful when obtaining values from
+  properties that take time to compute.  Otherwise, the object's
+  property would have to be wrapped in another callable by the caller.
+
 - A new style attribute, "width_", determines the total width of the
   table, which is otherwise taken as the terminal's width.
 
@@ -34,6 +46,13 @@ TODO Summary
   `pyout.SCHEMA` to `pyout.schema`.
 
 - The style attribute "label" has been renamed to "lookup".
+
+- Flanking white space in a field is no longer underlined.
+
+- In addition to the form `(initial value, callable)`, a plain
+  callable can now be used as a field value.  In this case, the
+  initial value will be an empty string by default and can configured
+  with the "missing" style attribute.
 
 ### Deprecated
 ### Fixed
