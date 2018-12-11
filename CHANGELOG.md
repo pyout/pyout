@@ -3,9 +3,11 @@
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.2.0] - 2018-12-10
 
-TODO Summary
+This release includes several new style attributes, enhancements to
+how asynchronous values can be defined, and support for different
+output "modes".
 
 ### Added
 
@@ -54,15 +56,11 @@ TODO Summary
   initial value will be an empty string by default and can configured
   with the "missing" style attribute.
 
-### Deprecated
 ### Fixed
 
 - Rows that exceeded the terminal's width wrapped to the next line and
   broke pyout's line counting logic (used to, e.g., update a previous
   line).
-
-### Removed
-### Security
 
 ## [0.1.0] - 2018-01-08
 
@@ -76,5 +74,5 @@ that allows the user to update a previous row, and the ability to
 update previous fields by defining asynchronous callback functions.
 
 
-[Unreleased]: https://github.com/pyout/pyout/compare/v0.1.0...HEAD
+[0.2.0]: https://github.com/pyout/pyout/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/pyout/pyout/commits/v0.1.0
