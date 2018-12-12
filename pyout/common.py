@@ -465,8 +465,8 @@ class StyleFields(object):
             A style that follows the schema defined in pyout.elements.  If
             None, `self.style` is used.
         adopt : bool, optional
-            Merge `self.style` and `style`, using the latter's keys when there
-            are conflicts matching keys.  If False, treat `style` as a
+            Merge `self.style` and `style`, using the latter's keys
+            when there are conflicts.  If False, treat `style` as a
             standalone style.
 
         Returns
