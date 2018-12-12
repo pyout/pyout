@@ -917,6 +917,42 @@ def test_tabular_write_callable_values_multi_return():
 
 
 @pytest.mark.timeout(10)
+@pytest.mark.parametrize("nrows", [20, 21])
+@pytest.mark.parametrize("interactive", [True, False])
+def test_tabular_callback_to_hidden_row(nrows, interactive):
+    delay = Delayed("OK")
+    out = Tabular(interactive=interactive,
+                  style={"status": {"aggregate": len}})
+    # Make sure we're in update mode even for interactive=False.
+    out.mode = "update"
+    with out:
+        for i in range(1, nrows + 1):
+            status = delay.run if i == 3 else "s{:02d}".format(i)
+            out(OrderedDict([("name", "foo{:02d}".format(i)),
+                             ("status", status)]))
+        delay.now = True
+
+    lines = out.stdout.splitlines()
+    # The test terminal height is 20.  The summary line takes up one
+    # line and the current line takes up another, so we have 18
+    # available rows. Row 3 goes off the screen when we have 21 rows.
+
+    if nrows > 20 and interactive:
+        # No leading escape codes because it was part of a whole repaint.
+        nexpected_plain = 1
+        nexpected_updated = 0
+    else:
+        nexpected_plain = 0
+        nexpected_updated = 1
+
+    assert len([l for l in lines if l == "foo03 OK "]) == nexpected_plain
+
+    cuu1 = unicode_cap("cuu1")
+    updated = [l for l in lines if l.startswith(cuu1) and "foo03 OK " in l]
+    assert len(updated) == nexpected_updated
+
+
+@pytest.mark.timeout(10)
 @pytest.mark.parametrize("result",
                          [{"status": "done", "path": "/tmp/a"},
                           ("done", "/tmp/a")],
