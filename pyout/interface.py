@@ -30,6 +30,9 @@ class Stream(object):
     def width(self):
         """Maximum line width.
         """
+    @abc.abstractproperty
+    def height(self):
+        """Maximum number of rows that are visible."""
 
     @abc.abstractmethod
     def write(self, text):

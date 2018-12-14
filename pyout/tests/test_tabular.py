@@ -37,6 +37,10 @@ class Terminal(blessings.Terminal):
     def width(self):
         return 100
 
+    @property
+    def height(self):
+        return 20
+
 
 class Tabular(TheRealTabular):
     """Test-specific subclass of pyout.Tabular.
