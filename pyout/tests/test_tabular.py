@@ -1120,6 +1120,19 @@ def test_tabular_mode_incremental():
 
 
 def test_tabular_mode_final():
+    out = Tabular(["name", "status"])
+    out.mode = "final"
+
+    with out:
+        out({"name": "foo", "status": "unknown"})
+        out({"name": "bar", "status": "ok"})
+        out({"name": "foo", "status": "ok"})
+
+    assert "unknown" not in out.stdout
+    assert len(out.stdout.splitlines()) == 2
+
+
+def test_tabular_mode_final_summary():
     out = Tabular(["name", "status"],
                   style={"status": {"aggregate": len}})
     out.mode = "final"

@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 
 
+### Fixed
+
+- When a table did not include a summary, "incremental" and "final"
+  mode added "None" as the last row.
+
 ## [0.2.0] - 2018-12-10
 
 This release includes several new style attributes, enhancements to

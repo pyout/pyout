@@ -100,7 +100,7 @@ class Writer(object):
         self.wait()
         if self.mode == "final":
             self._stream.write(six.text_type(self._content))
-        if self.mode != "update":
+        if self.mode != "update" and self._last_summary is not None:
             self._stream.write(six.text_type(self._last_summary))
 
     @property
