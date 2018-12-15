@@ -42,13 +42,31 @@ class Terminal(blessings.Terminal):
         return 20
 
 
+class TerminalNonInteractive(Terminal):
+
+    @property
+    def width(self):
+        return None
+
+    @property
+    def height(self):
+        return None
+
+
 class Tabular(TheRealTabular):
     """Test-specific subclass of pyout.Tabular.
     """
 
     def __init__(self, *args, **kwargs):
-        with patch("pyout.interface.sys.stdout.isatty", return_value=True):
-            with patch("pyout.tabular.Terminal", Terminal):
+        interactive = kwargs.pop("interactive", True)
+        if interactive:
+            term = Terminal
+        else:
+            term = TerminalNonInteractive
+
+        with patch("pyout.interface.sys.stdout.isatty",
+                   return_value=interactive):
+            with patch("pyout.tabular.Terminal", term):
                 super(Tabular, self).__init__(*args, **kwargs)
 
     @property
