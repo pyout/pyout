@@ -920,6 +920,17 @@ def test_tabular_write_callable_values_multi_return():
 @pytest.mark.parametrize("nrows", [20, 21])
 @pytest.mark.parametrize("interactive", [True, False])
 def test_tabular_callback_to_hidden_row(nrows, interactive):
+    if sys.version_info < (3,):
+        try:
+            import jsonschema
+        except ImportError:
+            pass
+        else:
+            # Ideally we'd also check if the tests are running under
+            # coverage, but I don't know a way to do that.
+            pytest.xfail(
+                "Hangs for unknown reason in py2/coverage/jsonschema run")
+
     delay = Delayed("OK")
     out = Tabular(interactive=interactive,
                   style={"status": {"aggregate": len}})
