@@ -46,7 +46,8 @@ schema = {
                        "properties": {
                            "auto": {"type": "boolean"},
                            "max": {"type": ["integer", "null"]},
-                           "min": {"type": ["integer", "null"]}}}],
+                           "min": {"type": ["integer", "null"]},
+                           "marker": {"type": ["string", "boolean"]}}}],
             "default": "auto",
             "scope": "column"},
         # Other style elements
