@@ -4,6 +4,18 @@
 from __future__ import unicode_literals
 
 
+def _truncate_right(value, length, marker):
+    if len(value) <= length:
+        return value
+    if marker:
+        marker_beg = max(length - len(marker), 0)
+        if value[marker_beg:].strip():
+            if marker_beg == 0:
+                return marker[:length]
+            return value[:marker_beg] + marker
+    return value[:length]
+
+
 class Truncater(object):
     """A processor that truncates the result to a given length.
 
@@ -24,18 +36,7 @@ class Truncater(object):
     def __init__(self, length, marker=True):
         self.length = length
         self.marker = "..." if marker is True else marker
+        self._truncate_fn = _truncate_right
 
     def truncate(self, _, result):
-        # TODO: Add an option to center the truncation marker?
-        length = self.length
-        marker = self.marker
-
-        if len(result) <= length:
-            return result
-        if marker:
-            marker_beg = max(length - len(marker), 0)
-            if result[marker_beg:].strip():
-                if marker_beg == 0:
-                    return marker[:length]
-                return result[:marker_beg] + marker
-        return result[:length]
+        return self._truncate_fn(result, self.length, self.marker)
