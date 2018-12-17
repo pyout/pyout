@@ -54,6 +54,23 @@ def _splice(value, n):
     return left[:-left_idx], right[right_idx:]
 
 
+def _truncate_center(value, length, marker):
+    value_len = len(value)
+    if value_len <= length:
+        return value
+
+    if marker:
+        marker_len = len(marker)
+        if marker_len < length:
+            left, right = _splice(value, length - marker_len)
+            parts = left, marker, right
+        else:
+            parts = _splice(marker, length)
+    else:
+        parts = _splice(value, length)
+    return "".join(parts)
+
+
 class Truncater(object):
     """A processor that truncates the result to a given length.
 
