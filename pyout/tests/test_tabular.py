@@ -703,7 +703,7 @@ def test_tabular_write_autowidth_with_header():
 
 def test_tabular_write_autowidth_min():
     out = Tabular(style={"name": {"width": "auto"},
-                         "status": {"width": {"auto": True, "min": 5}},
+                         "status": {"width": {"min": 5}},
                          "path": {"width": 6}})
     out(OrderedDict([("name", "fooab"),
                      ("status", "OK"),
@@ -721,8 +721,8 @@ def test_tabular_write_autowidth_min():
 def test_tabular_write_autowidth_min_max(marker):
     out = Tabular(style={"name": {"width": 3},
                          "status": {"width":
-                                    {"auto": True, "min": 2, "max": 7}},
-                         "path": {"width": {"auto": True, "max": 5,
+                                    {"min": 2, "max": 7}},
+                         "path": {"width": {"max": 5,
                                             "marker": marker}}})
     out(OrderedDict([("name", "foo"),
                      ("status", "U"),
@@ -758,7 +758,7 @@ def test_tabular_write_autowidth_min_max_with_header():
     out = Tabular(style={"header_": {},
                          "name": {"width": 4},
                          "status": {"width":
-                                    {"auto": True, "min": 2, "max": 8}}})
+                                    {"min": 2, "max": 8}}})
     out(OrderedDict([("name", "foo"),
                      ("status", "U")]))
 
@@ -777,7 +777,7 @@ def test_tabular_write_autowidth_different_data_types_same_output():
                        style={"header_": {},
                               "name": {"width": 4},
                               "status": {"width":
-                                         {"auto": True, "min": 2, "max": 8}}})
+                                         {"min": 2, "max": 8}}})
     out_dict({"name": "foo", "status": "U"})
     out_dict({"name": "bar", "status": "BAD!!!!!!!!!!!"})
 
@@ -785,17 +785,17 @@ def test_tabular_write_autowidth_different_data_types_same_output():
                        style={"header_": {},
                               "name": {"width": 4},
                               "status": {"width":
-                                         {"auto": True, "min": 2, "max": 8}}})
+                                         {"min": 2, "max": 8}}})
     out_list(["foo", "U"])
     out_list(["bar", "BAD!!!!!!!!!!!"])
 
     assert out_dict.stdout == out_list.stdout
 
 
-def test_tabular_write_autowidth_auto_false_exception():
+def test_tabular_write_incompatible_width_exception():
     out = Tabular(style={"header_": {},
-                         "name": {"width": 4},
-                         "status": {"width": {"auto": False}}})
+                         "status": {"width": {"min": 4,
+                                              "width": 9}}})
     with pytest.raises(ValueError):
         out(OrderedDict([("name", "foo"),
                          ("status", "U")]))

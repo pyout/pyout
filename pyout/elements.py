@@ -44,7 +44,6 @@ schema = {
                        "enum": ["auto"]},
                       {"type": "object",
                        "properties": {
-                           "auto": {"type": "boolean"},
                            "max": {"type": ["integer", "null"]},
                            "min": {"type": ["integer", "null"]},
                            "width": {"type": "integer"},

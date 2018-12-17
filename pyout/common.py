@@ -312,21 +312,23 @@ class StyleFields(object):
 
             # Convert atomic values into the equivalent complex form.
             if style_width == "auto":
-                style_width = {"auto": True}
+                style_width = {}
             elif isinstance(style_width, int):
-                style_width = {"width": style_width, "auto": False}
+                style_width = {"width": style_width}
 
-            is_auto = style_width.get("auto", True)
+            is_auto = "width" not in style_width
             if is_auto:
+                lgr.debug("Automatically adjusting width for %s", column)
                 width = _safe_get(style_width, "min", 0)
                 wmax = _safe_get(style_width, "max")
                 self.autowidth_columns[column] = {"max": wmax}
                 if wmax is not None:
                     lgr.debug("Setting max width of column %r to %d",
                               column, wmax)
-            elif is_auto is False and "width" not in style_width:
-                raise ValueError("No 'width' specified")
             else:
+                if "min" in style_width or "max" in style_width:
+                    raise ValueError(
+                        "'min' and 'max' are incompatible with 'width'")
                 width = style_width["width"]
                 lgr.debug("Setting width of column %r to %d",
                           column, width)

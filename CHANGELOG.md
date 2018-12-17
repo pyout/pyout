@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   the truncation marker.  A "width" key is now accepted in the
   dictionary form (e.g., `{"width": 10, "marker": "…"}`).
 
+### Changed
+
+- When giving a dictionary as the "width" style attribute's value, the
+  "auto" key is no longer supported because the appropriate behavior
+  can be inferred from the "min", "max", and "width" keys.
+
 ### Fixed
 
 - The output was corrupted when a callback function tried to update a
