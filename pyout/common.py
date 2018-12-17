@@ -22,7 +22,7 @@ import six
 from pyout import elements
 from pyout.field import Field
 from pyout.field import Nothing
-from pyout.field import Truncater
+from pyout.truncate import Truncater
 from pyout.summary import Summary
 
 lgr = getLogger(__name__)
