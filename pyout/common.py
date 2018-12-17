@@ -342,8 +342,10 @@ class StyleFields(object):
                           other_keys=["override"])
             field.add("pre", "default",
                       *(self.procgen.pre_from_style(cstyle)))
-            truncater = Truncater(width,
-                                  _safe_get(style_width, "marker", True))
+            truncater = Truncater(
+                width,
+                _safe_get(style_width, "marker", True),
+                _safe_get(style_width, "truncate", "right"))
             field.add("post", "width", truncater.truncate)
             field.add("post", "default",
                       *(self.procgen.post_from_style(cstyle)))

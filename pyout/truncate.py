@@ -86,12 +86,21 @@ class Truncater(object):
         Indicate truncation with this string.  If True, indicate truncation by
         replacing the last three characters of a truncated string with '...'.
         If False, no truncation marker is added to a truncated string.
+    where : {'left', 'center', 'right'}, optional
+        Where to truncate the result.
     """
 
-    def __init__(self, length, marker=True):
+    def __init__(self, length, marker=True, where="right"):
         self.length = length
         self.marker = "..." if marker is True else marker
-        self._truncate_fn = _truncate_right
+
+        truncate_fns = {"left": _truncate_left,
+                        "center": _truncate_center,
+                        "right": _truncate_right}
+        try:
+            self._truncate_fn = truncate_fns[where]
+        except KeyError:
+            raise ValueError("Unrecognized `where` value: {}".format(where))
 
     def truncate(self, _, result):
         return self._truncate_fn(result, self.length, self.marker)

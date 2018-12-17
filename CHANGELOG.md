@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   the truncation marker.  A "width" key is now accepted in the
   dictionary form (e.g., `{"width": 10, "marker": "…"}`).
 
+- The "width" style attribute now supports a "truncate" key that can
+  be "left", "center", or "right" (e.g., `{"width": {"truncate":
+  "left"}}}`).
+
 ### Changed
 
 - When giving a dictionary as the "width" style attribute's value, the

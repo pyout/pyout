@@ -28,22 +28,49 @@ def test_truncate_mark_true():
     assert fn(None, "abcdefgh") == "abcd..."
 
 
-def test_truncate_mark_string():
-    fn = Truncater(7, marker="…").truncate
+@pytest.mark.parametrize("where", ["left", "center", "right"])
+def test_truncate_mark_string(where):
+    fn = Truncater(7, marker="…", where=where).truncate
 
     assert fn(None, "abc") == "abc"
     assert fn(None, "abcdefg") == "abcdefg"
-    assert fn(None, "abcdefgh") == "abcdef…"
+
+    expected = {"left": "…cdefgh",
+                "center": "abc…fgh",
+                "right": "abcdef…"}
+    assert fn(None, "abcdefgh") == expected[where]
 
 
-def test_truncate_mark_short():
-    fn = Truncater(2, marker=True).truncate
+@pytest.mark.parametrize("where", ["left", "center", "right"])
+def test_truncate_mark_even(where):
+    # Test out a marker with an even number of characters, mostly to get the
+    # "center" style on seven characters to be uneven.
+    fn = Truncater(7, marker="..", where=where).truncate
+    expected = {"left": "..defgh",
+                "center": "ab..fgh",
+                "right": "abcde.."}
+    assert fn(None, "abcdefgh") == expected[where]
+
+
+@pytest.mark.parametrize("where", ["left", "center", "right"])
+def test_truncate_mark_short(where):
+    fn = Truncater(2, marker=True, where=where).truncate
     assert fn(None, "abc") == ".."
 
 
-def test_truncate_nomark():
-    fn = Truncater(7, marker=False).truncate
+@pytest.mark.parametrize("where", ["left", "center", "right"])
+def test_truncate_nomark(where):
+    fn = Truncater(7, marker=False, where=where).truncate
 
     assert fn(None, "abc") == "abc"
     assert fn(None, "abcdefg") == "abcdefg"
-    assert fn(None, "abcdefgh") == "abcdefg"
+
+    expected = {"left": "bcdefgh",
+                "center": "abcefgh",
+                "right": "abcdefg"}
+    assert fn(None, "abcdefgh") == expected[where]
+
+
+def test_truncate_unknown_where():
+    with pytest.raises(ValueError):
+        Truncater(7, marker=False, where="dunno")

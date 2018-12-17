@@ -46,7 +46,9 @@ schema = {
             object can be specified.  Its 'min' and 'max' keys specify the
             minimum and maximum widths allowed, whereas the 'width' key
             specifies a fixed width.  The 'marker' key specifies the marker
-            used for truncation ('...' by default).""",
+            used for truncation ('...' by default).  Where the field is
+            truncated can be configured with 'truncate': 'right' (default),
+            'left', or 'center.""",
             "oneOf": [{"type": "integer"},
                       {"type": "string",
                        "enum": ["auto"]},
@@ -55,7 +57,11 @@ schema = {
                            "max": {"type": ["integer", "null"]},
                            "min": {"type": ["integer", "null"]},
                            "width": {"type": "integer"},
-                           "marker": {"type": ["string", "boolean"]}},
+                           "marker": {"type": ["string", "boolean"]},
+                           "truncate": {"type": "string",
+                                           "enum": ["left",
+                                                    "right",
+                                                    "center"]}},
                        "additionalProperties": False}],
             "default": "auto",
             "scope": "column"},
