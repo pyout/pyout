@@ -38,7 +38,15 @@ schema = {
             "default": False,
             "scope": "field"},
         "width": {
-            "description": "Width of field",
+            "description": """Width of field.  With the default value, 'auto',
+            the column width is automatically adjusted to fit the content and
+            may be truncated to ensure that the entire row fits within the
+            available output width.  An integer value forces all fields in a
+            column to have a width of the specified value. In addition, an
+            object can be specified.  Its 'min' and 'max' keys specify the
+            minimum and maximum widths allowed, whereas the 'width' key
+            specifies a fixed width.  The 'marker' key specifies the marker
+            used for truncation ('...' by default).""",
             "oneOf": [{"type": "integer"},
                       {"type": "string",
                        "enum": ["auto"]},
