@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 
+- The output was corrupted when a callback function tried to update a
+  line that was no longer visible on the screen.
+
 - When a table did not include a summary, "incremental" and "final"
   mode added "None" as the last row.
 

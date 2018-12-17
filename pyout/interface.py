@@ -30,6 +30,9 @@ class Stream(object):
     def width(self):
         """Maximum line width.
         """
+    @abc.abstractproperty
+    def height(self):
+        """Maximum number of rows that are visible."""
 
     @abc.abstractmethod
     def write(self, text):
@@ -190,12 +193,34 @@ class Writer(object):
             # possible for the summary lines to shrink.
             lgr.debug("Clearing summary")
             self._stream.clear_last_lines(last_summary_len)
-        content, status, summary = self._content.update(row, style)
-        if isinstance(status, int):
-            lgr.debug("Overwriting line %d with %r", status, row)
-            self._stream.overwrite_line(self._last_content_len - status,
-                                        content)
         else:
+            last_summary_len = 0
+
+        content, status, summary = self._content.update(row, style)
+
+        single_row_updated = False
+        if isinstance(status, int):
+            height = self._stream.height
+            if height is None:  # non-tty
+                n_visible = self._last_content_len
+            else:
+                n_visible = min(
+                    height - last_summary_len - 1,  # -1 for current line.
+                    self._last_content_len)
+
+            n_back = self._last_content_len - status
+            if n_back > n_visible:
+                lgr.debug("Cannot move back %d rows for update; "
+                          "only %d visible rows",
+                          n_back, n_visible)
+                status = "repaint"
+                content = six.text_type(self._content)
+            else:
+                lgr.debug("Overwriting line %d with %r", status, row)
+                self._stream.overwrite_line(n_back, content)
+                single_row_updated = True
+
+        if not single_row_updated:
             if status == "repaint":
                 lgr.debug("Repainting the whole thing.  Blame row %r", row)
                 self._stream.move_to(self._last_content_len)

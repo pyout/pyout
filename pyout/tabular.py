@@ -24,12 +24,19 @@ class TerminalStream(interface.Stream):
 
     def __init__(self):
         self.term = Terminal()
+        self._height = self.term.height
 
     @property
     def width(self):
         """Maximum terminal width.
         """
         return self.term.width
+
+    @property
+    def height(self):
+        """Terminal height.
+        """
+        return self._height
 
     def write(self, text):
         """Write `text` to terminal.
