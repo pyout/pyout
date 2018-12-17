@@ -309,7 +309,14 @@ class StyleFields(object):
             lgr.debug("Setting up field for column %r", column)
             cstyle = self.style[column]
             style_width = cstyle["width"]
-            is_auto = style_width == "auto" or _safe_get(style_width, "auto")
+
+            # Convert atomic values into the equivalent complex form.
+            if style_width == "auto":
+                style_width = {"auto": True}
+            elif isinstance(style_width, int):
+                style_width = {"width": style_width, "auto": False}
+
+            is_auto = style_width.get("auto", True)
             if is_auto:
                 width = _safe_get(style_width, "min", 0)
                 wmax = _safe_get(style_width, "max")
@@ -317,12 +324,12 @@ class StyleFields(object):
                 if wmax is not None:
                     lgr.debug("Setting max width of column %r to %d",
                               column, wmax)
-            elif is_auto is False:
+            elif is_auto is False and "width" not in style_width:
                 raise ValueError("No 'width' specified")
             else:
+                width = style_width["width"]
                 lgr.debug("Setting width of column %r to %d",
-                          column, style_width)
-                width = style_width
+                          column, width)
 
             # We are creating a distinction between "width" processors, that we
             # always want to be active and "default" processors that we want to

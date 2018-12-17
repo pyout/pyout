@@ -47,6 +47,7 @@ schema = {
                            "auto": {"type": "boolean"},
                            "max": {"type": ["integer", "null"]},
                            "min": {"type": ["integer", "null"]},
+                           "width": {"type": "integer"},
                            "marker": {"type": ["string", "boolean"]}},
                        "additionalProperties": False}],
             "default": "auto",
