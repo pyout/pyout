@@ -2,7 +2,22 @@
 
 from __future__ import unicode_literals
 
+import pytest
+
+from pyout.truncate import _splice as splice
 from pyout.truncate import Truncater
+
+
+def test_splice_non_positive():
+    with pytest.raises(ValueError):
+        assert splice("", 0)
+
+
+def test_splice():
+    assert splice("", 10) == ("", "")
+    assert splice("abc", 10) == ("a", "bc")
+    assert splice("abc", 3) == ("a", "bc")
+    assert splice("abcefg", 3) == ("a", "fg")
 
 
 def test_truncate_mark_true():
