@@ -6,14 +6,16 @@ from __future__ import unicode_literals
 
 def _truncate_right(value, length, marker):
     if len(value) <= length:
-        return value
-    if marker:
-        marker_beg = max(length - len(marker), 0)
-        if value[marker_beg:].strip():
-            if marker_beg == 0:
-                return marker[:length]
-            return value[:marker_beg] + marker
-    return value[:length]
+        short = value
+    elif marker:
+        nchars_free = length - len(marker)
+        if nchars_free > 0:
+            short = value[:nchars_free] + marker
+        else:
+            short = marker[:length]
+    else:
+        short = value[:length]
+    return short
 
 
 class Truncater(object):
