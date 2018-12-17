@@ -18,6 +18,12 @@ def _truncate_right(value, length, marker):
     return short
 
 
+def _truncate_left(value, length, marker):
+    res = _truncate_right(value[::-1], length,
+                          marker[::-1] if marker else None)
+    return res[::-1]
+
+
 class Truncater(object):
     """A processor that truncates the result to a given length.
 
