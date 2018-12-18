@@ -212,7 +212,7 @@ class Truncater(object):
     ----------
     length : int
         Truncate the string to this length.
-    marker : str or bool
+    marker : str or bool, optional
         Indicate truncation with this string.  If True, indicate truncation by
         replacing the last three characters of a truncated string with '...'.
         If False, no truncation marker is added to a truncated string.
