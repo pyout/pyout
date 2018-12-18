@@ -22,7 +22,7 @@ import six
 from pyout import elements
 from pyout.field import Field
 from pyout.field import Nothing
-from pyout.field import Truncater
+from pyout.truncate import Truncater
 from pyout.summary import Summary
 
 lgr = getLogger(__name__)
@@ -309,20 +309,29 @@ class StyleFields(object):
             lgr.debug("Setting up field for column %r", column)
             cstyle = self.style[column]
             style_width = cstyle["width"]
-            is_auto = style_width == "auto" or _safe_get(style_width, "auto")
+
+            # Convert atomic values into the equivalent complex form.
+            if style_width == "auto":
+                style_width = {}
+            elif isinstance(style_width, int):
+                style_width = {"width": style_width}
+
+            is_auto = "width" not in style_width
             if is_auto:
+                lgr.debug("Automatically adjusting width for %s", column)
                 width = _safe_get(style_width, "min", 0)
                 wmax = _safe_get(style_width, "max")
                 self.autowidth_columns[column] = {"max": wmax}
                 if wmax is not None:
                     lgr.debug("Setting max width of column %r to %d",
                               column, wmax)
-            elif is_auto is False:
-                raise ValueError("No 'width' specified")
             else:
+                if "min" in style_width or "max" in style_width:
+                    raise ValueError(
+                        "'min' and 'max' are incompatible with 'width'")
+                width = style_width["width"]
                 lgr.debug("Setting width of column %r to %d",
-                          column, style_width)
-                width = style_width
+                          column, width)
 
             # We are creating a distinction between "width" processors, that we
             # always want to be active and "default" processors that we want to
@@ -333,8 +342,10 @@ class StyleFields(object):
                           other_keys=["override"])
             field.add("pre", "default",
                       *(self.procgen.pre_from_style(cstyle)))
-            truncater = Truncater(width,
-                                  _safe_get(style_width, "marker", True))
+            truncater = Truncater(
+                width,
+                _safe_get(style_width, "marker", True),
+                _safe_get(style_width, "truncate", "right"))
             field.add("post", "width", truncater.truncate)
             field.add("post", "default",
                       *(self.procgen.post_from_style(cstyle)))

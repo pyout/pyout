@@ -6,6 +6,23 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 
 
+### Added
+
+- A fixed width could be specified by setting the "width" style
+  attribute to an integer, but there was previously no way to specify
+  the truncation marker.  A "width" key is now accepted in the
+  dictionary form (e.g., `{"width": 10, "marker": "…"}`).
+
+- The "width" style attribute now supports a "truncate" key that can
+  be "left", "center", or "right" (e.g., `{"width": {"truncate":
+  "left"}}}`).
+
+### Changed
+
+- When giving a dictionary as the "width" style attribute's value, the
+  "auto" key is no longer supported because the appropriate behavior
+  can be inferred from the "min", "max", and "width" keys.
+
 ### Fixed
 
 - The output was corrupted when a callback function tried to update a
