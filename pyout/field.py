@@ -217,13 +217,13 @@ class StyleProcessors(object):
                   ("underline", bool),
                   ("color", str)]
 
-    def render(self, key, value):
+    def render(self, style_attr, value):
         """Render `value` according to a style key.
 
         Parameters
         ----------
-        key : str
-            A style key (e.g., "bold").
+        style_attr : str
+            A style attribute (e.g., "bold" or "blue").
         value : str
             The value to render.
 
@@ -432,13 +432,13 @@ class TermProcessors(StyleProcessors):
     def __init__(self, term):
         self.term = term
 
-    def render(self, key, value):
+    def render(self, style_attr, value):
         """Prepend terminal code for `key` to `value`.
 
         Parameters
         ----------
-        key : str
-            A style key (e.g., "bold").
+        style_attr : str
+            A style attribute (e.g., "bold" or "blue").
         value : str
             The value to render.
 
@@ -451,7 +451,7 @@ class TermProcessors(StyleProcessors):
             # We've got an empty string.  Don't bother adding any
             # codes.
             return value
-        return six.text_type(getattr(self.term, key)) + value
+        return six.text_type(getattr(self.term, style_attr)) + value
 
     def _maybe_reset(self):
         def proc(_, result):
