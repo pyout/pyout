@@ -10,6 +10,8 @@ import sys
 
 import six
 
+from pyout.elements import value_type
+
 lgr = getLogger(__name__)
 
 
@@ -338,26 +340,6 @@ class StyleProcessors(object):
             return result
         return by_interval_lookup_fn
 
-    @staticmethod
-    def value_type(value):
-        """Classify `value` of bold, color, and underline keys.
-
-        Parameters
-        ----------
-        value : style value
-
-        Returns
-        -------
-        str, {"simple", "lookup", "interval"}
-        """
-        try:
-            keys = list(value.keys())
-        except AttributeError:
-            return "simple"
-        if keys in [["lookup"], ["interval"]]:
-            return keys[0]
-        raise ValueError("Type of `value` could not be determined")
-
     def pre_from_style(self, column_style):
         """Yield pre-format processors based on `column_style`.
 
@@ -394,7 +376,7 @@ class StyleProcessors(object):
             if key not in column_style:
                 continue
 
-            vtype = self.value_type(column_style[key])
+            vtype = value_type(column_style[key])
             attr_key = key if key_type is bool else None
 
             if vtype == "simple":

@@ -57,20 +57,6 @@ def test_something_about_nothing(text):
     assert nada + "x" == text + "x"
 
 
-def test_style_value_type():
-    fn = StyleProcessors.value_type
-
-    assert fn(True) == "simple"
-    assert fn("red") == "simple"
-    assert fn({"lookup": {"BAD": "red"}}) == "lookup"
-
-    interval = {"interval": [(0, 50, "red"), (50, 80, "yellow")]}
-    assert fn(interval) == "interval"
-
-    with pytest.raises(ValueError):
-        fn({"unknown": 1})
-
-
 def test_style_processor_render():
     sp = StyleProcessors()
     with pytest.raises(NotImplementedError):

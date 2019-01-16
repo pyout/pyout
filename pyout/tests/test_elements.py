@@ -5,6 +5,7 @@ import pytest
 from pyout.elements import adopt
 from pyout.elements import StyleValidationError
 from pyout.elements import validate
+from pyout.elements import value_type
 
 
 def test_adopt_noop():
@@ -56,3 +57,15 @@ def test_validate_error():
 def test_validate_ok():
     validate({})
     validate({"header_": {"colname": {"bold": True}}})
+
+
+def test_value_type():
+    assert value_type(True) == "simple"
+    assert value_type("red") == "simple"
+    assert value_type({"lookup": {"BAD": "red"}}) == "lookup"
+
+    interval = {"interval": [(0, 50, "red"), (50, 80, "yellow")]}
+    assert value_type(interval) == "interval"
+
+    with pytest.raises(ValueError):
+        value_type({"unknown": 1})
