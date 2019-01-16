@@ -330,7 +330,7 @@ class StyleProcessors(object):
             for start, end, lookup_value in intervals:
                 if start is None:
                     start = float("-inf")
-                elif end is None:
+                if end is None:
                     end = float("inf")
 
                 if start <= value < end:

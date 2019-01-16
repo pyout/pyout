@@ -540,6 +540,22 @@ def test_tabular_write_intervals_color_open_ended():
     assert_eq_repr(out.stdout, expected)
 
 
+
+def test_tabular_write_intervals_color_catchall_range():
+    out = Tabular(style={"name": {"width": 3},
+                         "percent": {"color": {"interval":
+                                               [[None, None, "red"]]},
+                                     "width": 7}})
+    out(OrderedDict([("name", "foo"),
+                     ("percent", 88)]))
+    out(OrderedDict([("name", "bar"),
+                     ("percent", 33)]))
+
+    expected = "foo " + capres("red", "88") + "     \n" + \
+               "bar " + capres("red", "33") + "     \n"
+    assert_eq_repr(out.stdout, expected)
+
+
 def test_tabular_write_intervals_color_outside_intervals():
     out = Tabular(style={"name": {"width": 3},
                          "percent": {"color": {"interval":
