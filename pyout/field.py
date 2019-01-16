@@ -261,39 +261,51 @@ class StyleProcessors(object):
                     del tb
         return transform_fn
 
-    def by_key(self, key):
-        """Return a processor for the style given by `key`.
+    def by_key(self, style_key, style_value):
+        """Return a processor for a "simple" style value.
 
         Parameters
         ----------
-        key : str
-            A style key to be applied to the result.
+        style_key : str
+            A style key.
+        style_value : bool or str
+            A "simple" style value that is either a style attribute (str) and a
+            boolean flag indicating to use the style attribute named by
+            `style_key`.
 
         Returns
         -------
         A function.
         """
+        if self.style_types[style_key] is bool:
+            style_attr = style_key
+        else:
+            style_attr = style_value
+
         def proc(_, result):
-            return self.render(key, result)
+            return self.render(style_attr, result)
         return proc
 
-    def by_lookup(self, mapping, key=None):
+    def by_lookup(self, style_key, style_value):
         """Return a processor that extracts the style from `mapping`.
 
         Parameters
         ----------
-        mapping : mapping
-            A map from the field value to a style key, or, if `key` is given, a
-            map from the field value to a value that indicates whether the
-            processor should style its result.
-        key : str, optional
-            A style key to be applied to the result.  If not given, the value
-            from `mapping` is used.
+        style_key : str
+            A style key.
+        style_value : dict
+            A dictionary with a "lookup" key whose value is a "mapping" style
+            value that maps a field value to either a style attribute (str) and
+            a boolean flag indicating to use the style attribute named by
+            `style_key`.
 
         Returns
         -------
         A function.
         """
+        style_attr = style_key if self.style_types[style_key] is bool else None
+        mapping = style_value["lookup"]
+
         def proc(value, result):
             try:
                 lookup_value = mapping[value]
@@ -304,26 +316,31 @@ class StyleProcessors(object):
 
             if not lookup_value:
                 return result
-            return self.render(key or lookup_value, result)
+            return self.render(style_attr or lookup_value, result)
         return proc
 
-    def by_interval_lookup(self, intervals, key=None):
-        """Return a processor that extracts the style from `intervals`.
+    def by_interval_lookup(self, style_key, style_value):
+        """Return a processor for an "interval" style value.
 
         Parameters
         ----------
-        intervals : sequence of tuples
-            Each tuple should have the form `(start, end, key)`, where start is
-            the start of the interval (inclusive), end is the end of the
-            interval, and key is a style key.
-        key : str, optional
-            A style key to be applied to the result.  If not given, the value
-            from `intervals` is used.
+        style_key : str
+            A style key.
+        style_value : dict
+            A dictionary with an "interval" key whose value consists of a
+            sequence of tuples where each tuple should have the form `(start,
+            end, x)`, where start is the start of the interval (inclusive), end
+            is the end of the interval, and x is either a style attribute (str)
+            and a boolean flag indicating to use the style attribute named by
+            `style_key`.
 
         Returns
         -------
         A function.
         """
+        style_attr = style_key if self.style_types[style_key] is bool else None
+        intervals = style_value["interval"]
+
         def proc(value, result):
             try:
                 value = float(value)
@@ -339,7 +356,7 @@ class StyleProcessors(object):
                 if start <= value < end:
                     if not lookup_value:
                         return result
-                    return self.render(key or lookup_value, result)
+                    return self.render(style_attr or lookup_value, result)
             return result
         return proc
 
@@ -375,24 +392,17 @@ class StyleProcessors(object):
         flanks = Flanks()
         yield flanks.split_flanks
 
-        for key, key_type in self.style_types.items():
+        for key in self.style_types:
             if key not in column_style:
                 continue
 
             vtype = value_type(column_style[key])
-            attr_key = key if key_type is bool else None
-
             if vtype == "simple":
-                if key_type is bool:
-                    if column_style[key] is True:
-                        yield self.by_key(key)
-                elif key_type is str:
-                    yield self.by_key(column_style[key])
+                yield self.by_key(key, column_style[key])
             elif vtype == "lookup":
-                yield self.by_lookup(column_style[key][vtype], attr_key)
+                yield self.by_lookup(key, column_style[key])
             elif vtype == "interval":
-                yield self.by_interval_lookup(column_style[key][vtype],
-                                              attr_key)
+                yield self.by_interval_lookup(key, column_style[key])
 
         yield flanks.join_flanks
 
