@@ -309,11 +309,11 @@ class StyleProcessors(object):
         ----------
         intervals : sequence of tuples
             Each tuple should have the form `(start, end, key)`, where start is
-            the start of the interval (inclusive) , end is the end of the
+            the start of the interval (inclusive), end is the end of the
             interval, and key is a style key.
         key : str, optional
             A style key to be applied to the result.  If not given, the value
-            from `mapping` is used.
+            from `intervals` is used.
 
         Returns
         -------
