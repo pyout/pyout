@@ -270,9 +270,9 @@ class StyleProcessors(object):
         -------
         A function.
         """
-        def by_key_fn(_, result):
+        def proc(_, result):
             return self.render(key, result)
-        return by_key_fn
+        return proc
 
     def by_lookup(self, mapping, key=None):
         """Return a processor that extracts the style from `mapping`.
@@ -291,7 +291,7 @@ class StyleProcessors(object):
         -------
         A function.
         """
-        def by_lookup_fn(value, result):
+        def proc(value, result):
             try:
                 lookup_value = mapping[value]
             except (KeyError, TypeError):
@@ -302,7 +302,7 @@ class StyleProcessors(object):
             if not lookup_value:
                 return result
             return self.render(key or lookup_value, result)
-        return by_lookup_fn
+        return proc
 
     def by_interval_lookup(self, intervals, key=None):
         """Return a processor that extracts the style from `intervals`.
@@ -321,7 +321,7 @@ class StyleProcessors(object):
         -------
         A function.
         """
-        def by_interval_lookup_fn(value, result):
+        def proc(value, result):
             try:
                 value = float(value)
             except TypeError:
@@ -338,7 +338,7 @@ class StyleProcessors(object):
                         return result
                     return self.render(key or lookup_value, result)
             return result
-        return by_interval_lookup_fn
+        return proc
 
     def pre_from_style(self, column_style):
         """Yield pre-format processors based on `column_style`.
@@ -454,11 +454,11 @@ class TermProcessors(StyleProcessors):
         return six.text_type(getattr(self.term, key)) + value
 
     def _maybe_reset(self):
-        def maybe_reset_fn(_, result):
+        def proc(_, result):
             if "\x1b" in result:
                 return result + self.term.normal
             return result
-        return maybe_reset_fn
+        return proc
 
     def post_from_style(self, column_style):
         """A Terminal-specific reset to StyleProcessors.post_from_style.
