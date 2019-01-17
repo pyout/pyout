@@ -507,6 +507,48 @@ def test_tabular_write_lookup_non_hashable():
     assert_eq_repr(out.stdout, expected)
 
 
+def test_tabular_write_re_lookup_color():
+    out = Tabular(
+        style={"name": {"width": 3},
+               "status":
+               {"color": {"re_lookup": [["good", "green"],
+                                        ["^bad$", "red"]]},
+                "width": 12}})
+
+    out(OrderedDict([("name", "foo"),
+                     ("status", "good")]))
+    out(OrderedDict([("name", "bar"),
+                     ("status", "really good")]))
+    out(OrderedDict([("name", "oof"),
+                     ("status", "bad")]))
+    out(OrderedDict([("name", "rab"),
+                     ("status", "not bad")]))
+
+    expected = "foo " + capres("green", "good") + "        \n" + \
+               "bar " + capres("green", "really good") + " \n" + \
+               "oof " + capres("red", "bad") + "         \n" + \
+               "rab not bad     \n"
+    assert_eq_repr(out.stdout, expected)
+
+
+def test_tabular_write_re_lookup_bold():
+    out = Tabular(
+        style={"name": {"width": 3},
+               "status":
+               {"bold": {"re_lookup": [["^!![XYZ]$", False],
+                                       ["^!!.$", True]]},
+                "width": 3}})
+
+    out(OrderedDict([("name", "foo"),
+                     ("status", "!!Z")]))
+    out(OrderedDict([("name", "bar"),
+                     ("status", "!!y")]))
+
+    expected = "foo !!Z\n" + \
+               "bar " + capres("bold", "!!y") + "\n"
+    assert_eq_repr(out.stdout, expected)
+
+
 def test_tabular_write_intervals_color():
     out = Tabular(style={"name": {"width": 3},
                          "percent": {"color": {"interval":

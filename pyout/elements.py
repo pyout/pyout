@@ -18,6 +18,7 @@ schema = {
             "description": "Whether text is bold",
             "oneOf": [{"type": "boolean"},
                       {"$ref": "#/definitions/lookup"},
+                      {"$ref": "#/definitions/re_lookup"},
                       {"$ref": "#/definitions/interval"}],
             "default": False,
             "scope": "field"},
@@ -27,6 +28,7 @@ schema = {
                        "enum": ["black", "red", "green", "yellow",
                                 "blue", "magenta", "cyan", "white"]},
                       {"$ref": "#/definitions/lookup"},
+                      {"$ref": "#/definitions/re_lookup"},
                       {"$ref": "#/definitions/interval"}],
             "default": "black",
             "scope": "field"},
@@ -34,6 +36,7 @@ schema = {
             "description": "Whether text is underlined",
             "oneOf": [{"type": "boolean"},
                       {"$ref": "#/definitions/lookup"},
+                      {"$ref": "#/definitions/re_lookup"},
                       {"$ref": "#/definitions/interval"}],
             "default": False,
             "scope": "field"},
@@ -123,7 +126,20 @@ schema = {
             "description": "Map a value to a style",
             "type": "object",
             "properties": {"lookup": {"type": "object"}},
-            "additionalProperties": False}
+            "additionalProperties": False},
+        "re_lookup": {
+            "description": """Apply a style to values that match a regular
+            expression.  The regular expressions are matched with re.search and
+            tried in order, stopping after the first match.""",
+            "type": "object",
+            "properties": {"re_lookup":
+                           {"type": "array",
+                            "items": [
+                                {"type": "array",
+                                 "items": [{"type": "string"},
+                                           {"type": ["string", "boolean"]}],
+                                 "additionalItems": False}]}},
+            "additionalProperties": False},
     },
     "type": "object",
     "properties": {
@@ -247,12 +263,12 @@ def value_type(value):
 
     Returns
     -------
-    str, {"simple", "lookup", "interval"}
+    str, {"simple", "lookup", "re_lookup", "interval"}
     """
     try:
         keys = list(value.keys())
     except AttributeError:
         return "simple"
-    if keys in [["lookup"], ["interval"]]:
+    if keys in [["lookup"], ["re_lookup"], ["interval"]]:
         return keys[0]
     raise ValueError("Type of `value` could not be determined")
