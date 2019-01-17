@@ -89,6 +89,15 @@ schema = {
             "default": "",
             "scope": "column"
         },
+        "re_flags": {
+            "description": """Flags passed to re.search when using re_lookup.
+            See the documentation of the re module for a description of
+            possible values.  'I' (ignore case) is the most likely value of
+            interest.""",
+            "type": "array",
+            "items": [{"type": "string",
+                       "enum": ["A", "I", "L", "M", "S", "U", "X"]}],
+            "scope": "field"},
         "transform": {
             "description": """An arbitrary function.
             This function will be called with the (unprocessed) field value as
@@ -105,6 +114,7 @@ schema = {
                            "color": {"$ref": "#/definitions/color"},
                            "delayed": {"$ref": "#/definitions/delayed"},
                            "missing": {"$ref": "#/definitions/missing"},
+                           "re_flags": {"$ref": "#/definitions/re_flags"},
                            "transform": {"$ref": "#/definitions/transform"},
                            "underline": {"$ref": "#/definitions/underline"},
                            "width": {"$ref": "#/definitions/width"}},
@@ -130,7 +140,8 @@ schema = {
         "re_lookup": {
             "description": """Apply a style to values that match a regular
             expression.  The regular expressions are matched with re.search and
-            tried in order, stopping after the first match.""",
+            tried in order, stopping after the first match.  Flags for
+            re.search can be specified via the re_flags style attribute.""",
             "type": "object",
             "properties": {"re_lookup":
                            {"type": "array",

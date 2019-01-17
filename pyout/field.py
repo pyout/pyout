@@ -319,7 +319,7 @@ class StyleProcessors(object):
             return self.render(style_attr or lookup_value, result)
         return proc
 
-    def by_re_lookup(self, style_key, style_value):
+    def by_re_lookup(self, style_key, style_value, re_flags=0):
         """Return a processor for a "re_lookup" style value.
 
         Parameters
@@ -332,13 +332,16 @@ class StyleProcessors(object):
             x)`, where regexp is a regular expression to match against the
             field value and x is either a style attribute (str) and a boolean
             flag indicating to use the style attribute named by `style_key`.
+        re_flags : int
+            Passed through as flags argument to re.compile.
 
         Returns
         -------
         A function.
         """
         style_attr = style_key if self.style_types[style_key] is bool else None
-        regexps = [(re.compile(r), v) for r, v in style_value["re_lookup"]]
+        regexps = [(re.compile(r, flags=re_flags), v)
+                   for r, v in style_value["re_lookup"]]
 
         def proc(value, result):
             for r, lookup_value in regexps:
@@ -434,6 +437,9 @@ class StyleProcessors(object):
             vtype = value_type(column_style[key])
             fn = fns[vtype]
             args = [key, column_style[key]]
+            if vtype == "re_lookup":
+                args.append(sum(getattr(re, f)
+                                for f in column_style.get("re_flags", [])))
             yield fn(*args)
 
         yield flanks.join_flanks

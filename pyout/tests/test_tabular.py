@@ -513,19 +513,20 @@ def test_tabular_write_re_lookup_color():
                "status":
                {"color": {"re_lookup": [["good", "green"],
                                         ["^bad$", "red"]]},
-                "width": 12}})
+                "width": 12},
+               "default_": {"re_flags": ["I"]}})
 
     out(OrderedDict([("name", "foo"),
                      ("status", "good")]))
     out(OrderedDict([("name", "bar"),
-                     ("status", "really good")]))
+                     ("status", "really GOOD")]))
     out(OrderedDict([("name", "oof"),
                      ("status", "bad")]))
     out(OrderedDict([("name", "rab"),
                      ("status", "not bad")]))
 
     expected = "foo " + capres("green", "good") + "        \n" + \
-               "bar " + capres("green", "really good") + " \n" + \
+               "bar " + capres("green", "really GOOD") + " \n" + \
                "oof " + capres("red", "bad") + "         \n" + \
                "rab not bad     \n"
     assert_eq_repr(out.stdout, expected)
