@@ -3,6 +3,7 @@
 from __future__ import unicode_literals
 
 from collections import defaultdict
+from collections import OrderedDict
 from itertools import chain
 from logging import getLogger
 import re
@@ -213,9 +214,11 @@ class StyleProcessors(object):
         type.
     """
 
-    style_keys = [("bold", bool),
-                  ("underline", bool),
-                  ("color", str)]
+    # Ordering the dict isn't required, but we'll loop over this to generate
+    # processors, and it'd be good to have a predictable order across calls.
+    style_types = OrderedDict([("bold", bool),
+                               ("underline", bool),
+                               ("color", str)])
 
     def render(self, style_attr, value):
         """Render `value` according to a style key.
@@ -372,7 +375,7 @@ class StyleProcessors(object):
         flanks = Flanks()
         yield flanks.split_flanks
 
-        for key, key_type in self.style_keys:
+        for key, key_type in self.style_types.items():
             if key not in column_style:
                 continue
 
