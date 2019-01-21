@@ -392,17 +392,18 @@ class StyleProcessors(object):
         flanks = Flanks()
         yield flanks.split_flanks
 
+        fns = {"simple": self.by_key,
+               "lookup": self.by_lookup,
+               "interval": self.by_interval_lookup}
+
         for key in self.style_types:
             if key not in column_style:
                 continue
 
             vtype = value_type(column_style[key])
-            if vtype == "simple":
-                yield self.by_key(key, column_style[key])
-            elif vtype == "lookup":
-                yield self.by_lookup(key, column_style[key])
-            elif vtype == "interval":
-                yield self.by_interval_lookup(key, column_style[key])
+            fn = fns[vtype]
+            args = [key, column_style[key]]
+            yield fn(*args)
 
         yield flanks.join_flanks
 
