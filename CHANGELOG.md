@@ -5,6 +5,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+
+- The new style attribute "re_lookup" adds support for styling a value
+  when it matches a regular expression.
+
 ## [0.3.0] - 2018-12-18
 
 ### Added
