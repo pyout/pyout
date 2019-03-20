@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
+import pytest
+
+blessings = pytest.importorskip("blessings")
+
 from collections import Counter
 from collections import OrderedDict
 from curses import tigetstr
@@ -11,9 +15,7 @@ import sys
 import time
 import traceback
 
-import blessings
 from mock import patch
-import pytest
 from six.moves import StringIO
 
 from pyout import Tabular as TheRealTabular
