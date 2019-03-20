@@ -24,7 +24,14 @@ lgr = getLogger(__name__)
 @six.add_metaclass(abc.ABCMeta)
 class Stream(object):
     """Output stream interface used by Writer.
+
+    Attributes
+    ----------
+    supports_updates : boolean
+        If true, the writer supports updating previous lines.
     """
+
+    supports_updates = True
 
     @abc.abstractproperty
     def width(self):
@@ -89,7 +96,14 @@ class Writer(object):
 
         self._mode = None
         self._write_fn = None
-        self.mode = "update" if sys.stdout.isatty() else "final"
+
+        if sys.stdout.isatty():
+            if self._stream.supports_updates:
+                self.mode = "update"
+            else:
+                self.mode = "incremental"
+        else:
+            self.mode = "final"
 
     def _init_prewrite(self):
         self._content.init_columns(self._columns, self.ids)
@@ -135,7 +149,11 @@ class Writer(object):
         elif value == "final":
             self._write_fn = self._write_final
         else:
-            self._write_fn = self._write_update
+            if self._stream.supports_updates:
+                self._write_fn = self._write_update
+            else:
+                raise ValueError("Stream {} does not support updates"
+                                 .format(self._stream))
 
     @property
     def ids(self):
