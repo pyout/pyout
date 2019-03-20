@@ -1,7 +1,8 @@
 from setuptools import setup
 
 requires = {
-    "core": ["blessings", "six"],
+    "core": ["blessings; sys_platform != 'win32'",
+             "six"],
     "tests": ["pytest", "pytest-timeout", "mock"],
     "validation": ["jsonschema"],
 }

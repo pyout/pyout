@@ -41,7 +41,7 @@ lack polish and documentation.
 
 It is developed and tested under Python 2 and 3 in GNU/Linux
 environments and is expected to work in macOS environments as well.
-There is currently no Windows support.
+There is currently very limited Windows support.
 
 
 License

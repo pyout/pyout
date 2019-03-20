@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - The new style attribute "re_lookup" adds support for styling a value
   when it matches a regular expression.
 
+- `pyout` should now run, in a very limited way, on Windows.  The
+  `Tabular` class used on Windows, `tabular_dummy.Tabular`, does not
+  support updating previous lines or styling values with the "color",
+  "bold", or "underline" keys.
+
 ## [0.3.0] - 2018-12-18
 
 ### Added

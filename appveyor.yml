@@ -1,0 +1,35 @@
+# CI on Windows via appveyor
+#
+# Modified from datalad-revolution's configuration file.
+
+build: false
+
+environment:
+  matrix:
+    - PYTHON: "C:\\Python35"
+      PYTHON_VERSION: "3.5.1"
+      PYTHON_ARCH: "32"
+      MINICONDA: C:\Miniconda35
+
+init:
+  - "ECHO %PYTHON% %PYTHON_VERSION% %PYTHON_ARCH% %MINICONDA%"
+
+install:
+  - "set PATH=%MINICONDA%;%MINICONDA%\\Scripts;%PATH%"
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  - conda info -a
+  - "conda create -q -n test-environment python=%PYTHON_VERSION%"
+  - activate test-environment
+  - python -c "import sys; print(sys.path)"
+  - pip install codecov
+  - pip install -e ".[full]"
+
+test_script:
+  - coverage run -m pytest --doctest-ignore-import-errors -rs && coverage xml
+
+after_test:
+  - ps: |
+      $env:PATH = 'C:\msys64\usr\bin;' + $env:PATH
+      Invoke-WebRequest -Uri 'https://codecov.io/bash' -OutFile codecov.sh
+      bash codecov.sh -f "coverage.xml"
