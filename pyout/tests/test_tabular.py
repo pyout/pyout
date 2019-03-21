@@ -960,6 +960,26 @@ def test_tabular_write_callable_transform_nothing():
 
 
 @pytest.mark.timeout(10)
+def test_tabular_write_callable_re_lookup_non_string():
+    delay0 = Delayed(3)
+    delay1 = Delayed("4")
+
+    out = Tabular(["name", "status"],
+                  style={"status": {"color":
+                                    {"re_lookup": [["[0-9]", "green"]]}}})
+    with out:
+        out({"name": "foo", "status": delay0.run})
+        out({"name": "bar", "status": delay1.run})
+        delay0.now = True
+        delay1.now = True
+    lines = out.stdout.splitlines()
+    # 3 was passed in as a number, so re_lookup ignores it
+    assert_contains_nc(lines, "foo 3")
+    # ... but it matches "4".
+    assert_contains_nc(lines, "bar " + capres("green", "4"))
+
+
+@pytest.mark.timeout(10)
 def test_tabular_write_callable_values_multi_return():
     delay = Delayed({"status": "done", "path": "/tmp/a"})
 
