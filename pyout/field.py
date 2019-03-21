@@ -344,6 +344,8 @@ class StyleProcessors(object):
                    for r, v in style_value["re_lookup"]]
 
         def proc(value, result):
+            if not isinstance(value, six.string_types):
+                return result
             for r, lookup_value in regexps:
                 if r.search(value):
                     if not lookup_value:
