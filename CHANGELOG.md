@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   support updating previous lines or styling values with the "color",
   "bold", or "underline" keys.
 
+- The Tabular class now returns a row's value when indexed with a
+  tuple containing the ID values for that row.  This is useful for
+  inspecting values populated by asynchronous functions.
+
 ## [0.3.0] - 2018-12-18
 
 ### Added

@@ -557,6 +557,10 @@ class Content(object):
 
     __nonzero__ = __bool__  # py2
 
+    def __getitem__(self, key):
+        idx = self._idmap[key]
+        return self._rows[idx].row
+
     @property
     def rows(self):
         """Data and summary rows.

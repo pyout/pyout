@@ -1167,6 +1167,19 @@ def test_tabular_write_delayed(form):
     assert eq_repr_noclear(lines[-1], "foo 1 2 3")
 
 
+@pytest.mark.timeout(10)
+def test_tabular_write_inspect_with_getitem():
+    delay0 = Delayed("done")
+    out = Tabular(["name", "status"])
+    with out:
+        out({"name": "foo", "status": ("thinking", delay0.run)})
+        delay0.now = True
+    out[("foo",)] == {"name": "foo", "status": "done"}
+
+    with pytest.raises(KeyError):
+        out[("nothere",)]
+
+
 def test_tabular_summary():
 
     def nbad(xs):
