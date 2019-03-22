@@ -28,13 +28,30 @@ lgr = getLogger(__name__)
 class Stream(object):
     """Output stream interface used by Writer.
 
+    Parameters
+    ----------
+    stream : stream, optional
+        Stream to write output to.  Defaults to sys.stdout.
+    interactive : boolean, optional
+        Whether this stream is interactive.  If not specified, it will be set
+        to the return value of `stream.isatty()`.
+
     Attributes
     ----------
+    interactive : bool
     supports_updates : boolean
         If true, the writer supports updating previous lines.
     """
 
     supports_updates = True
+
+    def __init__(self, stream=None, interactive=None):
+        self.stream = stream or sys.stdout
+        if interactive is None:
+            self.interactive = self.stream.isatty()
+        else:
+            self.interactive = interactive
+        self.supports_updates = self.interactive
 
     @abc.abstractproperty
     def width(self):
@@ -71,7 +88,8 @@ class Writer(object):
     To define a writer, a subclass should inherit Writer and define __init__ to
      call Writer.__init__ and then the _init method.
     """
-    def __init__(self, columns=None, style=None):
+    def __init__(self, columns=None, style=None, stream=None,
+                 interactive=None):
         self._columns = columns
         self._ids = None
 
@@ -88,8 +106,6 @@ class Writer(object):
         self._stream = None
         self._content = None
 
-        self._interactive = sys.stdout.isatty()
-
     def _init(self, style, streamer, processors=None):
         """Do writer-specific setup.
 
@@ -98,14 +114,15 @@ class Writer(object):
         style : dict
             Style, as passed to __init__.
         streamer : interface.Stream
-            A stream interface.
+            A stream interface that takes __init__'s `stream` and `interactive`
+            arguments into account.
         processors : field.StyleProcessors, optional
             A writer-specific processors instance.  Defaults to
             field.PlainProcessors().
         """
         self._stream = streamer
-        if self._interactive:
-            if self._stream.supports_updates:
+        if streamer.interactive:
+            if streamer.supports_updates:
                 self.mode = "update"
             else:
                 self.mode = "incremental"
@@ -161,7 +178,7 @@ class Writer(object):
         elif value == "final":
             self._write_fn = self._write_final
         else:
-            if self._stream.supports_updates and self._interactive:
+            if self._stream.supports_updates and self._stream.interactive:
                 self._write_fn = self._write_update
             else:
                 raise ValueError("Stream {} does not support updates"

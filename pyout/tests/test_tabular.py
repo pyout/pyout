@@ -31,9 +31,7 @@ class Terminal(blessings.Terminal):
 
     def __init__(self, *args, **kwargs):
         super(Terminal, self).__init__(
-            *args,
-            stream=StringIO(), force_styling=True, kind="xterm-256color",
-            **kwargs)
+            *args, kind="xterm-256color", **kwargs)
 
     @property
     def width(self):
@@ -49,14 +47,16 @@ class Tabular(TheRealTabular):
     """
 
     def __init__(self, *args, **kwargs):
-        with patch("pyout.interface.sys.stdout.isatty",
-                   return_value=True):
-            with patch("pyout.tabular.Terminal", Terminal):
-                super(Tabular, self).__init__(*args, **kwargs)
+        interactive = kwargs.pop("interactive", True)
+        with patch("pyout.tabular.Terminal", Terminal):
+            super(Tabular, self).__init__(
+                *args,
+                stream=StringIO(), interactive=interactive,
+                **kwargs)
 
     @property
     def stdout(self):
-        return self._stream.term.stream.getvalue()
+        return self._stream.stream.getvalue()
 
 
 # unicode_cap, and unicode_parm are copied from blessings' tests.
@@ -1241,6 +1241,13 @@ def test_tabular_mode_after_write():
     out(["foo", "ok"])
     with pytest.raises(ValueError):
         out.mode = "final"
+
+
+def test_tabular_mode_update_noninteractive():
+    out = Tabular(["name", "status"], interactive=False)
+    assert out.mode == "final"
+    with pytest.raises(ValueError):
+        out.mode = "update"
 
 
 def test_tabular_mode_incremental():

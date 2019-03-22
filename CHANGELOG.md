@@ -19,6 +19,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   tuple containing the ID values for that row.  This is useful for
   inspecting values populated by asynchronous functions.
 
+- The Tabular class now accepts a `stream` parameter that can be used
+  to specify a stream other than `sys.stdout`.
+
+- Whether Tabular behaves as though the output stream is a TTY (for
+  example, by coloring the output) can now be controlled with the
+  `interactive` parameter.
+
 ## [0.3.0] - 2018-12-18
 
 ### Added

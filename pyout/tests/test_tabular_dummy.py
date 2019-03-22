@@ -22,12 +22,12 @@ def test_stream_update_hardcodes_height_width():
 
 
 def test_tabular_basic():
-    with patch("pyout.interface.sys.stdout.isatty", return_value=True):
-        out = Tabular(["name", "status"],
-                      style={"name": {"color": "green",
-                                      "width": {"marker": "…", "max": 4},
-                                      "transform": lambda x: x.upper()}})
-    out._stream.stream = StringIO()
+    out = Tabular(["name", "status"],
+                  stream=StringIO(),
+                  interactive=True,
+                  style={"name": {"color": "green",
+                                  "width": {"marker": "…", "max": 4},
+                                  "transform": lambda x: x.upper()}})
     with out:
         out({"name": "foo", "status": "fine"})
         out({"name": "barbecue", "status": "dandy"})

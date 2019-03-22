@@ -20,21 +20,29 @@ class TerminalStream(interface.Stream):
     """Stream interface implementation using blessings.Terminal.
     """
 
-    def __init__(self):
-        self.term = Terminal()
-        self._height = self.term.height
+    def __init__(self, stream=None, interactive=None):
+        super(TerminalStream, self).__init__(
+            stream=stream, interactive=interactive)
+        self.term = Terminal(stream=stream,
+                             # interactive=False maps to force_styling=None.
+                             force_styling=self.interactive or None)
+        self._height = None
 
     @property
     def width(self):
         """Maximum terminal width.
         """
-        return self.term.width
+        if self.interactive:
+            return self.term.width
 
     @property
     def height(self):
         """Terminal height.
         """
-        return self._height
+        if self.interactive:
+            if self._height is None:
+                self._height = self.term.height
+            return self._height
 
     def write(self, text):
         """Write `text` to terminal.
@@ -86,6 +94,13 @@ class Tabular(interface.Writer):
         Each top-level key should be a column name and the value should be a
         style dict that overrides the `default_style` class attribute.  See the
         "Examples" section below.
+    stream : stream object, optional
+        Write output to this stream (sys.stdout by default).
+    interactive : boolean, optional
+        Whether stream is considered interactive.  By default, this is
+        determined by calling `stream.isatty()`.  If non-interactive, the bold,
+        color, and underline keys will be ignored, and the mode will default to
+        "final".
 
     Examples
     --------
@@ -109,10 +124,12 @@ class Tabular(interface.Writer):
     ...     style={"status": {"color": "red", "bold": True}})
     """
 
-    def __init__(self, columns=None, style=None,):
-        super(Tabular, self).__init__(columns, style)
-        streamer = TerminalStream()
-        if self._interactive:
+    def __init__(self, columns=None, style=None, stream=None,
+                 interactive=None):
+        super(Tabular, self).__init__(columns, style, stream=stream,
+                                      interactive=interactive)
+        streamer = TerminalStream(stream=stream, interactive=interactive)
+        if streamer.interactive:
             processors = TermProcessors(streamer.term)
         else:
             processors = None
