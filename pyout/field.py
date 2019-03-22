@@ -478,8 +478,7 @@ class PlainProcessors(StyleProcessors):
     """Ignore color, bold, or underline styling.
     """
 
-    def render(self, _, value):
-        return value
+    style_types = {}
 
 
 class TermProcessors(StyleProcessors):
