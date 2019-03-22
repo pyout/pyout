@@ -47,12 +47,13 @@ class Tabular(TheRealTabular):
     """
 
     def __init__(self, *args, **kwargs):
-        interactive = kwargs.pop("interactive", True)
+        stream = kwargs.pop("stream", None)
+        if not stream:
+            stream = StringIO()
+            stream.isatty = lambda: True
         with patch("pyout.tabular.Terminal", Terminal):
             super(Tabular, self).__init__(
-                *args,
-                stream=StringIO(), interactive=interactive,
-                **kwargs)
+                *args, stream=stream, **kwargs)
 
     @property
     def stdout(self):
