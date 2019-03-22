@@ -474,7 +474,9 @@ class Flanks(object):
         return self.left + result + self.right
 
 
-class NoopProcessors(StyleProcessors):
+class PlainProcessors(StyleProcessors):
+    """Ignore color, bold, or underline styling.
+    """
 
     def render(self, _, value):
         return value
