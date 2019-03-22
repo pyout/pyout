@@ -3,100 +3,24 @@ from __future__ import unicode_literals
 
 import pytest
 
-blessings = pytest.importorskip("blessings")
+pytest.importorskip("blessings")
 
 from collections import Counter
 from collections import OrderedDict
-from curses import tigetstr
-from curses import tparm
-from functools import partial
-import re
 import sys
 import time
 import traceback
 
-from mock import patch
-from six.moves import StringIO
-
-from pyout import Tabular as TheRealTabular
 from pyout.common import ContentError
 from pyout.elements import StyleError
 from pyout.field import StyleFunctionError
 
-from pyout.tests.utils import assert_contains
+from pyout.tests.tabular import Tabular
+from pyout.tests.terminal import assert_contains_nc
+from pyout.tests.terminal import capres
+from pyout.tests.terminal import eq_repr_noclear
+from pyout.tests.terminal import unicode_cap
 from pyout.tests.utils import assert_eq_repr
-
-
-class Terminal(blessings.Terminal):
-
-    def __init__(self, *args, **kwargs):
-        super(Terminal, self).__init__(
-            *args, kind="xterm-256color", **kwargs)
-
-    @property
-    def width(self):
-        return 100
-
-    @property
-    def height(self):
-        return 20
-
-
-class Tabular(TheRealTabular):
-    """Test-specific subclass of pyout.Tabular.
-    """
-
-    def __init__(self, *args, **kwargs):
-        stream = kwargs.pop("stream", None)
-        if not stream:
-            stream = StringIO()
-            stream.isatty = lambda: True
-        with patch("pyout.tabular.Terminal", Terminal):
-            super(Tabular, self).__init__(
-                *args, stream=stream, **kwargs)
-
-    @property
-    def stdout(self):
-        return self._stream.stream.getvalue()
-
-
-# unicode_cap, and unicode_parm are copied from blessings' tests.
-
-
-def unicode_cap(cap):
-    """Return the result of ``tigetstr`` except as Unicode."""
-    return tigetstr(cap).decode('latin1')
-
-
-def unicode_parm(cap, *parms):
-    """Return the result of ``tparm(tigetstr())`` except as Unicode."""
-    return tparm(tigetstr(cap), *parms).decode('latin1')
-
-
-COLORNUMS = {"black": 0, "red": 1, "green": 2, "yellow": 3, "blue": 4,
-             "magenta": 5, "cyan": 6, "white": 7}
-
-
-def capres(name, value):
-    """Format value with CAP key, followed by a reset.
-    """
-    if name in COLORNUMS:
-        prefix = unicode_parm("setaf", COLORNUMS[name])
-    else:
-        prefix = unicode_cap(name)
-    return prefix + value + unicode_cap("sgr0")
-
-
-def eq_repr_noclear(actual, expected):
-    """Like `eq_repr`, but strip clear-related codes from `actual`.
-    """
-    clear_codes = [re.escape(unicode_cap(x)) for x in ["el", "ed", "cuu1"]]
-    match = re.match("(?:{}|{}|{})*(.*)".format(*clear_codes), actual)
-    assert match, "This should always match"
-    return repr(match.group(1)) == repr(expected)
-
-
-assert_contains_nc = partial(assert_contains, cmp=eq_repr_noclear)
 
 
 class AttrData(object):
