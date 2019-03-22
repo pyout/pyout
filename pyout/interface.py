@@ -83,8 +83,7 @@ class Writer(object):
         self._columns = columns
         self._ids = None
 
-        style = style or {}
-        if "width_" not in style and self._stream.width:
+        if style and "width_" not in style and self._stream.width:
             style["width_"] = self._stream.width
 
         self._last_content_len = 0
