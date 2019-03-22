@@ -366,3 +366,27 @@ class Writer(object):
             else:
                 flat.append(column)
         return flat
+
+    def __getitem__(self, key):
+        """Get the (normalized) row for `key`.
+
+        This interface is focused on _writing_ output, and the caller usually
+        knows the values.  However, this method can be useful for retrieving
+        values that were produced asynchronously (see __call__).
+
+        Parameters
+        ----------
+        key : tuple
+            Unique ID for a row, as specified by the `ids` property.
+
+        Returns
+        -------
+        A dictionary with the row's current value.
+        """
+        try:
+            return self._content[key]
+        except KeyError as exc:
+            # Suppress context in py2 compatible way.
+            newexc = KeyError(exc)
+            newexc.__cause__ = None
+            raise newexc
