@@ -97,7 +97,8 @@ class Writer(object):
         self._mode = None
         self._write_fn = None
 
-        if sys.stdout.isatty():
+        self._interactive = sys.stdout.isatty()
+        if self._interactive:
             if self._stream.supports_updates:
                 self.mode = "update"
             else:
@@ -149,7 +150,7 @@ class Writer(object):
         elif value == "final":
             self._write_fn = self._write_final
         else:
-            if self._stream.supports_updates:
+            if self._stream.supports_updates and self._interactive:
                 self._write_fn = self._write_update
             else:
                 raise ValueError("Stream {} does not support updates"
@@ -219,12 +220,9 @@ class Writer(object):
         single_row_updated = False
         if isinstance(status, int):
             height = self._stream.height
-            if height is None:  # non-tty
-                n_visible = self._last_content_len
-            else:
-                n_visible = min(
-                    height - last_summary_len - 1,  # -1 for current line.
-                    self._last_content_len)
+            n_visible = min(
+                height - last_summary_len - 1,  # -1 for current line.
+                self._last_content_len)
 
             n_back = self._last_content_len - status
             if n_back > n_visible:

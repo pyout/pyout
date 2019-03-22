@@ -44,31 +44,14 @@ class Terminal(blessings.Terminal):
         return 20
 
 
-class TerminalNonInteractive(Terminal):
-
-    @property
-    def width(self):
-        return None
-
-    @property
-    def height(self):
-        return None
-
-
 class Tabular(TheRealTabular):
     """Test-specific subclass of pyout.Tabular.
     """
 
     def __init__(self, *args, **kwargs):
-        interactive = kwargs.pop("interactive", True)
-        if interactive:
-            term = Terminal
-        else:
-            term = TerminalNonInteractive
-
         with patch("pyout.interface.sys.stdout.isatty",
-                   return_value=interactive):
-            with patch("pyout.tabular.Terminal", term):
+                   return_value=True):
+            with patch("pyout.tabular.Terminal", Terminal):
                 super(Tabular, self).__init__(*args, **kwargs)
 
     @property
@@ -998,8 +981,7 @@ def test_tabular_write_callable_values_multi_return():
 
 @pytest.mark.timeout(10)
 @pytest.mark.parametrize("nrows", [20, 21])
-@pytest.mark.parametrize("interactive", [True, False])
-def test_tabular_callback_to_hidden_row(nrows, interactive):
+def test_tabular_callback_to_hidden_row(nrows):
     if sys.version_info < (3,):
         try:
             import jsonschema
@@ -1012,10 +994,7 @@ def test_tabular_callback_to_hidden_row(nrows, interactive):
                 "Hangs for unknown reason in py2/coverage/jsonschema run")
 
     delay = Delayed("OK")
-    out = Tabular(interactive=interactive,
-                  style={"status": {"aggregate": len}})
-    # Make sure we're in update mode even for interactive=False.
-    out.mode = "update"
+    out = Tabular(style={"status": {"aggregate": len}})
     with out:
         for i in range(1, nrows + 1):
             status = delay.run if i == 3 else "s{:02d}".format(i)
@@ -1028,7 +1007,7 @@ def test_tabular_callback_to_hidden_row(nrows, interactive):
     # line and the current line takes up another, so we have 18
     # available rows. Row 3 goes off the screen when we have 21 rows.
 
-    if nrows > 20 and interactive:
+    if nrows > 20:
         # No leading escape codes because it was part of a whole repaint.
         nexpected_plain = 1
         nexpected_updated = 0
