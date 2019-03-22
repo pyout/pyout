@@ -16,7 +16,10 @@ import sys
 
 import six
 
+from pyout.common import ContentWithSummary
 from pyout.common import RowNormalizer
+from pyout.common import StyleFields
+from pyout.field import PlainProcessors
 
 lgr = getLogger(__name__)
 
@@ -65,26 +68,12 @@ class Stream(object):
 class Writer(object):
     """Base class implementing the core handling logic of pyout output.
 
-    To define a writer, a subclass should inherit Writer and define two
-    attributes, `_content` (a `pyout.common.Content` object and `_stream` (a
-    `pyout.interface.Stream` object).
+    To define a writer, a subclass should inherit Writer and define __init__ to
+     call Writer.__init__ and then the _init method.
     """
-    _content = None
-    _stream = None
-
     def __init__(self, columns=None, style=None):
-        if self._content is None:
-            raise NotImplementedError(
-                "Children must set `content` to a ContentWithSummary object")
-        if self._stream is None:
-            raise NotImplementedError(
-                "Children must set `stream` to a Stream object")
-
         self._columns = columns
         self._ids = None
-
-        if style and "width_" not in style and self._stream.width:
-            style["width_"] = self._stream.width
 
         self._last_content_len = 0
         self._last_summary = None
@@ -96,7 +85,25 @@ class Writer(object):
         self._mode = None
         self._write_fn = None
 
+        self._stream = None
+        self._content = None
+
         self._interactive = sys.stdout.isatty()
+
+    def _init(self, style, streamer, processors=None):
+        """Do writer-specific setup.
+
+        Parameters
+        ----------
+        style : dict
+            Style, as passed to __init__.
+        streamer : interface.Stream
+            A stream interface.
+        processors : field.StyleProcessors, optional
+            A writer-specific processors instance.  Defaults to
+            field.PlainProcessors().
+        """
+        self._stream = streamer
         if self._interactive:
             if self._stream.supports_updates:
                 self.mode = "update"
@@ -104,6 +111,11 @@ class Writer(object):
                 self.mode = "incremental"
         else:
             self.mode = "final"
+
+        if style and "width_" not in style and self._stream.width:
+            style["width_"] = self._stream.width
+        self._content = ContentWithSummary(
+            StyleFields(style, processors or PlainProcessors()))
 
     def _init_prewrite(self):
         self._content.init_columns(self._columns, self.ids)

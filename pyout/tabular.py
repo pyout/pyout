@@ -11,8 +11,6 @@ from logging import getLogger
 from blessings import Terminal
 
 from pyout import interface
-from pyout.common import ContentWithSummary
-from pyout.common import StyleFields
 from pyout.field import TermProcessors
 
 lgr = getLogger(__name__)
@@ -111,8 +109,11 @@ class Tabular(interface.Writer):
     ...     style={"status": {"color": "red", "bold": True}})
     """
 
-    def __init__(self, columns=None, style=None):
-        self._stream = TerminalStream()
-        self._content = ContentWithSummary(
-            StyleFields(style, TermProcessors(self._stream.term)))
+    def __init__(self, columns=None, style=None,):
         super(Tabular, self).__init__(columns, style)
+        streamer = TerminalStream()
+        if self._interactive:
+            processors = TermProcessors(streamer.term)
+        else:
+            processors = None
+        super(Tabular, self)._init(style, streamer, processors)

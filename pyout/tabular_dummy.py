@@ -10,9 +10,6 @@ from __future__ import unicode_literals
 import sys
 
 from pyout import interface
-from pyout.common import ContentWithSummary
-from pyout.common import StyleFields
-from pyout.field import PlainProcessors
 
 
 class NoUpdateTerminalStream(interface.Stream):
@@ -52,7 +49,6 @@ class Tabular(interface.Writer):
     """
 
     def __init__(self, columns=None, style=None):
-        self._stream = NoUpdateTerminalStream()
-        self._content = ContentWithSummary(
-            StyleFields(style, PlainProcessors()))
         super(Tabular, self).__init__(columns, style)
+        streamer = NoUpdateTerminalStream()
+        super(Tabular, self)._init(style, streamer)
