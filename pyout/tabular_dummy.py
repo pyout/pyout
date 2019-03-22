@@ -12,7 +12,7 @@ import sys
 from pyout import interface
 from pyout.common import ContentWithSummary
 from pyout.common import StyleFields
-from pyout.field import StyleProcessors
+from pyout.field import NoopProcessors
 
 
 class NoUpdateTerminalStream(interface.Stream):
@@ -43,12 +43,6 @@ class NoUpdateTerminalStream(interface.Stream):
 
     def write(self, text):
         self.stream.write(text)
-
-
-class NoopProcessors(StyleProcessors):
-
-    def render(self, _, value):
-        return value
 
 
 class Tabular(interface.Writer):

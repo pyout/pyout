@@ -474,6 +474,12 @@ class Flanks(object):
         return self.left + result + self.right
 
 
+class NoopProcessors(StyleProcessors):
+
+    def render(self, _, value):
+        return value
+
+
 class TermProcessors(StyleProcessors):
     """Generate Field.processors for styled Terminal output.
 
