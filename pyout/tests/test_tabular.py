@@ -585,7 +585,6 @@ def test_tabular_write_intervals_color_open_ended():
     assert_eq_repr(out.stdout, expected)
 
 
-
 def test_tabular_write_intervals_color_catchall_range():
     out = Tabular(style={"name": {"width": 3},
                          "percent": {"color": {"interval":
