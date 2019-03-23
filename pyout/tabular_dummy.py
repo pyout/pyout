@@ -7,20 +7,15 @@ values).  In other words, this is not a real attempt to support Windows.
 
 from __future__ import unicode_literals
 
-import sys
-
 from pyout import interface
-from pyout.common import ContentWithSummary
-from pyout.common import StyleFields
-from pyout.field import StyleProcessors
 
 
 class NoUpdateTerminalStream(interface.Stream):
 
-    supports_updates = False
-
-    def __init__(self, stream=None):
-        self.stream = stream or sys.stdout
+    def __init__(self, stream=None, interactive=None):
+        super(NoUpdateTerminalStream, self).__init__(
+            stream=stream, interactive=interactive)
+        self.supports_updates = False
 
     def _die(self, *args, **kwargs):
         raise NotImplementedError("{!s} does not support 'update' methods"
@@ -45,20 +40,16 @@ class NoUpdateTerminalStream(interface.Stream):
         self.stream.write(text)
 
 
-class NoopProcessors(StyleProcessors):
-
-    def render(self, _, value):
-        return value
-
-
 class Tabular(interface.Writer):
     """Like `pyout.tabular.Tabular`, but broken.
 
     This doesn't support terminal styling or updating previous content.
     """
 
-    def __init__(self, columns=None, style=None):
-        self._stream = NoUpdateTerminalStream()
-        self._content = ContentWithSummary(
-            StyleFields(style, NoopProcessors()))
-        super(Tabular, self).__init__(columns, style)
+    def __init__(self, columns=None, style=None, stream=None,
+                 interactive=None):
+        super(Tabular, self).__init__(columns, style, stream=stream,
+                                      interactive=interactive)
+        streamer = NoUpdateTerminalStream(
+            stream=stream, interactive=interactive)
+        super(Tabular, self)._init(style, streamer)

@@ -474,6 +474,13 @@ class Flanks(object):
         return self.left + result + self.right
 
 
+class PlainProcessors(StyleProcessors):
+    """Ignore color, bold, or underline styling.
+    """
+
+    style_types = {}
+
+
 class TermProcessors(StyleProcessors):
     """Generate Field.processors for styled Terminal output.
 

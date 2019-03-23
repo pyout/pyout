@@ -3,116 +3,24 @@ from __future__ import unicode_literals
 
 import pytest
 
-blessings = pytest.importorskip("blessings")
+pytest.importorskip("blessings")
 
 from collections import Counter
 from collections import OrderedDict
-from curses import tigetstr
-from curses import tparm
-from functools import partial
-import re
 import sys
 import time
 import traceback
 
-from mock import patch
-from six.moves import StringIO
-
-from pyout import Tabular as TheRealTabular
 from pyout.common import ContentError
 from pyout.elements import StyleError
 from pyout.field import StyleFunctionError
 
-from pyout.tests.utils import assert_contains
+from pyout.tests.tabular import Tabular
+from pyout.tests.terminal import assert_contains_nc
+from pyout.tests.terminal import capres
+from pyout.tests.terminal import eq_repr_noclear
+from pyout.tests.terminal import unicode_cap
 from pyout.tests.utils import assert_eq_repr
-
-
-class Terminal(blessings.Terminal):
-
-    def __init__(self, *args, **kwargs):
-        super(Terminal, self).__init__(
-            *args,
-            stream=StringIO(), force_styling=True, kind="xterm-256color",
-            **kwargs)
-
-    @property
-    def width(self):
-        return 100
-
-    @property
-    def height(self):
-        return 20
-
-
-class TerminalNonInteractive(Terminal):
-
-    @property
-    def width(self):
-        return None
-
-    @property
-    def height(self):
-        return None
-
-
-class Tabular(TheRealTabular):
-    """Test-specific subclass of pyout.Tabular.
-    """
-
-    def __init__(self, *args, **kwargs):
-        interactive = kwargs.pop("interactive", True)
-        if interactive:
-            term = Terminal
-        else:
-            term = TerminalNonInteractive
-
-        with patch("pyout.interface.sys.stdout.isatty",
-                   return_value=interactive):
-            with patch("pyout.tabular.Terminal", term):
-                super(Tabular, self).__init__(*args, **kwargs)
-
-    @property
-    def stdout(self):
-        return self._stream.term.stream.getvalue()
-
-
-# unicode_cap, and unicode_parm are copied from blessings' tests.
-
-
-def unicode_cap(cap):
-    """Return the result of ``tigetstr`` except as Unicode."""
-    return tigetstr(cap).decode('latin1')
-
-
-def unicode_parm(cap, *parms):
-    """Return the result of ``tparm(tigetstr())`` except as Unicode."""
-    return tparm(tigetstr(cap), *parms).decode('latin1')
-
-
-COLORNUMS = {"black": 0, "red": 1, "green": 2, "yellow": 3, "blue": 4,
-             "magenta": 5, "cyan": 6, "white": 7}
-
-
-def capres(name, value):
-    """Format value with CAP key, followed by a reset.
-    """
-    if name in COLORNUMS:
-        prefix = unicode_parm("setaf", COLORNUMS[name])
-    else:
-        prefix = unicode_cap(name)
-    return prefix + value + unicode_cap("sgr0")
-
-
-def eq_repr_noclear(actual, expected):
-    """Like `eq_repr`, but strip clear-related codes from `actual`.
-    """
-    clear_codes = [re.escape(unicode_cap(x)) for x in ["el", "ed", "cuu1"]]
-    match = re.match("(?:{}|{}|{})*(.*)".format(*clear_codes), actual)
-    assert match, "This should always match"
-    return repr(match.group(1)) == repr(expected)
-
-
-assert_contains_nc = partial(assert_contains, cmp=eq_repr_noclear)
 
 
 class AttrData(object):
@@ -998,8 +906,7 @@ def test_tabular_write_callable_values_multi_return():
 
 @pytest.mark.timeout(10)
 @pytest.mark.parametrize("nrows", [20, 21])
-@pytest.mark.parametrize("interactive", [True, False])
-def test_tabular_callback_to_hidden_row(nrows, interactive):
+def test_tabular_callback_to_hidden_row(nrows):
     if sys.version_info < (3,):
         try:
             import jsonschema
@@ -1012,10 +919,7 @@ def test_tabular_callback_to_hidden_row(nrows, interactive):
                 "Hangs for unknown reason in py2/coverage/jsonschema run")
 
     delay = Delayed("OK")
-    out = Tabular(interactive=interactive,
-                  style={"status": {"aggregate": len}})
-    # Make sure we're in update mode even for interactive=False.
-    out.mode = "update"
+    out = Tabular(style={"status": {"aggregate": len}})
     with out:
         for i in range(1, nrows + 1):
             status = delay.run if i == 3 else "s{:02d}".format(i)
@@ -1028,7 +932,7 @@ def test_tabular_callback_to_hidden_row(nrows, interactive):
     # line and the current line takes up another, so we have 18
     # available rows. Row 3 goes off the screen when we have 21 rows.
 
-    if nrows > 20 and interactive:
+    if nrows > 20:
         # No leading escape codes because it was part of a whole repaint.
         nexpected_plain = 1
         nexpected_updated = 0
@@ -1262,6 +1166,13 @@ def test_tabular_mode_after_write():
     out(["foo", "ok"])
     with pytest.raises(ValueError):
         out.mode = "final"
+
+
+def test_tabular_mode_update_noninteractive():
+    out = Tabular(["name", "status"], interactive=False)
+    assert out.mode == "final"
+    with pytest.raises(ValueError):
+        out.mode = "update"
 
 
 def test_tabular_mode_incremental():
