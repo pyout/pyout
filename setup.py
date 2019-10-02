@@ -11,7 +11,7 @@ requires["full"] = list(requires.values())
 
 setup(
     name="pyout",
-    version="0.4.0",
+    version="0.4.1",
     author="Kyle Meyer",
     author_email="kyle@kyleam.com",
     description="Terminal styling for tabular data",

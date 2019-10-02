@@ -7,7 +7,7 @@ from __future__ import unicode_literals
 
 import sys
 
-__version__ = "0.1.0"
+__version__ = "0.4.1"
 
 from pyout.elements import schema
 
