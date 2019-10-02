@@ -11,7 +11,7 @@ pyout: Terminal styling for structured data
 
 ``pyout`` is a Python package that defines an interface for writing
 structured records as a table in a terminal.  It is being developed to
-replace custom code for displaying tabular data in in NICEMAN_ and
+replace custom code for displaying tabular data in in ReproMan_ and
 DataLad_.
 
 A primary goal of the interface is the separation of content from
@@ -51,4 +51,4 @@ License
 
 
 .. _DataLad: https://datalad.org
-.. _NICEMAN: http://niceman.repronim.org
+.. _ReproMan: http://reproman.repronim.org
