@@ -4,8 +4,11 @@
 from __future__ import unicode_literals
 
 import abc
-from collections import Mapping
 from collections import OrderedDict
+try:
+    from collections.abc import Mapping
+except ImportError:  # Python <= 3.3
+    from collections import Mapping
 from contextlib import contextmanager
 from functools import partial
 import inspect

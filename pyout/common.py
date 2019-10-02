@@ -9,10 +9,14 @@ actually added.
 from __future__ import unicode_literals
 
 from collections import defaultdict
-from collections import Mapping
 from collections import namedtuple
 from collections import OrderedDict
-from collections import Sequence
+try:
+    from collections.abc import Mapping
+    from collections.abc import Sequence
+except ImportError:  # Python <= 3.3
+    from collections import Mapping
+    from collections import Sequence
 from functools import partial
 import inspect
 from logging import getLogger
