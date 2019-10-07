@@ -74,7 +74,7 @@ schema = {
         # Other style elements
         "aggregate": {
             "description": """A function that produces a summary value.  This
-            function will be called with all of the column's the (unprocessed)
+            function will be called with all of the column's (unprocessed)
             field values and should return a single value to be displayed.""",
             "scope": "column"},
         "delayed": {
