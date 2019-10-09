@@ -241,7 +241,7 @@ class Writer(object):
             # Clear the summary because 1) it has very likely changed, 2)
             # it makes the counting for row updates simpler, 3) and it is
             # possible for the summary lines to shrink.
-            lgr.debug("Clearing summary")
+            lgr.debug("Clearing summary of %d line(s)", last_summary_len)
             self._stream.clear_last_lines(last_summary_len)
         else:
             last_summary_len = 0
@@ -263,13 +263,16 @@ class Writer(object):
                 status = "repaint"
                 content = six.text_type(self._content)
             else:
-                lgr.debug("Overwriting line %d with %r", status, row)
+                lgr.debug("Moving up %d line(s) to overwrite line %d with %r",
+                          n_back, status, row)
                 self._stream.overwrite_line(n_back, content)
                 single_row_updated = True
 
         if not single_row_updated:
             if status == "repaint":
-                lgr.debug("Repainting the whole thing.  Blame row %r", row)
+                lgr.debug("Moving up %d line(s) to repaint the whole thing. "
+                          "Blame row %r",
+                          self._last_content_len, row)
                 self._stream.move_to(self._last_content_len)
             self._stream.write(content)
 
