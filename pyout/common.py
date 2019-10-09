@@ -36,7 +36,7 @@ NOTHING = Nothing()
 class RowNormalizer(object):
     """Transform various input data forms to a common form.
 
-    An un-normalized can be one of three kinds:
+    An un-normalized row can be one of three kinds:
 
       * a mapping from column names to keys
 
