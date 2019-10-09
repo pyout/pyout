@@ -163,7 +163,7 @@ class Field(object):
 class Nothing(object):
     """Internal class to represent missing values.
 
-    This is used instead of a built-ins like None, "", or 0 to allow us to
+    This is used instead of a built-in like None, "", or 0 to allow us to
     unambiguously identify a missing value.  In terms of methods, it tries to
     mimic the string `text` (an empty string by default) because that behavior
     is the most useful internally for formatting the output.
