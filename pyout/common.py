@@ -767,7 +767,9 @@ class ContentWithSummary(Content):
         lgr.log(9, "Updating with .summary set to %s", self.summary)
         content, status = super(ContentWithSummary, self).update(row, style)
         if self.summary:
-            summ_rows = self.summary.summarize([r.row for r in self._rows])
+            summ_rows = self.summary.summarize(
+                self.columns,
+                [r.row for r in self._rows])
 
             def join():
                 return "".join(self._render(summ_rows))
