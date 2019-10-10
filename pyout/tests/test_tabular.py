@@ -976,7 +976,7 @@ def test_tabular_write_callable_values_multi_return():
 
 @pytest.mark.timeout(10)
 @pytest.mark.parametrize("nrows", [20, 21])
-def test_tabular_callback_to_hidden_row(nrows):
+def test_tabular_callback_to_offscreen_row(nrows):
     delay = Delayed("OK")
     out = Tabular(style={"status": {"aggregate": len}})
     with out:
