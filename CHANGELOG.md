@@ -3,6 +3,9 @@
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+
 ## [0.4.1] - 2019-10-02
 
 Fix stale `pyout.__version__`, which hasn't been updated since v0.1.0.
@@ -128,6 +131,7 @@ that allows the user to update a previous row, and the ability to
 update previous fields by defining asynchronous callback functions.
 
 
+[Unreleased]: https://github.com/pyout/pyout/compare/v0.4.1...HEAD
 [0.4.1]: https://github.com/pyout/pyout/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/pyout/pyout/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/pyout/pyout/compare/v0.2.0...v0.3.0
