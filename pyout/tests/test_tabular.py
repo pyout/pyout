@@ -1142,6 +1142,42 @@ def test_tabular_write_inspect_with_getitem():
         out[("nothere",)]
 
 
+def test_tabular_hidden_column():
+    out = Tabular(["name"],
+                  style={"name": {"hide": True, "aggregate": len}})
+    out({"name": "foo"})
+    assert out.stdout.strip() == ""
+
+
+def test_tabular_hidden_if_missing_column():
+    out = Tabular(["name", "status", "letter"],
+                  style={"header_": {},
+                         "name": {"aggregate": lambda _: "X"},
+                         "status": {"hide": "if_missing",
+                                    "aggregate": len}})
+    out({"name": "foo", "letter": "a"})
+    expected = ["name letter",
+                "foo  a     ",
+                "X          "]
+    assert out.stdout.splitlines() == expected
+
+    out({"name": "bar", "status": "ok", "letter": "b"})
+    lines1 = out.stdout.splitlines()
+    assert_contains_nc(lines1, "bar  ok     b     ")
+    assert_contains_nc(lines1, "X    1            ")
+
+
+def test_tabular_hidden_col_takes_back_auto_space():
+    out = Tabular(["name", "status", "letter"],
+                  style={"width_": 10,
+                         "default_": {"width": {"marker": "…"}},
+                         "status": {"hide": "if_missing"}})
+    out({"name": "foo", "letter": "abcdefg"})
+    assert out.stdout.splitlines() == ["foo abcde…"]
+    out({"name": "foo", "status": "ok"})
+    assert_contains_nc(out.stdout.splitlines(), "foo ok ab…")
+
+
 def test_tabular_summary():
 
     def nbad(xs):

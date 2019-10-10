@@ -78,5 +78,6 @@ class Summary(object):
 
             summary_rows.append((sumrow,
                                  {"style": self.style.get("aggregate_"),
-                                  "adopt": False}))
+                                  "adopt": False,
+                                  "can_unhide": False}))
         return summary_rows
