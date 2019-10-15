@@ -54,7 +54,7 @@ def test_tabular_write_empty_string():
 def test_tabular_write_missing_column():
     out = Tabular(columns=["name", "status"])
     out({"name": "solo"})
-    assert_eq_repr(out.stdout, "solo \n")
+    assert_eq_repr(out.stdout, "solo\n")
 
 
 def test_tabular_write_missing_column_missing_text():
@@ -930,7 +930,7 @@ def test_tabular_write_callable_transform_nothing():
         # function above, which is designed to take a number, won't be called
         # with it.
         out({"name": "foo", "status": delay0.run})
-        assert_eq_repr(out.stdout, "foo \n")
+        assert_eq_repr(out.stdout, "foo\n")
         delay0.now = True
     lines = out.stdout.splitlines()
     assert_contains_nc(lines, "foo 5")
@@ -1117,13 +1117,13 @@ def test_tabular_write_delayed(form):
     with out:
         out(row)
     lines = out.stdout.splitlines()
-    assert lines[0] == "foo   "
+    assert lines[0] == "foo"
 
     # Either paired0/paired1 came in first or solo came in first, but
     # paired0/paired1 should arrive together.
     firstin = [ln for ln in lines
-               if eq_repr_noclear(ln, "foo 1 2 ")
-               or eq_repr_noclear(ln, "foo   3")]
+               if eq_repr_noclear(ln, "foo 1 2")
+               or eq_repr_noclear(ln, "foo 3")]
     assert len(firstin) == 1
 
     assert eq_repr_noclear(lines[-1], "foo 1 2 3")

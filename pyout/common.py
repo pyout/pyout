@@ -577,8 +577,12 @@ class StyleFields(object):
             proc_keys = None
 
         adjusted = self._set_widths(row, group)
-        proc_fields = [self.fields[c](row[c], keys=proc_keys)
-                       for c in self.columns]
+        cols = self.columns
+        proc_fields = ((self.fields[c], row[c]) for c in cols)
+        # Exclude fields that weren't able to claim any width to avoid
+        # surrounding empty values with separators.
+        proc_fields = filter(lambda x: x[0].width > 0, proc_fields)
+        proc_fields = (fld(val, keys=proc_keys) for fld, val in proc_fields)
         return self.style["separator_"].join(proc_fields) + "\n", adjusted
 
 
