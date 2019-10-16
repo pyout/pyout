@@ -270,6 +270,8 @@ class StyleFields(object):
              self.width_separtor])
         lgr.debug("Calculated fixed width as %d", self.width_fixed)
 
+        self._check_widths()
+
     def _compose(self, name, attributes):
         """Construct a style taking `attributes` from the column styles.
 
@@ -348,6 +350,13 @@ class StyleFields(object):
         """Whether the style specifies a header.
         """
         return self.style["header_"] is not None
+
+    def _check_widths(self):
+        columns = self.columns
+        width_table = self.style["width_"]
+        if len(columns) > width_table:
+            raise elements.StyleError(
+                "Number of columns exceeds available table width")
 
     def _set_widths(self, row, proc_group):
         """Update auto-width Fields based on `row`.

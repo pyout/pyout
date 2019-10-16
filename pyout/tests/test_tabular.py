@@ -798,6 +798,13 @@ def test_tabular_fixed_width_exceeds_total():
         out(OrderedDict([("name", ""), ("status", "")]))
 
 
+def test_tabular_number_of_columns_exceeds_total_width():
+    cols = ["a", "b", "c", "d"]
+    out = Tabular(columns=cols, style={"width_": 3})
+    with pytest.raises(StyleError):
+        out([c + "val" for c in cols])
+
+
 def test_tabular_auto_width_exceeds_total():
     out = Tabular(style={"width_": 13})
     out(OrderedDict([("name", "foobert"),
