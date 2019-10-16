@@ -226,6 +226,7 @@ class StyleFields(object):
         self.columns = None
         self.autowidth_columns = {}
 
+        self.width_fixed = None
         self.width_separtor = None
         self.fields = None
         self._truncaters = {}
@@ -260,6 +261,14 @@ class StyleFields(object):
         ngaps = len(self.columns) - 1
         self.width_separtor = len(self.style["separator_"]) * ngaps
         lgr.debug("Calculated separator width as %d", self.width_separtor)
+
+        autowidth_columns = self.autowidth_columns
+        fields = self.fields
+        self.width_fixed = sum(
+            [sum(fields[c].width for c in self.columns
+                 if c not in autowidth_columns),
+             self.width_separtor])
+        lgr.debug("Calculated fixed width as %d", self.width_fixed)
 
     def _compose(self, name, attributes):
         """Construct a style taking `attributes` from the column styles.
@@ -360,15 +369,12 @@ class StyleFields(object):
 
         width_separtor = self.width_separtor
         width_table = self.style["width_"]
+        width_fixed = self.width_fixed
         width_free = width_table - sum(
             [sum(fields[c].width for c in columns),
              width_separtor])
 
         if width_free < 0:
-            width_fixed = sum(
-                [sum(fields[c].width for c in columns
-                     if c not in autowidth_columns),
-                 width_separtor])
             assert width_fixed > width_table, "bug in width logic"
             raise elements.StyleError(
                 "Fixed widths specified in style exceed total width")
