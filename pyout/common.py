@@ -381,7 +381,7 @@ class StyleFields(object):
 
         lgr.debug("Checking width for row %r", row)
         adjusted = False
-        for column in sorted(self.columns, key=lambda c: fields[c].width):
+        for column in sorted(autowidth_columns, key=lambda c: fields[c].width):
             # ^ Sorting the columns by increasing widths isn't necessary; we do
             # it so that columns that already take up more of the screen don't
             # continue to grow and use up free width before smaller columns
@@ -390,38 +390,37 @@ class StyleFields(object):
                 lgr.debug("Giving up on checking widths; no free width left")
                 break
 
-            if column in autowidth_columns:
-                field = fields[column]
-                lgr.debug("Checking width of column %r "
-                          "(field width: %d, free width: %d)",
-                          column, field.width, width_free)
-                # If we've added any style transform functions as
-                # pre-format processors, we want to measure the width
-                # of their result rather than the raw value.
-                if field.pre[proc_group]:
-                    value = field(row[column], keys=[proc_group],
-                                  exclude_post=True)
-                else:
-                    value = row[column]
-                value = str(value)
-                value_width = len(value)
-                wmax = autowidth_columns[column]["max"]
-                if value_width > field.width:
-                    width_old = field.width
-                    width_available = width_free + field.width
-                    width_new = min(value_width,
-                                    wmax or width_available,
-                                    width_available)
-                    if width_new > width_old:
-                        adjusted = True
-                        field.width = width_new
-                        lgr.debug("Adjusting width of %r column from %d to %d "
-                                  "to accommodate value %r",
-                                  column, width_old, field.width, value)
-                        self._truncaters[column].length = field.width
-                        width_free -= field.width - width_old
-                        lgr.debug("Free width is %d after processing column %r",
-                                  width_free, column)
+            field = fields[column]
+            lgr.debug("Checking width of column %r "
+                      "(field width: %d, free width: %d)",
+                      column, field.width, width_free)
+            # If we've added any style transform functions as pre-format
+            # processors, we want to measure the width of their result rather
+            # than the raw value.
+            if field.pre[proc_group]:
+                value = field(row[column], keys=[proc_group],
+                              exclude_post=True)
+            else:
+                value = row[column]
+            value = str(value)
+            value_width = len(value)
+            wmax = autowidth_columns[column]["max"]
+            if value_width > field.width:
+                width_old = field.width
+                width_available = width_free + field.width
+                width_new = min(value_width,
+                                wmax or width_available,
+                                width_available)
+                if width_new > width_old:
+                    adjusted = True
+                    field.width = width_new
+                    lgr.debug("Adjusting width of %r column from %d to %d "
+                              "to accommodate value %r",
+                              column, width_old, field.width, value)
+                    self._truncaters[column].length = field.width
+                    width_free -= field.width - width_old
+                    lgr.debug("Free width is %d after processing column %r",
+                              width_free, column)
         return adjusted
 
     def _proc_group(self, style, adopt=True):
