@@ -647,6 +647,7 @@ class Content(object):
             self._rows.append(ContentRow(row, kwds={"style": style}))
 
         line, adjusted = self.fields.render(row, style)
+        lgr.log(9, "Rendered line as %r", line)
         if called_before and adjusted:
             return six.text_type(self), "repaint"
         if not adjusted and prev_idx is not None:
@@ -676,6 +677,7 @@ class ContentWithSummary(Content):
         self.summary = Summary(self.fields.style)
 
     def update(self, row, style):
+        lgr.log(9, "Updating with .summary set to %s", self.summary)
         content, status = super(ContentWithSummary, self).update(row, style)
         if self.summary:
             summ_rows = self.summary.summarize([r.row for r in self._rows])

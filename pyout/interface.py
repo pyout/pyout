@@ -208,10 +208,13 @@ class Writer(object):
     def wait(self):
         """Wait for asynchronous calls to return.
         """
+        lgr.debug("Waiting for asynchronous calls")
         if self._pool is None:
             return
         self._pool.close()
+        lgr.debug("Pool closed")
         self._pool.join()
+        lgr.debug("Pool joined")
 
     @contextmanager
     def _write_lock(self):
@@ -301,11 +304,16 @@ class Writer(object):
         id_vals = {c: row[c] for c in self.ids}
 
         def callback(tab, cols, result):
+            lgr.debug("Received result for %s: %s",
+                      cols, result)
             if isinstance(result, Mapping):
+                lgr.debug("Processing result as mapping")
                 pass
             elif isinstance(result, tuple):
+                lgr.debug("Processing result as tuple")
                 result = dict(zip(cols, result))
             elif len(cols) == 1:
+                lgr.debug("Processing result as atom")
                 # Don't bother raising an exception if cols != 1
                 # because it would be lost in the thread.
                 result = {cols[0]: result}
@@ -313,8 +321,10 @@ class Writer(object):
             tab._write(result)
 
         if self._pool is None:
+            lgr.debug("Initializing pool")
             self._pool = Pool()
         if self._lock is None:
+            lgr.debug("Initializing lock")
             self._lock = multiprocessing.Lock()
 
         for cols, fn in callables:
@@ -327,6 +337,8 @@ class Writer(object):
                 gen = fn
 
             if gen:
+                lgr.debug("Wrapping generator in callback")
+
                 def callback_for_each():
                     for i in gen:
                         cb_func(i)
