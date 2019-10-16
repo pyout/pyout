@@ -375,6 +375,9 @@ class StyleFields(object):
             lgr.debug("Not checking widths; no free width left")
             return False
 
+        if not autowidth_columns:
+            return False
+
         lgr.debug("Checking width for row %r", row)
         adjusted = False
         for column in sorted(self.columns, key=lambda c: fields[c].width):
