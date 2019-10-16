@@ -359,7 +359,8 @@ class StyleFields(object):
         fields = self.fields
 
         width_separtor = self.width_separtor
-        width_free = self.style["width_"] - sum(
+        width_table = self.style["width_"]
+        width_free = width_table - sum(
             [sum(fields[c].width for c in columns),
              width_separtor])
 
@@ -368,7 +369,7 @@ class StyleFields(object):
                 [sum(fields[c].width for c in columns
                      if c not in autowidth_columns),
                  width_separtor])
-            assert width_fixed > self.style["width_"], "bug in width logic"
+            assert width_fixed > width_table, "bug in width logic"
             raise elements.StyleError(
                 "Fixed widths specified in style exceed total width")
         elif width_free == 0:
