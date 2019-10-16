@@ -285,7 +285,7 @@ class StyleFields(object):
             return result
 
     def _setup_fields(self):
-        self.fields = {}
+        fields = {}
         for column in self.columns:
             lgr.debug("Setting up field for column %r", column)
             cstyle = self.style[column]
@@ -330,8 +330,9 @@ class StyleFields(object):
             field.add("post", "width", truncater.truncate)
             field.add("post", "default",
                       *(self.procgen.post_from_style(cstyle)))
-            self.fields[column] = field
+            fields[column] = field
             self._truncaters[column] = truncater
+        self.fields = fields
 
     @property
     def has_header(self):
@@ -353,15 +354,20 @@ class StyleFields(object):
         -------
         True if any widths required adjustment.
         """
+        columns = self.columns
+        autowidth_columns = self.autowidth_columns
+        fields = self.fields
+
+        width_separtor = self.width_separtor
         width_free = self.style["width_"] - sum(
-            [sum(self.fields[c].width for c in self.columns),
-             self.width_separtor])
+            [sum(fields[c].width for c in columns),
+             width_separtor])
 
         if width_free < 0:
             width_fixed = sum(
-                [sum(self.fields[c].width for c in self.columns
-                     if c not in self.autowidth_columns),
-                 self.width_separtor])
+                [sum(fields[c].width for c in columns
+                     if c not in autowidth_columns),
+                 width_separtor])
             assert width_fixed > self.style["width_"], "bug in width logic"
             raise elements.StyleError(
                 "Fixed widths specified in style exceed total width")
@@ -371,7 +377,7 @@ class StyleFields(object):
 
         lgr.debug("Checking width for row %r", row)
         adjusted = False
-        for column in sorted(self.columns, key=lambda c: self.fields[c].width):
+        for column in sorted(self.columns, key=lambda c: fields[c].width):
             # ^ Sorting the columns by increasing widths isn't necessary; we do
             # it so that columns that already take up more of the screen don't
             # continue to grow and use up free width before smaller columns
@@ -380,8 +386,8 @@ class StyleFields(object):
                 lgr.debug("Giving up on checking widths; no free width left")
                 break
 
-            if column in self.autowidth_columns:
-                field = self.fields[column]
+            if column in autowidth_columns:
+                field = fields[column]
                 lgr.debug("Checking width of column %r "
                           "(field width: %d, free width: %d)",
                           column, field.width, width_free)
@@ -395,7 +401,7 @@ class StyleFields(object):
                     value = row[column]
                 value = str(value)
                 value_width = len(value)
-                wmax = self.autowidth_columns[column]["max"]
+                wmax = autowidth_columns[column]["max"]
                 if value_width > field.width:
                     width_old = field.width
                     width_available = width_free + field.width
