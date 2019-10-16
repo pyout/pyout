@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   required.
 
 
+### Changed
+
+- The calculation of auto-width columns has been enhanced so that the
+  available width is more evenly spread across the columns.
+
+
 ## [0.4.1] - 2019-10-02
 
 Fix stale `pyout.__version__`, which hasn't been updated since v0.1.0.

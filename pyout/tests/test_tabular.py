@@ -806,11 +806,16 @@ def test_tabular_number_of_columns_exceeds_total_width():
 
 
 def test_tabular_auto_width_exceeds_total():
-    out = Tabular(style={"width_": 13})
-    out(OrderedDict([("name", "foobert"),
-                     ("status", "okiguess"),
-                     ("path", "illbedropped:(")]))
-    assert out.stdout == "foobert o... \n"
+    out = Tabular(style={"width_": 13,
+                         "default_": {"width": {"marker": "…"}}})
+    out(OrderedDict([("name", "abcd"),
+                     ("status", "efghi"),
+                     ("path", "jklm")]))
+    # The values are divided evenly.  Subtracting the separators, there are 11
+    # available spaces.  'status' and 'path' get 4, while 'name' gets the
+    # remaining 3.  'name' is shorted just because the columns are processed in
+    # reverse alphabetical order.
+    assert out.stdout == "ab… efg… jklm\n"
 
 
 def test_tabular_auto_width_exceeds_total_multiline():
@@ -820,12 +825,13 @@ def test_tabular_auto_width_exceeds_total_multiline():
                      ("path", "t/")]))
     assert out.stdout == "abcd efg t/\n"
 
-    # name gets truncated because it claims the most width in the table so far.
-    out(OrderedDict([("name", "notme"),
+    # name gets truncated due to predictable but arbitrary reverse alphabetical
+    # sorting when assigning widths.
+    out(OrderedDict([("name", "mooost"),
                      ("status", "metoo"),
                      ("path", "here")]))
     lines0 = out.stdout.splitlines()
-    assert_contains_nc(lines0, "n... metoo here")
+    assert_contains_nc(lines0, "m... metoo here")
 
     out(OrderedDict([("name", "hi"),
                      ("status", "jk"),
