@@ -14,8 +14,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Changed
 
 - The calculation of auto-width columns has been enhanced so that the
-  available width is more evenly spread across the columns.
-
+  available width is more evenly spread across the columns.  The width
+  style attribute takes a "weight" key to allow a column's growth to
+  be prioritized.
 
 ## [0.4.1] - 2019-10-02
 

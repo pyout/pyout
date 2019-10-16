@@ -50,7 +50,14 @@ schema = {
             key specifies a fixed width.  The 'marker' key specifies the marker
             used for truncation ('...' by default).  Where the field is
             truncated can be configured with 'truncate': 'right' (default),
-            'left', or 'center'.""",
+            'left', or 'center'.
+
+            The object can also include a 'weight' key.  Conceptually,
+            assigning widths to each column can be (roughly) viewed as each
+            column claiming _one_ character of available width at a time until
+            a column is at its maximum width or there is no available width
+            left.  Setting a column's weight to an integer N makes it claim N
+            characters each iteration.""",
             "oneOf": [{"type": "integer"},
                       {"type": "string",
                        "enum": ["auto"]},
@@ -59,6 +66,7 @@ schema = {
                            "max": {"type": ["integer", "null"]},
                            "min": {"type": ["integer", "null"]},
                            "width": {"type": "integer"},
+                           "weight": {"type": "integer", "minimum": 1},
                            "marker": {"type": ["string", "boolean"]},
                            "truncate": {"type": "string",
                                         "enum": ["left",

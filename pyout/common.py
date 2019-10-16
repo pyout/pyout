@@ -313,7 +313,8 @@ class StyleFields(object):
                 lgr.debug("Automatically adjusting width for %s", column)
                 width = style_width.get("min", 0)
                 wmax = style_width.get("max")
-                autoval = {"max": wmax, "min": width}
+                autoval = {"max": wmax, "min": width,
+                           "weight": style_width.get("weight", 1)}
                 self.autowidth_columns[column] = autoval
                 lgr.debug("Stored auto-width value for column %r: %s",
                           column, autoval)
@@ -447,6 +448,10 @@ class StyleFields(object):
               - wants: how much width the column wants
               - min: the minimum that the width should set to, provided there
                 is enough room
+             - weight: if present, a "weight" key indicates the number of
+               available characters the column should claim at a time.  This is
+               only in effect after each column has claimed one, and the
+               specific column has claimed its minimum.
         available : int
             Width available to be assigned.
 
@@ -469,10 +474,11 @@ class StyleFields(object):
                 assigned[column] = 1
         assert available >= 0, "bug: upstream checks should make impossible"
 
+        weights = {c: columns[c].get("weight", 1) for c in columns}
         # ATTN: The sorting here needs to be stable across calls with the same
         # row so that the same assignments come out.
         colnames = sorted(assigned.keys(), reverse=True,
-                          key=lambda c: (columns[c]["min"], c))
+                          key=lambda c: (columns[c]["min"], weights[c], c))
         columns_in_need = set(assigned.keys())
         while available > 0 and columns_in_need:
             for column in colnames:
@@ -486,7 +492,7 @@ class StyleFields(object):
 
                 wmin = columns[column]["min"]
                 has = assigned[column]
-                claim = min(1 if has >= wmin else wmin - has,
+                claim = min(weights[column] if has >= wmin else wmin - has,
                             col_wants,
                             available)
                 available -= claim
