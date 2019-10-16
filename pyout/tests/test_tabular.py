@@ -127,6 +127,14 @@ def test_tabular_write_data_as_list():
     assert_eq_repr(out.stdout, expected)
 
 
+def test_tabular_width_no_style():
+    out = Tabular(["name"])
+    out(["a" * 105])
+    # The test terminal's width of 100 is used, not the default of 90 set in
+    # elements.py.
+    assert out.stdout == "a" * 97 + "...\n"
+
+
 def test_tabular_write_header():
     out = Tabular(["name", "status"],
                   style={"header_": {},

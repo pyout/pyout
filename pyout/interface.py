@@ -132,7 +132,10 @@ class Writer(object):
         else:
             self.mode = "final"
 
-        if style and "width_" not in style and self._stream.width:
+        style = style or {}
+        if "width_" not in style and self._stream.width:
+            lgr.debug("Setting width to stream width: %s",
+                      self._stream.width)
             style["width_"] = self._stream.width
         self._content = ContentWithSummary(
             StyleFields(style, processors or PlainProcessors()))
