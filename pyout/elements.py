@@ -54,7 +54,7 @@ schema = {
             specifies a fixed width.  The 'marker' key specifies the marker
             used for truncation ('...' by default).  Where the field is
             truncated can be configured with 'truncate': 'right' (default),
-            'left', or 'center.""",
+            'left', or 'center'.""",
             "oneOf": [{"type": "integer"},
                       {"type": "string",
                        "enum": ["auto"]},
