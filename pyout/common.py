@@ -215,21 +215,6 @@ class RowNormalizer(object):
         return getattr(row, column, self.nothings[column])
 
 
-def _safe_get(mapping, key, default=None):
-    """Helper for accessing style values.
-
-    It exists to avoid checking whether `mapping` is indeed a mapping before
-    trying to get a key.  In the context of style dicts, this eliminates "is
-    this a mapping" checks in two common situations: 1) a style argument is
-    None, and 2) a style key's value (e.g., width) can be either a mapping or a
-    plain value.
-    """
-    try:
-        return mapping.get(key, default)
-    except AttributeError:
-        return default
-
-
 class StyleFields(object):
     """Generate Fields based on the specified style and processors.
 
@@ -263,7 +248,7 @@ class StyleFields(object):
         """
         self.columns = columns
         default = dict(elements.default("default_"),
-                       **_safe_get(self.init_style, "default_", {}))
+                       **self.init_style.get("default_", {}))
         self.style = elements.adopt({c: default for c in columns},
                                     self.init_style)
 
@@ -272,11 +257,11 @@ class StyleFields(object):
         self.style["header_"] = self._compose("header_", {"align", "width"})
         self.style["aggregate_"] = self._compose("aggregate_",
                                                  {"align", "width"})
-        self.style["separator_"] = _safe_get(self.init_style, "separator_",
-                                             elements.default("separator_"))
+        self.style["separator_"] = self.init_style.get(
+            "separator_", elements.default("separator_"))
         lgr.debug("Validating style %r", self.style)
-        self.style["width_"] = _safe_get(self.init_style, "width_",
-                                         elements.default("width_"))
+        self.style["width_"] = self.init_style.get(
+            "width_", elements.default("width_"))
         elements.validate(self.style)
         self._setup_fields()
 
@@ -298,7 +283,7 @@ class StyleFields(object):
         -------
         The composite style for `name`.
         """
-        name_style = _safe_get(self.init_style, name, elements.default(name))
+        name_style = self.init_style.get(name, elements.default(name))
         if self.init_style is not None and name_style is not None:
             result = {}
             for col in self.columns:
@@ -323,8 +308,8 @@ class StyleFields(object):
             is_auto = "width" not in style_width
             if is_auto:
                 lgr.debug("Automatically adjusting width for %s", column)
-                width = _safe_get(style_width, "min", 0)
-                wmax = _safe_get(style_width, "max")
+                width = style_width.get("min", 0)
+                wmax = style_width.get("max")
                 self.autowidth_columns[column] = {"max": wmax}
                 if wmax is not None:
                     lgr.debug("Setting max width of column %r to %d",
@@ -348,8 +333,8 @@ class StyleFields(object):
                       *(self.procgen.pre_from_style(cstyle)))
             truncater = Truncater(
                 width,
-                _safe_get(style_width, "marker", True),
-                _safe_get(style_width, "truncate", "right"))
+                style_width.get("marker", True),
+                style_width.get("truncate", "right"))
             field.add("post", "width", truncater.truncate)
             field.add("post", "default",
                       *(self.procgen.post_from_style(cstyle)))
