@@ -38,6 +38,9 @@ schema = {
                       {"$ref": "#/definitions/interval"}],
             "default": False,
             "scope": "field"},
+        "width_type": {
+            "description": "Type for numeric values in 'width'",
+            "oneOf": [{"type": "integer"}]},
         "width": {
             "description": """Width of field.  With the default value, 'auto',
             the column width is automatically adjusted to fit the content and
@@ -58,14 +61,14 @@ schema = {
             a column is at its maximum width or there is no available width
             left.  Setting a column's weight to an integer N makes it claim N
             characters each iteration.""",
-            "oneOf": [{"type": "integer"},
+            "oneOf": [{"$ref": "#/definitions/width_type"},
                       {"type": "string",
                        "enum": ["auto"]},
                       {"type": "object",
                        "properties": {
-                           "max": {"type": "integer"},
-                           "min": {"type": "integer"},
-                           "width": {"type": "integer"},
+                           "max": {"$ref": "#/definitions/width_type"},
+                           "min": {"$ref": "#/definitions/width_type"},
+                           "width": {"$ref": "#/definitions/width_type"},
                            "weight": {"type": "integer", "minimum": 1},
                            "marker": {"type": ["string", "boolean"]},
                            "truncate": {"type": "string",
