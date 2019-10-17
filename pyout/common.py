@@ -297,22 +297,33 @@ class StyleFields(object):
 
     def _setup_fields(self):
         fields = {}
+        style = self.style
+        width_table = style["width_"]
+
+        def frac_to_int(x):
+            if x and 0 < x < 1:
+                result = int(x * width_table)
+                lgr.debug("Converted fraction %f to %d", x, result)
+            else:
+                result = x
+            return result
+
         for column in self.columns:
             lgr.debug("Setting up field for column %r", column)
-            cstyle = self.style[column]
+            cstyle = style[column]
             style_width = cstyle["width"]
 
             # Convert atomic values into the equivalent complex form.
             if style_width == "auto":
                 style_width = {}
-            elif isinstance(style_width, int):
+            elif not isinstance(style_width, Mapping):
                 style_width = {"width": style_width}
 
             is_auto = "width" not in style_width
             if is_auto:
                 lgr.debug("Automatically adjusting width for %s", column)
-                width = style_width.get("min", 0)
-                wmax = style_width.get("max")
+                width = frac_to_int(style_width.get("min", 0))
+                wmax = frac_to_int(style_width.get("max"))
                 autoval = {"max": wmax, "min": width,
                            "weight": style_width.get("weight", 1)}
                 self.autowidth_columns[column] = autoval
@@ -322,7 +333,7 @@ class StyleFields(object):
                 if "min" in style_width or "max" in style_width:
                     raise ValueError(
                         "'min' and 'max' are incompatible with 'width'")
-                width = style_width["width"]
+                width = frac_to_int(style_width["width"])
                 lgr.debug("Setting width of column %r to %d",
                           column, width)
 

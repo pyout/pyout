@@ -762,6 +762,41 @@ def test_tabular_write_autowidth_min_max_with_header():
     assert_contains_nc(lines1, "bar  BAD!!...")
 
 
+def test_tabular_write_autowidth_min_frac():
+    out = Tabular(style={"width_": 12,
+                         "name": {"width": {"min": 0.5}}})
+    out(OrderedDict([("name", "foo"),
+                     ("status", "unknown")]))
+
+    # 0.5 of table width => 6 characters for "foo"
+    assert out.stdout == "foo    un...\n"
+
+
+def test_tabular_write_autowidth_max_frac():
+    out = Tabular(style={"width_": 12,
+                         "name": {"width": {"max": 0.5}}})
+    out(OrderedDict([("name", "foo"),
+                     ("status", "ok")]))
+
+    # 0.5 of table width => 6 characters for "foo", but it only needs 3.
+    assert out.stdout == "foo ok\n"
+
+    out(OrderedDict([("name", "longerthanmax"),
+                     ("status", "ko")]))
+
+    lines0 = out.stdout.splitlines()
+    # Value over 6 only takes up 6.
+    assert_contains_nc(lines0, "lon... ko")
+
+
+def test_tabular_write_fixed_width_frac():
+    out = Tabular(style={"width_": 20,
+                         "name": {"width": 0.4}})
+    out(OrderedDict([("name", "foo"),
+                     ("status", "ok")]))
+    assert out.stdout == "foo      ok\n"
+
+
 def test_tabular_write_autowidth_different_data_types_same_output():
     out_dict = Tabular(["name", "status"],
                        style={"header_": {},

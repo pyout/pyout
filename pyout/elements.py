@@ -40,7 +40,10 @@ schema = {
             "scope": "field"},
         "width_type": {
             "description": "Type for numeric values in 'width'",
-            "oneOf": [{"type": "integer", "minimum": 1}]},
+            "oneOf": [{"type": "integer", "minimum": 1},
+                      {"type": "number",
+                       "exclusiveMinimum": 0,
+                       "exclusiveMaximum": 1}]},
         "width": {
             "description": """Width of field.  With the default value, 'auto',
             the column width is automatically adjusted to fit the content and
@@ -50,10 +53,14 @@ schema = {
 
             In addition, an object can be specified.  Its 'min' and 'max' keys
             specify the minimum and maximum widths allowed, whereas the 'width'
-            key specifies a fixed width.  The 'marker' key specifies the marker
-            used for truncation ('...' by default).  Where the field is
-            truncated can be configured with 'truncate': 'right' (default),
-            'left', or 'center'.
+            key specifies a fixed width.  The values can be given as an integer
+            (representing the number of characters) or as a fraction, which
+            indicates the proportion of the total table width (typically the
+            width of your terminal).
+
+            The 'marker' key specifies the marker used for truncation ('...' by
+            default).  Where the field is truncated can be configured with
+            'truncate': 'right' (default), 'left', or 'center'.
 
             The object can also include a 'weight' key.  Conceptually,
             assigning widths to each column can be (roughly) viewed as each
