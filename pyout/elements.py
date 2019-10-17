@@ -63,8 +63,8 @@ schema = {
                        "enum": ["auto"]},
                       {"type": "object",
                        "properties": {
-                           "max": {"type": ["integer", "null"]},
-                           "min": {"type": ["integer", "null"]},
+                           "max": {"type": "integer"},
+                           "min": {"type": "integer"},
                            "width": {"type": "integer"},
                            "weight": {"type": "integer", "minimum": 1},
                            "marker": {"type": ["string", "boolean"]},
