@@ -43,10 +43,11 @@ schema = {
             the column width is automatically adjusted to fit the content and
             may be truncated to ensure that the entire row fits within the
             available output width.  An integer value forces all fields in a
-            column to have a width of the specified value. In addition, an
-            object can be specified.  Its 'min' and 'max' keys specify the
-            minimum and maximum widths allowed, whereas the 'width' key
-            specifies a fixed width.  The 'marker' key specifies the marker
+            column to have a width of the specified value.
+
+            In addition, an object can be specified.  Its 'min' and 'max' keys
+            specify the minimum and maximum widths allowed, whereas the 'width'
+            key specifies a fixed width.  The 'marker' key specifies the marker
             used for truncation ('...' by default).  Where the field is
             truncated can be configured with 'truncate': 'right' (default),
             'left', or 'center'.""",
