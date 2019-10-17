@@ -40,7 +40,7 @@ schema = {
             "scope": "field"},
         "width_type": {
             "description": "Type for numeric values in 'width'",
-            "oneOf": [{"type": "integer"}]},
+            "oneOf": [{"type": "integer", "minimum": 1}]},
         "width": {
             "description": """Width of field.  With the default value, 'auto',
             the column width is automatically adjusted to fit the content and
