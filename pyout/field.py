@@ -314,10 +314,13 @@ class StyleProcessors(object):
         def proc(value, result):
             try:
                 lookup_value = mapping[value]
-            except (KeyError, TypeError):
-                # ^ TypeError is included in case the user passes non-hashable
-                # values.
-                return result
+            except KeyError:
+                lgr.debug("by_lookup: Key %r not found in mapping %s",
+                          value, mapping)
+                lookup_value = None
+            except TypeError:
+                lgr.debug("by_lookup: Key %r not hashable", value)
+                lookup_value = None
 
             if not lookup_value:
                 return result
@@ -350,6 +353,8 @@ class StyleProcessors(object):
 
         def proc(value, result):
             if not isinstance(value, six.string_types):
+                lgr.debug("by_re_lookup: Skipping non-string value %r",
+                          value)
                 return result
             for r, lookup_value in regexps:
                 if r.search(value):
