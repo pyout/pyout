@@ -257,18 +257,7 @@ class StyleFields(object):
             "width_", elements.default("width_"))
         elements.validate(self.style)
         self._setup_fields()
-
-        ngaps = len(self.columns) - 1
-        self.width_separtor = len(self.style["separator_"]) * ngaps
-        lgr.debug("Calculated separator width as %d", self.width_separtor)
-
-        autowidth_columns = self.autowidth_columns
-        fields = self.fields
-        self.width_fixed = sum(
-            [sum(fields[c].width for c in self.columns
-                 if c not in autowidth_columns),
-             self.width_separtor])
-        lgr.debug("Calculated fixed width as %d", self.width_fixed)
+        self._set_fixed_widths()
 
         self._check_widths()
 
@@ -379,6 +368,21 @@ class StyleFields(object):
                 "The number of auto-width columns ({}) "
                 "exceeds the available width ({})"
                 .format(len(autowidth_columns), width_auto))
+
+    def _set_fixed_widths(self):
+        """Set fixed-width attributes.
+        """
+        ngaps = len(self.columns) - 1
+        self.width_separtor = len(self.style["separator_"]) * ngaps
+        lgr.debug("Calculated separator width as %d", self.width_separtor)
+
+        autowidth_columns = self.autowidth_columns
+        fields = self.fields
+        self.width_fixed = sum(
+            [sum(fields[c].width for c in self.columns
+                 if c not in autowidth_columns),
+             self.width_separtor])
+        lgr.debug("Calculated fixed width as %d", self.width_fixed)
 
     def _set_widths(self, row, proc_group):
         """Update auto-width Fields based on `row`.
