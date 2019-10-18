@@ -389,7 +389,8 @@ class StyleProcessors(object):
         def proc(value, result):
             try:
                 value = float(value)
-            except TypeError:
+            except Exception as exc:
+                lgr.debug("by_interval_lookup: Skipping %r: %s", value, exc)
                 return result
 
             for start, end, lookup_value in intervals:
