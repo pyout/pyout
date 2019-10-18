@@ -195,6 +195,14 @@ class Nothing(object):
         return self._text.__format__(format_spec)
 
 
+def _pass_nothing_through(proc):
+    """Make processor function `proc` skip Nothing objects.
+    """
+    def wrapped(value, result):
+        return result if isinstance(value, Nothing) else proc(value, result)
+    return wrapped
+
+
 class StyleFunctionError(Exception):
     """Signal that a style function failed.
     """
@@ -241,9 +249,6 @@ class StyleProcessors(object):
         """Return a processor for a style's "transform" function.
         """
         def transform_fn(_, result):
-            if isinstance(result, Nothing):
-                return result
-
             lgr.debug("Transforming %r with %r", result, function)
             try:
                 return function(result)
@@ -309,10 +314,13 @@ class StyleProcessors(object):
         def proc(value, result):
             try:
                 lookup_value = mapping[value]
-            except (KeyError, TypeError):
-                # ^ TypeError is included in case the user passes non-hashable
-                # values.
-                return result
+            except KeyError:
+                lgr.debug("by_lookup: Key %r not found in mapping %s",
+                          value, mapping)
+                lookup_value = None
+            except TypeError:
+                lgr.debug("by_lookup: Key %r not hashable", value)
+                lookup_value = None
 
             if not lookup_value:
                 return result
@@ -345,6 +353,8 @@ class StyleProcessors(object):
 
         def proc(value, result):
             if not isinstance(value, six.string_types):
+                lgr.debug("by_re_lookup: Skipping non-string value %r",
+                          value)
                 return result
             for r, lookup_value in regexps:
                 if r.search(value):
@@ -379,7 +389,8 @@ class StyleProcessors(object):
         def proc(value, result):
             try:
                 value = float(value)
-            except TypeError:
+            except Exception as exc:
+                lgr.debug("by_interval_lookup: Skipping %r: %s", value, exc)
                 return result
 
             for start, end, lookup_value in intervals:
@@ -409,7 +420,8 @@ class StyleProcessors(object):
         A generator object.
         """
         if "transform" in column_style:
-            yield self.transform(column_style["transform"])
+            yield _pass_nothing_through(
+                self.transform(column_style["transform"]))
 
     def post_from_style(self, column_style):
         """Yield post-format processors based on `column_style`.
@@ -442,7 +454,7 @@ class StyleProcessors(object):
             if vtype == "re_lookup":
                 args.append(sum(getattr(re, f)
                                 for f in column_style.get("re_flags", [])))
-            yield fn(*args)
+            yield _pass_nothing_through(fn(*args))
 
         yield flanks.join_flanks
 

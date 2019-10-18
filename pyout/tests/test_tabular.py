@@ -468,6 +468,23 @@ def test_tabular_write_re_lookup_bold():
     assert_eq_repr(out.stdout, expected)
 
 
+def test_tabular_write_intervals_wrong_type():
+    out = Tabular(style={"name": {"width": 3},
+                         "percent": {"color": {"interval":
+                                               [[0, 50, "red"],
+                                                [50, 80, "yellow"],
+                                                [80, 100, "green"]]},
+                                     "width": 8}})
+    out(OrderedDict([("name", "foo"),
+                     ("percent", 88)]))
+    out(OrderedDict([("name", "bar"),
+                     ("percent", "notfloat")]))
+
+    expected = ["foo " + capres("green", "88") + "      ",
+                "bar notfloat"]
+    assert_contains_nc(out.stdout.splitlines(), *expected)
+
+
 def test_tabular_write_intervals_color():
     out = Tabular(style={"name": {"width": 3},
                          "percent": {"color": {"interval":
