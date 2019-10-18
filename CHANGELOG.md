@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   either unconditionally or until `Tabular` is called with a record
   that includes the column.
 
+- The `Tabular` class now accepts a `max_workers` argument that
+  controls the maximum number of asynchronous workers that run
+  concurrently.
+
 ### Changed
 
 - The `mode` property of the `Tabular` class has been removed.

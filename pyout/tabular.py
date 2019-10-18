@@ -108,6 +108,10 @@ class Tabular(interface.Writer):
 
         Defaults to "update" if the stream supports updates and "incremental"
         otherwise.  If the stream is non-interactive, defaults to "final".
+    max_workers : int, optional
+        Use at most this number of concurrent workers when retrieving values
+        asynchronously (i.e., when producers are specified as row values).  The
+        default is left to `multiprocessing.pool.ThreadPool`.
 
     Examples
     --------
@@ -132,9 +136,11 @@ class Tabular(interface.Writer):
     """
 
     def __init__(self, columns=None, style=None, stream=None,
-                 interactive=None, mode=None):
-        super(Tabular, self).__init__(columns, style, stream=stream,
-                                      interactive=interactive, mode=mode)
+                 interactive=None, mode=None, max_workers=None):
+        super(Tabular, self).__init__(
+            columns, style, stream=stream,
+            interactive=interactive, mode=mode,
+            max_workers=max_workers)
         streamer = TerminalStream(stream=stream, interactive=interactive)
         if streamer.interactive:
             processors = TermProcessors(streamer.term)

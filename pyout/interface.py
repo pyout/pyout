@@ -84,7 +84,8 @@ class Writer(object):
      call Writer.__init__ and then the _init method.
     """
     def __init__(self, columns=None, style=None, stream=None,
-                 interactive=None, mode=None):
+                 interactive=None, mode=None,
+                 max_workers=None):
         self._columns = columns
         self._ids = None
 
@@ -93,6 +94,7 @@ class Writer(object):
         self._normalizer = None
 
         self._pool = None
+        self._max_workers = max_workers
         self._lock = None
 
         self._mode = mode
@@ -304,8 +306,9 @@ class Writer(object):
             tab._write(result)
 
         if self._pool is None:
-            lgr.debug("Initializing pool")
-            self._pool = Pool()
+            lgr.debug("Initializing pool with max workers=%s",
+                      self._max_workers)
+            self._pool = Pool(processes=self._max_workers)
         if self._lock is None:
             lgr.debug("Initializing lock")
             self._lock = multiprocessing.Lock()
