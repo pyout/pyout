@@ -195,6 +195,14 @@ class Nothing(object):
         return self._text.__format__(format_spec)
 
 
+def _pass_nothing_through(proc):
+    """Make processor function `proc` skip Nothing objects.
+    """
+    def wrapped(value, result):
+        return result if isinstance(value, Nothing) else proc(value, result)
+    return wrapped
+
+
 class StyleFunctionError(Exception):
     """Signal that a style function failed.
     """
@@ -241,9 +249,6 @@ class StyleProcessors(object):
         """Return a processor for a style's "transform" function.
         """
         def transform_fn(_, result):
-            if isinstance(result, Nothing):
-                return result
-
             lgr.debug("Transforming %r with %r", result, function)
             try:
                 return function(result)
@@ -409,7 +414,8 @@ class StyleProcessors(object):
         A generator object.
         """
         if "transform" in column_style:
-            yield self.transform(column_style["transform"])
+            yield _pass_nothing_through(
+                self.transform(column_style["transform"]))
 
     def post_from_style(self, column_style):
         """Yield post-format processors based on `column_style`.
@@ -442,7 +448,7 @@ class StyleProcessors(object):
             if vtype == "re_lookup":
                 args.append(sum(getattr(re, f)
                                 for f in column_style.get("re_flags", [])))
-            yield fn(*args)
+            yield _pass_nothing_through(fn(*args))
 
         yield flanks.join_flanks
 
