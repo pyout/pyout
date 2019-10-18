@@ -372,17 +372,20 @@ class StyleFields(object):
     def _set_fixed_widths(self):
         """Set fixed-width attributes.
         """
-        ngaps = len(self.columns) - 1
-        self.width_separtor = len(self.style["separator_"]) * ngaps
-        lgr.debug("Calculated separator width as %d", self.width_separtor)
+        columns = self.columns
+        ngaps = len(columns) - 1
+        width_separtor = len(self.style["separator_"]) * ngaps
+        lgr.debug("Calculated separator width as %d", width_separtor)
 
         autowidth_columns = self.autowidth_columns
         fields = self.fields
-        self.width_fixed = sum(
-            [sum(fields[c].width for c in self.columns
-                 if c not in autowidth_columns),
-             self.width_separtor])
-        lgr.debug("Calculated fixed width as %d", self.width_fixed)
+        width_fixed = sum([sum(fields[c].width for c in columns
+                               if c not in autowidth_columns),
+                           width_separtor])
+        lgr.debug("Calculated fixed width as %d", width_fixed)
+
+        self.width_separtor = width_separtor
+        self.width_fixed = width_fixed
 
     def _set_widths(self, row, proc_group):
         """Update auto-width Fields based on `row`.
