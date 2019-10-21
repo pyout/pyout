@@ -158,7 +158,6 @@ class Field(object):
         return result
 
 
-@six.python_2_unicode_compatible
 class Nothing(object):
     """Internal class to represent missing values.
 

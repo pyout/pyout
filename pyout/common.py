@@ -501,7 +501,6 @@ class ContentError(Exception):
 ContentRow = namedtuple("ContentRow", ["row", "kwds"])
 
 
-@six.python_2_unicode_compatible
 class Content(object):
     """Concatenation of rendered fields.
 
