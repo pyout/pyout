@@ -8,8 +8,6 @@ from logging import getLogger
 import re
 import sys
 
-import six
-
 from pyout.elements import value_type
 
 lgr = getLogger(__name__)

@@ -19,8 +19,6 @@ from functools import partial
 import inspect
 from logging import getLogger
 
-import six
-
 from pyout import elements
 from pyout.field import Field
 from pyout.field import Nothing

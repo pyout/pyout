@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import pytest
-import six
 
 from pyout.field import Field
 from pyout.field import Nothing

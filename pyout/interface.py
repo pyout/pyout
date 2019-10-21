@@ -15,8 +15,6 @@ import multiprocessing
 from multiprocessing.dummy import Pool
 import sys
 
-import six
-
 from pyout.common import ContentWithSummary
 from pyout.common import RowNormalizer
 from pyout.common import StyleFields
