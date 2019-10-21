@@ -115,12 +115,12 @@ class Field(object):
 
     def _build_format(self):
         align = self._align_values[self._align]
-        return "".join(["{:", align, six.text_type(self.width), "}"])
+        return "".join(["{:", align, str(self.width), "}"])
 
     def _format(self, _, result):
         """Wrap format call as a two-argument processor function.
         """
-        return self._fmt.format(six.text_type(result))
+        return self._fmt.format(str(result))
 
     def __call__(self, value, keys=None, exclude_post=False):
         """Render `value` by feeding it through the processors.
@@ -180,10 +180,10 @@ class Nothing(object):
         return self._text
 
     def __add__(self, right):
-        return six.text_type(self) + right
+        return str(self) + right
 
     def __radd__(self, left):
-        return left + six.text_type(self)
+        return left + str(self)
 
     def __bool__(self):
         return False
@@ -522,7 +522,7 @@ class TermProcessors(StyleProcessors):
             # We've got an empty string.  Don't bother adding any
             # codes.
             return value
-        return six.text_type(getattr(self.term, style_attr)) + value
+        return str(getattr(self.term, style_attr)) + value
 
     def _maybe_reset(self):
         def proc(_, result):
