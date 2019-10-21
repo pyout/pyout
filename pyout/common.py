@@ -6,8 +6,6 @@ amount of general logic that should be extracted if any other outputter is
 actually added.
 """
 
-from __future__ import unicode_literals
-
 from collections import defaultdict
 from collections import namedtuple
 from collections import OrderedDict

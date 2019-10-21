@@ -1,8 +1,6 @@
 """Processor for field value truncation.
 """
 
-from __future__ import unicode_literals
-
 
 def _truncate_right(value, length, marker):
     if len(value) <= length:

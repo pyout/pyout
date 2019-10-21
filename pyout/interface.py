@@ -1,8 +1,6 @@
 """Core pyout interface definitions.
 """
 
-from __future__ import unicode_literals
-
 import abc
 from collections import OrderedDict
 try:

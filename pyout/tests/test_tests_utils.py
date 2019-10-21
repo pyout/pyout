@@ -1,5 +1,3 @@
-from __future__ import unicode_literals
-
 import pytest
 from pyout.tests.utils import assert_contains
 

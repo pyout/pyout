@@ -1,8 +1,6 @@
 """Summarize output.
 """
 
-from __future__ import unicode_literals
-
 try:
     from collections.abc import Mapping
 except ImportError:  # Python <= 3.3

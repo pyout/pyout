@@ -1,5 +1,3 @@
-from __future__ import unicode_literals
-
 from pyout.summary import Summary
 
 

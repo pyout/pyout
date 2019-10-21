@@ -1,8 +1,6 @@
 """Terminal test utilities.
 """
 
-from __future__ import unicode_literals
-
 from curses import tigetstr
 from curses import tparm
 from functools import partial

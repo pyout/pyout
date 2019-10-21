@@ -1,8 +1,6 @@
 """A Tabular for testing.
 """
 
-from __future__ import unicode_literals
-
 from mock import patch
 
 from six.moves import StringIO

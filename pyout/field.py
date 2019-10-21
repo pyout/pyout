@@ -1,6 +1,5 @@
 """Define a "field" based on a sequence of processor functions.
 """
-from __future__ import unicode_literals
 
 from collections import defaultdict
 from collections import OrderedDict
