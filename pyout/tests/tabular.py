@@ -1,9 +1,8 @@
 """A Tabular for testing.
 """
 
+from io import StringIO
 from mock import patch
-
-from six.moves import StringIO
 
 from pyout import Tabular as TheRealTabular
 from pyout.tests.terminal import Terminal
