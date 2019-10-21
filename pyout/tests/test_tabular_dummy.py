@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals
-
+from io import StringIO
 from mock import patch
 import pytest
-from six.moves import StringIO
 
 from pyout.tabular_dummy import NoUpdateTerminalStream
 from pyout.tabular_dummy import Tabular

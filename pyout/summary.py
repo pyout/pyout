@@ -1,12 +1,7 @@
 """Summarize output.
 """
 
-from __future__ import unicode_literals
-
-try:
-    from collections.abc import Mapping
-except ImportError:  # Python <= 3.3
-    from collections import Mapping
+from collections.abc import Mapping
 from logging import getLogger
 
 from pyout.field import Nothing
@@ -30,8 +25,6 @@ class Summary(object):
 
     def __bool__(self):
         return self._enabled
-
-    __nonzero__ = __bool__  # py2
 
     def summarize(self, rows):
         """Return summary rows for `rows`.

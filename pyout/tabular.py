@@ -3,8 +3,6 @@
 This module defines the Tabular entry point.
 """
 
-from __future__ import unicode_literals
-
 from contextlib import contextmanager
 from logging import getLogger
 

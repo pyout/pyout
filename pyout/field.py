@@ -1,6 +1,5 @@
 """Define a "field" based on a sequence of processor functions.
 """
-from __future__ import unicode_literals
 
 from collections import defaultdict
 from collections import OrderedDict
@@ -8,8 +7,6 @@ from itertools import chain
 from logging import getLogger
 import re
 import sys
-
-import six
 
 from pyout.elements import value_type
 
@@ -116,12 +113,12 @@ class Field(object):
 
     def _build_format(self):
         align = self._align_values[self._align]
-        return "".join(["{:", align, six.text_type(self.width), "}"])
+        return "".join(["{:", align, str(self.width), "}"])
 
     def _format(self, _, result):
         """Wrap format call as a two-argument processor function.
         """
-        return self._fmt.format(six.text_type(result))
+        return self._fmt.format(str(result))
 
     def __call__(self, value, keys=None, exclude_post=False):
         """Render `value` by feeding it through the processors.
@@ -159,7 +156,6 @@ class Field(object):
         return result
 
 
-@six.python_2_unicode_compatible
 class Nothing(object):
     """Internal class to represent missing values.
 
@@ -181,15 +177,13 @@ class Nothing(object):
         return self._text
 
     def __add__(self, right):
-        return six.text_type(self) + right
+        return str(self) + right
 
     def __radd__(self, left):
-        return left + six.text_type(self)
+        return left + str(self)
 
     def __bool__(self):
         return False
-
-    __nonzero__ = __bool__  # py2
 
     def __format__(self, format_spec):
         return self._text.__format__(format_spec)
@@ -258,8 +252,7 @@ class StyleProcessors(object):
                     new_exc = StyleFunctionError(function, exctype, value)
                     # Remove the "During handling ..." since we're
                     # reraising with the traceback.
-                    new_exc.__cause__ = None
-                    six.reraise(StyleFunctionError, new_exc, tb)
+                    raise new_exc.with_traceback(tb) from None
                 finally:
                     # Remove circular reference.
                     # https://docs.python.org/2/library/sys.html#sys.exc_info
@@ -352,7 +345,7 @@ class StyleProcessors(object):
                    for r, v in style_value["re_lookup"]]
 
         def proc(value, result):
-            if not isinstance(value, six.string_types):
+            if not isinstance(value, str):
                 lgr.debug("by_re_lookup: Skipping non-string value %r",
                           value)
                 return result
@@ -523,7 +516,7 @@ class TermProcessors(StyleProcessors):
             # We've got an empty string.  Don't bother adding any
             # codes.
             return value
-        return six.text_type(getattr(self.term, style_attr)) + value
+        return str(getattr(self.term, style_attr)) + value
 
     def _maybe_reset(self):
         def proc(_, result):

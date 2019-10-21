@@ -1,14 +1,9 @@
 """Core pyout interface definitions.
 """
 
-from __future__ import unicode_literals
-
 import abc
 from collections import OrderedDict
-try:
-    from collections.abc import Mapping
-except ImportError:  # Python <= 3.3
-    from collections import Mapping
+from collections.abc import Mapping
 from contextlib import contextmanager
 from functools import partial
 import inspect
@@ -16,8 +11,6 @@ from logging import getLogger
 import multiprocessing
 from multiprocessing.dummy import Pool
 import sys
-
-import six
 
 from pyout.common import ContentWithSummary
 from pyout.common import RowNormalizer
@@ -27,8 +20,7 @@ from pyout.field import PlainProcessors
 lgr = getLogger(__name__)
 
 
-@six.add_metaclass(abc.ABCMeta)
-class Stream(object):
+class Stream(object, metaclass=abc.ABCMeta):
     """Output stream interface used by Writer.
 
     Parameters
@@ -151,9 +143,9 @@ class Writer(object):
     def __exit__(self, *args):
         self.wait()
         if self.mode == "final":
-            self._stream.write(six.text_type(self._content))
+            self._stream.write(str(self._content))
         if self.mode != "update" and self._last_summary is not None:
-            self._stream.write(six.text_type(self._last_summary))
+            self._stream.write(str(self._last_summary))
 
     @property
     def mode(self):
@@ -267,7 +259,7 @@ class Writer(object):
                           "only %d visible rows",
                           n_back, n_visible)
                 status = "repaint"
-                content = six.text_type(self._content)
+                content = str(self._content)
             else:
                 lgr.debug("Moving up %d line(s) to overwrite line %d with %r",
                           n_back, status, row)
@@ -433,7 +425,5 @@ class Writer(object):
         try:
             return self._content[key]
         except KeyError as exc:
-            # Suppress context in py2 compatible way.
-            newexc = KeyError(exc)
-            newexc.__cause__ = None
-            raise newexc
+            # Suppress context.
+            raise KeyError(exc) from None

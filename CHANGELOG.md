@@ -5,6 +5,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Removed
+
+- Support for Python 2 has been dropped.  Python 3.4 or later is
+  required.
+
 
 ## [0.4.1] - 2019-10-02
 

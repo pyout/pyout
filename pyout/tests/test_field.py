@@ -1,9 +1,5 @@
 # -*- coding: utf-8 -*-
-
-from __future__ import unicode_literals
-
 import pytest
-import six
 
 from pyout.field import Field
 from pyout.field import Nothing
@@ -51,7 +47,7 @@ def test_something_about_nothing(text):
     nada = Nothing(text=text)
     assert not nada
 
-    assert six.text_type(nada) == text
+    assert str(nada) == text
     assert "{:5}".format(nada) == "{:5}".format(text)
     assert "x" + nada == "x" + text
     assert nada + "x" == text + "x"

@@ -39,9 +39,9 @@ should be usable in its current form, it may change in substantial
 ways that break backward compatibility, and many aspects currently
 lack polish and documentation.
 
-It is developed and tested under Python 2 and 3 in GNU/Linux
-environments and is expected to work in macOS environments as well.
-There is currently very limited Windows support.
+``pyout`` requires Python 3 (>= 3.4).  It is developed and tested in
+GNU/Linux environments and is expected to work in macOS environments
+as well.  There is currently very limited Windows support.
 
 
 License

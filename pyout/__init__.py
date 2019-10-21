@@ -3,8 +3,6 @@
 Exposes a single entry point, the Tabular class.
 """
 
-from __future__ import unicode_literals
-
 import sys
 
 __version__ = "0.4.1"

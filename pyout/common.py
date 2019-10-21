@@ -6,22 +6,14 @@ amount of general logic that should be extracted if any other outputter is
 actually added.
 """
 
-from __future__ import unicode_literals
-
 from collections import defaultdict
 from collections import namedtuple
 from collections import OrderedDict
-try:
-    from collections.abc import Mapping
-    from collections.abc import Sequence
-except ImportError:  # Python <= 3.3
-    from collections import Mapping
-    from collections import Sequence
+from collections.abc import Mapping
+from collections.abc import Sequence
 from functools import partial
 import inspect
 from logging import getLogger
-
-import six
 
 from pyout import elements
 from pyout.field import Field
@@ -401,7 +393,7 @@ class StyleFields(object):
                                   exclude_post=True)
                 else:
                     value = row[column]
-                value = six.text_type(value)
+                value = str(value)
                 value_width = len(value)
                 wmax = self.autowidth_columns[column]["max"]
                 if value_width > field.width:
@@ -503,7 +495,6 @@ class ContentError(Exception):
 ContentRow = namedtuple("ContentRow", ["row", "kwds"])
 
 
-@six.python_2_unicode_compatible
 class Content(object):
     """Concatenation of rendered fields.
 
@@ -543,8 +534,6 @@ class Content(object):
 
     def __bool__(self):
         return bool(self._rows)
-
-    __nonzero__ = __bool__  # py2
 
     def __getitem__(self, key):
         idx = self._idmap[key]
@@ -611,7 +600,7 @@ class Content(object):
             self._add_header()
             self._rows.append(ContentRow(row, kwds={"style": style}))
             self._idmap[idkey] = 0
-            return six.text_type(self), "append"
+            return str(self), "append"
 
         try:
             prev_idx = self._idmap[idkey] if idkey in self._idmap else None
@@ -634,7 +623,7 @@ class Content(object):
         line, adjusted = self.fields.render(row, style)
         lgr.log(9, "Rendered line as %r", line)
         if called_before and adjusted:
-            return six.text_type(self), "repaint"
+            return str(self), "repaint"
         if not adjusted and prev_idx is not None:
             return line, prev_idx + self.fields.has_header
         return line, "append"
@@ -675,6 +664,6 @@ class ContentWithSummary(Content):
             except RedoContent:
                 # If rendering the summary lines triggered an adjustment, we
                 # need to re-render the main content as well.
-                return six.text_type(self), "repaint", join()
+                return str(self), "repaint", join()
             return content, status, summ_content
         return content, status, None

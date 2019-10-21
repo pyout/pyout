@@ -5,8 +5,6 @@ not updated, and the results are not styled (e.g., no coloring or bolding of
 values).  In other words, this is not a real attempt to support Windows.
 """
 
-from __future__ import unicode_literals
-
 from pyout import interface
 
 
