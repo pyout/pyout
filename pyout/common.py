@@ -9,12 +9,8 @@ actually added.
 from collections import defaultdict
 from collections import namedtuple
 from collections import OrderedDict
-try:
-    from collections.abc import Mapping
-    from collections.abc import Sequence
-except ImportError:  # Python <= 3.3
-    from collections import Mapping
-    from collections import Sequence
+from collections.abc import Mapping
+from collections.abc import Sequence
 from functools import partial
 import inspect
 from logging import getLogger

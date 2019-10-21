@@ -3,10 +3,7 @@
 
 import abc
 from collections import OrderedDict
-try:
-    from collections.abc import Mapping
-except ImportError:  # Python <= 3.3
-    from collections import Mapping
+from collections.abc import Mapping
 from contextlib import contextmanager
 from functools import partial
 import inspect
