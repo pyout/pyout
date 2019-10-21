@@ -3,7 +3,7 @@ from setuptools import setup
 requires = {
     "core": ["blessings; sys_platform != 'win32'"],
     "tests": ["pytest", "pytest-timeout", "mock"],
-    "validation": ["jsonschema"],
+    "validation": ["jsonschema>=3.0.0"],
 }
 
 requires["full"] = list(requires.values())
