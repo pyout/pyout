@@ -26,8 +26,6 @@ class Summary(object):
     def __bool__(self):
         return self._enabled
 
-    __nonzero__ = __bool__  # py2
-
     def summarize(self, rows):
         """Return summary rows for `rows`.
 

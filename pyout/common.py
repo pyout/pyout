@@ -535,8 +535,6 @@ class Content(object):
     def __bool__(self):
         return bool(self._rows)
 
-    __nonzero__ = __bool__  # py2
-
     def __getitem__(self, key):
         idx = self._idmap[key]
         return self._rows[idx].row

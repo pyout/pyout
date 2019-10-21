@@ -185,8 +185,6 @@ class Nothing(object):
     def __bool__(self):
         return False
 
-    __nonzero__ = __bool__  # py2
-
     def __format__(self, format_spec):
         return self._text.__format__(format_spec)
 
