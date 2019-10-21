@@ -430,7 +430,5 @@ class Writer(object):
         try:
             return self._content[key]
         except KeyError as exc:
-            # Suppress context in py2 compatible way.
-            newexc = KeyError(exc)
-            newexc.__cause__ = None
-            raise newexc
+            # Suppress context.
+            raise KeyError(exc) from None

@@ -256,8 +256,7 @@ class StyleProcessors(object):
                     new_exc = StyleFunctionError(function, exctype, value)
                     # Remove the "During handling ..." since we're
                     # reraising with the traceback.
-                    new_exc.__cause__ = None
-                    raise new_exc.with_traceback(tb)
+                    raise new_exc.with_traceback(tb) from None
                 finally:
                     # Remove circular reference.
                     # https://docs.python.org/2/library/sys.html#sys.exc_info
