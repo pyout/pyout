@@ -1,8 +1,7 @@
 from setuptools import setup
 
 requires = {
-    "core": ["blessings; sys_platform != 'win32'",
-             "six"],
+    "core": ["blessings; sys_platform != 'win32'"],
     "tests": ["pytest", "pytest-timeout", "mock"],
     "validation": ["jsonschema"],
 }
@@ -30,8 +29,6 @@ setup(
         "Development Status :: 1 - Planning",
         "Topic :: Utilities",
         "Operating System :: POSIX",
-        "Programming Language :: Python :: 2",
-        "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
         "Topic :: Software Development :: Libraries",
