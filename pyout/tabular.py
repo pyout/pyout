@@ -111,7 +111,8 @@ class Tabular(interface.Writer):
     max_workers : int, optional
         Use at most this number of concurrent workers when retrieving values
         asynchronously (i.e., when producers are specified as row values).  The
-        default is left to `multiprocessing.pool.ThreadPool`.
+        default matches the default of `concurrent.futures.ThreadPoolExecutor`
+        as of Python 3.8: `min(32, os.cpu_count() + 4)`.
 
     Examples
     --------

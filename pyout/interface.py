@@ -4,11 +4,11 @@
 import abc
 from collections import OrderedDict
 from collections.abc import Mapping
+from concurrent.futures import ThreadPoolExecutor as Pool
 from contextlib import contextmanager
-from functools import partial
 import inspect
 from logging import getLogger
-from multiprocessing.dummy import Pool
+import os
 import sys
 import threading
 
@@ -94,6 +94,11 @@ class Writer(object):
         self._normalizer = None
 
         self._pool = None
+        if max_workers is None and sys.version_info < (3, 8):
+            # ThreadPoolExecutor's max_workers didn't get a default until
+            # Python 3.5, and that default was changed in 3.8.  Use Python
+            # 3.8's default for consistent behavior.
+            max_workers = min(32, (os.cpu_count() or 1) + 4)
         self._max_workers = max_workers
         self._lock = None
 
@@ -196,10 +201,8 @@ class Writer(object):
         lgr.debug("Waiting for asynchronous calls")
         if self._pool is None:
             return
-        self._pool.close()
-        lgr.debug("Pool closed")
-        self._pool.join()
-        lgr.debug("Pool joined")
+        self._pool.shutdown(wait=True)
+        lgr.debug("Pool shut down")
 
     @contextmanager
     def _write_lock(self):
@@ -308,14 +311,12 @@ class Writer(object):
         if self._pool is None:
             lgr.debug("Initializing pool with max workers=%s",
                       self._max_workers)
-            self._pool = Pool(processes=self._max_workers)
+            self._pool = Pool(max_workers=self._max_workers)
         if self._lock is None:
             lgr.debug("Initializing lock")
             self._lock = threading.Lock()
 
         for cols, fn in callables:
-            write_fn = partial(self._write_async_result, id_vals, cols)
-
             gen = None
             if inspect.isgeneratorfunction(fn):
                 gen = fn()
@@ -328,10 +329,15 @@ class Writer(object):
 
                 def async_fn():
                     for i in gen:
-                        write_fn(i)
-                self._pool.apply_async(async_fn)
+                        self._write_async_result(id_vals, cols, i)
+                self._pool.submit(async_fn)
             else:
-                self._pool.apply_async(fn, callback=write_fn)
+                def callback(future):
+                    self._write_async_result(
+                        id_vals, cols, future.result())
+
+                future = self._pool.submit(fn)
+                future.add_done_callback(callback)
 
     def __call__(self, row, style=None):
         """Write styled `row`.
