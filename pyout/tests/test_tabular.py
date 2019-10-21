@@ -257,10 +257,10 @@ def test_tabular_write_multicolor():
     assert_eq_repr(out.stdout, expected)
 
 
-def test_tabular_write_empty_string_nostyle():
+def test_tabular_write_all_whitespace_nostyle():
     out = Tabular(style={"name": {"color": "green"}})
-    out({"name": ""})
-    assert_eq_repr(out.stdout, "\n")
+    out({"name": "  "})
+    assert_eq_repr(out.stdout, "  \n")
 
 
 def test_tabular_write_style_flanking():
