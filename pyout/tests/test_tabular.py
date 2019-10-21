@@ -646,9 +646,8 @@ def test_tabular_write_transform_func_error():
         exc_type, value, tb = sys.exc_info()
         try:
             assert isinstance(value, StyleFunctionError)
-            tblines = "\n".join(
-                traceback.format_exception(exc_type, value, tb))
-            assert "in dontlikeints" in tblines
+            names = [x[2] for x in traceback.extract_tb(tb)]
+            assert "dontlikeints" in names
         finally:
             del tb
 
