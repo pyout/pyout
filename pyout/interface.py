@@ -25,8 +25,7 @@ from pyout.field import PlainProcessors
 lgr = getLogger(__name__)
 
 
-@six.add_metaclass(abc.ABCMeta)
-class Stream(object):
+class Stream(object, metaclass=abc.ABCMeta):
     """Output stream interface used by Writer.
 
     Parameters
