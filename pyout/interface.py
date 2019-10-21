@@ -8,9 +8,9 @@ from contextlib import contextmanager
 from functools import partial
 import inspect
 from logging import getLogger
-import multiprocessing
 from multiprocessing.dummy import Pool
 import sys
+import threading
 
 from pyout.common import ContentWithSummary
 from pyout.common import RowNormalizer
@@ -311,7 +311,7 @@ class Writer(object):
             self._pool = Pool(processes=self._max_workers)
         if self._lock is None:
             lgr.debug("Initializing lock")
-            self._lock = multiprocessing.Lock()
+            self._lock = threading.Lock()
 
         for cols, fn in callables:
             cb_func = partial(callback, self, cols)
