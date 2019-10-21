@@ -351,7 +351,7 @@ class StyleProcessors(object):
                    for r, v in style_value["re_lookup"]]
 
         def proc(value, result):
-            if not isinstance(value, six.string_types):
+            if not isinstance(value, str):
                 lgr.debug("by_re_lookup: Skipping non-string value %r",
                           value)
                 return result
