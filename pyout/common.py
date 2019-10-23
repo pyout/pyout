@@ -673,7 +673,7 @@ class Content(object):
 
         self._header = None
         self._rows = []
-        self._idmap = {}
+        self._idkey_to_idx = {}
 
     def init_columns(self, columns, ids):
         """Set up the fields for `columns`.
@@ -697,7 +697,7 @@ class Content(object):
         return bool(self._rows)
 
     def __getitem__(self, key):
-        idx = self._idmap[key]
+        idx = self._idkey_to_idx[key]
         return self._rows[idx].row
 
     @property
@@ -760,11 +760,11 @@ class Content(object):
             lgr.debug("Registering header")
             self._add_header()
             self._rows.append(ContentRow(row, kwds={"style": style}))
-            self._idmap[idkey] = 0
+            self._idkey_to_idx[idkey] = 0
             return str(self), "append"
 
         try:
-            prev_idx = self._idmap[idkey]
+            prev_idx = self._idkey_to_idx[idkey]
         except KeyError:
             prev_idx = None
         except TypeError:
@@ -780,7 +780,7 @@ class Content(object):
             row = self._rows[prev_idx][0]
         else:
             lgr.debug("Adding row %r to content for first time", idkey)
-            self._idmap[idkey] = len(self._rows)
+            self._idkey_to_idx[idkey] = len(self._rows)
             self._rows.append(ContentRow(row, kwds={"style": style}))
 
         line, adjusted = self.fields.render(row, style)
