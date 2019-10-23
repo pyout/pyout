@@ -999,7 +999,7 @@ def test_tabular_callback_to_offscreen_row(nrows):
         nexpected_plain = 0
         nexpected_updated = 1
 
-    assert len([l for l in lines if l == "foo03 OK "]) == nexpected_plain
+    assert len([ln for ln in lines if ln == "foo03 OK "]) == nexpected_plain
 
     cuu1 = unicode_cap("cuu1")
     updated = [l for l in lines if l.startswith(cuu1) and "foo03 OK " in l]
