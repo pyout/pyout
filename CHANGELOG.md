@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
+- The `mode` property of the `Tabular` class has been removed.
+  The mode should instead be specified via the `mode` keyword argument
+  when initializing the class.
+
 - The calculation of auto-width columns has been enhanced so that the
   available width is more evenly spread across the columns.  The width
   style attribute takes a "weight" key to allow a column's growth to

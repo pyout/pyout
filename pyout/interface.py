@@ -84,7 +84,7 @@ class Writer(object):
      call Writer.__init__ and then the _init method.
     """
     def __init__(self, columns=None, style=None, stream=None,
-                 interactive=None):
+                 interactive=None, mode=None):
         self._columns = columns
         self._ids = None
 
@@ -95,7 +95,7 @@ class Writer(object):
         self._pool = None
         self._lock = None
 
-        self._mode = None
+        self._mode = mode
         self._write_fn = None
 
         self._stream = None
@@ -116,13 +116,7 @@ class Writer(object):
             field.PlainProcessors().
         """
         self._stream = streamer
-        if streamer.interactive:
-            if streamer.supports_updates:
-                self.mode = "update"
-            else:
-                self.mode = "incremental"
-        else:
-            self.mode = "final"
+        self._init_mode(streamer)
 
         style = style or {}
         if "width_" not in style and self._stream.width:
@@ -142,32 +136,26 @@ class Writer(object):
 
     def __exit__(self, *args):
         self.wait()
-        if self.mode == "final":
+        if self._mode == "final":
             self._stream.write(str(self._content))
-        if self.mode != "update" and self._last_summary is not None:
+        if self._mode != "update" and self._last_summary is not None:
             self._stream.write(str(self._last_summary))
 
-    @property
-    def mode(self):
-        """Mode of display.
-
-        * update (default): Go back and update the fields.  This includes
-          resizing the automated widths.
-
-        * incremental: Don't go back to update anything.
-
-        * final: finalized representation appropriate for redirecting to file
-        """
-        return self._mode
-
-    @mode.setter
-    def mode(self, value):
+    def _init_mode(self, streamer):
+        value = self._mode
+        lgr.debug("Initializing mode with given value of %s", value)
+        if value is None:
+            if streamer.interactive:
+                if streamer.supports_updates:
+                    value = "update"
+                else:
+                    value = "incremental"
+            else:
+                value = "final"
         valid = {"update", "incremental", "final"}
         if value not in valid:
             raise ValueError("{!r} is not a valid mode: {!r}"
                              .format(value, valid))
-        if self._content:
-            raise ValueError("Must set mode before output has been written")
 
         lgr.debug("Setting write mode to %r", value)
         self._mode = value

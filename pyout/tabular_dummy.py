@@ -45,9 +45,9 @@ class Tabular(interface.Writer):
     """
 
     def __init__(self, columns=None, style=None, stream=None,
-                 interactive=None):
+                 interactive=None, mode=None):
         super(Tabular, self).__init__(columns, style, stream=stream,
-                                      interactive=interactive)
+                                      interactive=interactive, mode=mode)
         streamer = NoUpdateTerminalStream(
             stream=stream, interactive=interactive)
         super(Tabular, self)._init(style, streamer)

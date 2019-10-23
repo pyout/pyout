@@ -99,6 +99,15 @@ class Tabular(interface.Writer):
         determined by calling `stream.isatty()`.  If non-interactive, the bold,
         color, and underline keys will be ignored, and the mode will default to
         "final".
+    mode : {update, incremental, final}, optional
+        Mode of display.
+        * update (default): Go back and update the fields.  This includes
+          resizing the automated widths.
+        * incremental: Don't go back to update anything.
+        * final: finalized representation appropriate for redirecting to file
+
+        Defaults to "update" if the stream supports updates and "incremental"
+        otherwise.  If the stream is non-interactive, defaults to "final".
 
     Examples
     --------
@@ -123,9 +132,9 @@ class Tabular(interface.Writer):
     """
 
     def __init__(self, columns=None, style=None, stream=None,
-                 interactive=None):
+                 interactive=None, mode=None):
         super(Tabular, self).__init__(columns, style, stream=stream,
-                                      interactive=interactive)
+                                      interactive=interactive, mode=mode)
         streamer = TerminalStream(stream=stream, interactive=interactive)
         if streamer.interactive:
             processors = TermProcessors(streamer.term)

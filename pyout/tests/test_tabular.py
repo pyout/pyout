@@ -1231,9 +1231,8 @@ def test_tabular_shrinking_summary():
 
 
 def test_tabular_mode_invalid():
-    out = Tabular(["name", "status"])
     with pytest.raises(ValueError):
-        out.mode = "unknown"
+        Tabular(["name", "status"], mode="unknown")
 
 
 def test_tabular_mode_default():
@@ -1247,8 +1246,7 @@ def test_tabular_mode_default():
         for row in data:
             out0(row)
 
-    out1 = Tabular()
-    out1.mode = "update"
+    out1 = Tabular(mode="update")
     with out1:
         for row in data:
             out1(row)
@@ -1256,24 +1254,15 @@ def test_tabular_mode_default():
     assert out0.stdout == out1.stdout
 
 
-def test_tabular_mode_after_write():
-    out = Tabular(["name", "status"])
-    out(["foo", "ok"])
-    with pytest.raises(ValueError):
-        out.mode = "final"
-
-
 def test_tabular_mode_update_noninteractive():
     out = Tabular(["name", "status"], interactive=False)
-    assert out.mode == "final"
-    with pytest.raises(ValueError):
-        out.mode = "update"
+    assert out._mode == "final"
 
 
 def test_tabular_mode_incremental():
     out = Tabular(["name", "status"],
-                  style={"status": {"aggregate": len}})
-    out.mode = "incremental"
+                  style={"status": {"aggregate": len}},
+                  mode="incremental")
 
     with out:
         out({"name": "foo", "status": "ok"})
@@ -1288,8 +1277,7 @@ def test_tabular_mode_incremental():
 
 
 def test_tabular_mode_final():
-    out = Tabular(["name", "status"])
-    out.mode = "final"
+    out = Tabular(["name", "status"], mode="final")
 
     with out:
         out({"name": "foo", "status": "unknown"})
@@ -1302,8 +1290,8 @@ def test_tabular_mode_final():
 
 def test_tabular_mode_final_summary():
     out = Tabular(["name", "status"],
-                  style={"status": {"aggregate": len}})
-    out.mode = "final"
+                  style={"status": {"aggregate": len}},
+                  mode="final")
 
     with out:
         out({"name": "foo", "status": "unknown"})
