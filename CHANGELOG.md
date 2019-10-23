@@ -25,6 +25,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   is encountered rather than after all asynchronous workers have
   returned.
 
+- `Tabular` now waits until the asynchronous workers of the top three
+  rows have completed before adding a new row that would advance the
+  screen.  The number of top rows that are considered can be
+  configured via the new `wait_for_top` keyword argument.
+
 ### Changed
 
 - The `mode` property of the `Tabular` class has been removed.

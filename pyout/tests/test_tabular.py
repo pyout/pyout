@@ -1003,7 +1003,8 @@ def test_tabular_write_callable_values_multi_return():
 @pytest.mark.parametrize("nrows", [20, 21])
 def test_tabular_callback_to_offscreen_row(nrows):
     delay = Delayed("OK")
-    out = Tabular(style={"status": {"aggregate": len}})
+    out = Tabular(style={"status": {"aggregate": len}},
+                  wait_for_top=0)
     with out:
         for i in range(1, nrows + 1):
             status = delay.run if i == 3 else "s{:02d}".format(i)
@@ -1029,6 +1030,64 @@ def test_tabular_callback_to_offscreen_row(nrows):
     cuu1 = unicode_cap("cuu1")
     updated = [l for l in lines if l.startswith(cuu1) and "foo03 OK " in l]
     assert len(updated) == nexpected_updated
+
+
+@pytest.mark.timeout(10)
+@pytest.mark.parametrize("header", [True, False], ids=["header", "no header"])
+def test_tabular_callback_wait_for_top(header):
+    delay_fns = {0: Delayed("v0"),
+                 4: Delayed("v4"),
+                 28: Delayed("v20")}
+    style = {"header_": {}} if header else {}
+
+    idxs = []
+
+    def run_tabular():
+        with Tabular(wait_for_top=2, style=style) as out:
+            for i in range(40):
+                if i in delay_fns:
+                    status = delay_fns[i].run
+                else:
+                    status = "s{:02d}".format(i)
+                out(OrderedDict([("name", "foo{:02d}".format(i)),
+                                 ("status", status)]))
+                idxs.append(i)
+
+    # The wait_for_top functionality involves Tabular.__call__() blocking us,
+    # so we need to test it in another thread.
+    thread = threading.Thread(target=run_tabular)
+    thread.daemon = True
+    thread.start()
+
+    def wait_then_check(idx_expected):
+        wait = 0
+        while not idxs or idxs[-1] < idx_expected:
+            time.sleep(0.1)
+            wait += 0.1
+
+        # We've encountered the index we expected in `wait` seconds.  A
+        # conservative check that we're not going to see another row is to wait
+        # that many seconds to make sure we're in the same spot.
+        time.sleep(wait)
+        assert idxs[-1] == idx_expected
+
+    # None of the workers have returned, including the one in the first row.
+    # So with a height of 20 and 1 row for the cursor, we to wait at 19 rows
+    # (an index of 18).  If there's a header, we can accommodate one fewer.
+    wait_then_check(18 - header)
+
+    delay_fns[0].now = True
+    delay_fns[28].now = True
+
+    # We've released the worker for the 1st row and the 28th, but the one in
+    # the 5th is still going.  We set wait_for_top=2, so we advance to having
+    # the 4th row at the top.
+    wait_then_check(21)
+
+    delay_fns[4].now = True
+    # We've released the final worker from the 4th row.  The last row comes in.
+    wait_then_check(39)
+    thread.join()
 
 
 @pytest.mark.timeout(10)

@@ -15,6 +15,7 @@ from logging import getLogger
 import os
 import sys
 import threading
+import time
 
 from pyout.common import ContentWithSummary
 from pyout.common import RowNormalizer
@@ -102,7 +103,7 @@ class Writer(object):
     """
     def __init__(self, columns=None, style=None, stream=None,
                  interactive=None, mode=None, continue_on_failure=True,
-                 max_workers=None):
+                 wait_for_top=3, max_workers=None):
         self._columns = columns
         self._ids = None
 
@@ -122,6 +123,7 @@ class Writer(object):
         self._futures = defaultdict(list)
         self._continue_on_failure = continue_on_failure
 
+        self._wait_for_top = wait_for_top
         self._mode = mode
         self._write_fn = None
 
@@ -471,6 +473,8 @@ class Writer(object):
             try:
                 future = self._pool.submit(async_fn)
             except RuntimeError as exc:
+                # We can get here if, between entering this method call and
+                # calling .submit(), _aborted was set by a callback.
                 if self._aborted:
                     lgr.debug(
                         "Submitting callable for %s failed "
@@ -482,6 +486,72 @@ class Writer(object):
                 future.add_done_callback(callback)
                 lgr.debug("Registering future %s for %s", future, id_key)
                 self._futures[id_key].append(future)
+
+    def top_nrows_done(self, n):
+        """Check if the top N rows' asynchronous workers are done.
+
+        Parameters
+        ----------
+        n : int
+            Consider this many of the top rows (e.g., 1 would consider just the
+            first row).
+
+        Returns
+        -------
+        True if the asynchronous workers for the top N rows have finished, and
+        False if they have not.  None is returned if Tabular is not operating
+        in "update" mode.
+        """
+        if self._mode != "update" or not self._content:
+            return None
+        #          0|..                                  <|
+        #          1|..                                   |
+        #          2|..                                   |
+        # top_idx  3|oo <|       <|          <|           |
+        #          4|oo  |--- n=3 |           |           |
+        #          5|oo <|        |           |           |--- content
+        #          6|oo           |           |           |    length
+        #          7|oo           |--- n_free |           | (including header)
+        #          8|oo           |           |    stream |
+        #          9|oo           |           |--- height |
+        #         10|oo          <|           |          <|
+        #           |oo <|                    |
+        #           |oo  |--- summary         |
+        #           |oo <|                    |
+        #           |oo <------ cursor       <|
+        last_summary_len = self._get_last_summary_length()
+        n_free = self._stream.height - last_summary_len - 1
+        top_idx = self._last_content_len - n_free
+
+        if top_idx < 0:
+            # The content lines haven't yet filled the screen.
+            return True
+
+        idxs = (top_idx + i for i in range(min(n, n_free)))
+        id_keys = (self._content.get_idkey(i) for i in idxs
+                   if i is not None)
+
+        futures = self._futures
+        top_futures = list(chain(*(futures[k] for k in id_keys)))
+        if not top_futures:
+            # These rows have no registered producers.
+            return True
+        return all(f.done() for f in top_futures)
+
+    def _maybe_wait_on_top_rows(self):
+        n = self._wait_for_top
+        if n:
+            waited = 0
+            secs = 0.5
+            while self.top_nrows_done(n) is False:
+                time.sleep(secs)
+                waited += 1
+            if waited:
+                lgr.debug("Waited for %s cycles of sleeping %s seconds",
+                          waited, secs)
+                # Wait a bit longer so that the caller has a chance to see the
+                # last updated row if it about to go off screen.
+                time.sleep(secs)
 
     @skip_if_aborted
     def __call__(self, row, style=None):
@@ -522,6 +592,7 @@ class Writer(object):
             Each top-level key should be a column name and the value should be
             a style dict that overrides the class instance style.
         """
+        self._maybe_wait_on_top_rows()
         if self._columns is None:
             self._columns = self._infer_columns(row)
             lgr.debug("Inferred columns: %r", self._columns)

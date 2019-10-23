@@ -112,6 +112,10 @@ class Tabular(interface.Writer):
         If an asynchronous worker fails, the default behavior is to continue
         and report the failures at the end.  Set this flag to false in order
         to abort writing the table and raise if any exception is received.
+    wait_for_top : int, optional
+        Wait for the asynchronous workers of this many top-most rows to finish
+        before proceeding with a row before adding a row that would take the
+        top row off screen.
     max_workers : int, optional
         Use at most this number of concurrent workers when retrieving values
         asynchronously (i.e., when producers are specified as row values).  The
@@ -142,12 +146,12 @@ class Tabular(interface.Writer):
 
     def __init__(self, columns=None, style=None, stream=None,
                  interactive=None, mode=None, continue_on_failure=True,
-                 max_workers=None):
+                 wait_for_top=3, max_workers=None):
         super(Tabular, self).__init__(
             columns, style, stream=stream,
             interactive=interactive, mode=mode,
             continue_on_failure=continue_on_failure,
-            max_workers=max_workers)
+            wait_for_top=wait_for_top, max_workers=max_workers)
         streamer = TerminalStream(stream=stream, interactive=interactive)
         if streamer.interactive:
             processors = TermProcessors(streamer.term)
