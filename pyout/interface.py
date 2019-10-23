@@ -283,27 +283,27 @@ class Writer(object):
         _, _, summary = self._content.update(row, style)
         self._last_summary = summary
 
+    def _write_async_result(self, id_vals, cols, result):
+        lgr.debug("Received result for %s: %s",
+                  cols, result)
+        if isinstance(result, Mapping):
+            lgr.debug("Processing result as mapping")
+            pass
+        elif isinstance(result, tuple):
+            lgr.debug("Processing result as tuple")
+            result = dict(zip(cols, result))
+        elif len(cols) == 1:
+            lgr.debug("Processing result as atom")
+            # Don't bother raising an exception if cols != 1
+            # because it would be lost in the thread.
+            result = {cols[0]: result}
+        result.update(id_vals)
+        self._write(result)
+
     def _start_callables(self, row, callables):
         """Start running `callables` asynchronously.
         """
         id_vals = {c: row[c] for c in self.ids}
-
-        def callback(tab, cols, result):
-            lgr.debug("Received result for %s: %s",
-                      cols, result)
-            if isinstance(result, Mapping):
-                lgr.debug("Processing result as mapping")
-                pass
-            elif isinstance(result, tuple):
-                lgr.debug("Processing result as tuple")
-                result = dict(zip(cols, result))
-            elif len(cols) == 1:
-                lgr.debug("Processing result as atom")
-                # Don't bother raising an exception if cols != 1
-                # because it would be lost in the thread.
-                result = {cols[0]: result}
-            result.update(id_vals)
-            tab._write(result)
 
         if self._pool is None:
             lgr.debug("Initializing pool with max workers=%s",
@@ -314,7 +314,7 @@ class Writer(object):
             self._lock = threading.Lock()
 
         for cols, fn in callables:
-            cb_func = partial(callback, self, cols)
+            cb_func = partial(self._write_async_result, id_vals, cols)
 
             gen = None
             if inspect.isgeneratorfunction(fn):
