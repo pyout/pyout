@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 from io import StringIO
-from mock import patch
 import pytest
 
 from pyout.tabular_dummy import NoUpdateTerminalStream
