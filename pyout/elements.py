@@ -30,6 +30,14 @@ schema = {
                       {"$ref": "#/definitions/interval"}],
             "default": "black",
             "scope": "field"},
+        "hide": {
+            "description": """Whether to hide column.  A value of True
+            unconditionally hides the column.  'if_missing' hides the column
+            until the first non-missing value is encountered.""",
+            "oneOf": [{"type": "boolean"},
+                      {"type": "string", "enum": ["if_missing"]}],
+            "default": False,
+            "scope": "column"},
         "underline": {
             "description": "Whether text is underlined",
             "oneOf": [{"type": "boolean"},
@@ -130,6 +138,7 @@ schema = {
                            "bold": {"$ref": "#/definitions/bold"},
                            "color": {"$ref": "#/definitions/color"},
                            "delayed": {"$ref": "#/definitions/delayed"},
+                           "hide": {"$ref": "#/definitions/hide"},
                            "missing": {"$ref": "#/definitions/missing"},
                            "re_flags": {"$ref": "#/definitions/re_flags"},
                            "transform": {"$ref": "#/definitions/transform"},
@@ -186,6 +195,7 @@ schema = {
             "oneOf": [{"$ref": "#/definitions/styles"},
                       {"type": "null"}],
             "default": {"align": "left",
+                        "hide": False,
                         "width": "auto"},
             "scope": "table"},
         "header_": {

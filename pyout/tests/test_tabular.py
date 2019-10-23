@@ -54,7 +54,7 @@ def test_tabular_write_empty_string():
 def test_tabular_write_missing_column():
     out = Tabular(columns=["name", "status"])
     out({"name": "solo"})
-    assert_eq_repr(out.stdout, "solo \n")
+    assert_eq_repr(out.stdout, "solo\n")
 
 
 def test_tabular_write_missing_column_missing_text():
@@ -257,10 +257,10 @@ def test_tabular_write_multicolor():
     assert_eq_repr(out.stdout, expected)
 
 
-def test_tabular_write_empty_string_nostyle():
+def test_tabular_write_all_whitespace_nostyle():
     out = Tabular(style={"name": {"color": "green"}})
-    out({"name": ""})
-    assert_eq_repr(out.stdout, "\n")
+    out({"name": "  "})
+    assert_eq_repr(out.stdout, "  \n")
 
 
 def test_tabular_write_style_flanking():
@@ -930,7 +930,7 @@ def test_tabular_write_callable_transform_nothing():
         # function above, which is designed to take a number, won't be called
         # with it.
         out({"name": "foo", "status": delay0.run})
-        assert_eq_repr(out.stdout, "foo \n")
+        assert_eq_repr(out.stdout, "foo\n")
         delay0.now = True
     lines = out.stdout.splitlines()
     assert_contains_nc(lines, "foo 5")
@@ -976,7 +976,7 @@ def test_tabular_write_callable_values_multi_return():
 
 @pytest.mark.timeout(10)
 @pytest.mark.parametrize("nrows", [20, 21])
-def test_tabular_callback_to_hidden_row(nrows):
+def test_tabular_callback_to_offscreen_row(nrows):
     delay = Delayed("OK")
     out = Tabular(style={"status": {"aggregate": len}})
     with out:
@@ -1117,13 +1117,13 @@ def test_tabular_write_delayed(form):
     with out:
         out(row)
     lines = out.stdout.splitlines()
-    assert lines[0] == "foo   "
+    assert lines[0] == "foo"
 
     # Either paired0/paired1 came in first or solo came in first, but
     # paired0/paired1 should arrive together.
     firstin = [ln for ln in lines
-               if eq_repr_noclear(ln, "foo 1 2 ")
-               or eq_repr_noclear(ln, "foo   3")]
+               if eq_repr_noclear(ln, "foo 1 2")
+               or eq_repr_noclear(ln, "foo 3")]
     assert len(firstin) == 1
 
     assert eq_repr_noclear(lines[-1], "foo 1 2 3")
@@ -1140,6 +1140,42 @@ def test_tabular_write_inspect_with_getitem():
 
     with pytest.raises(KeyError):
         out[("nothere",)]
+
+
+def test_tabular_hidden_column():
+    out = Tabular(["name"],
+                  style={"name": {"hide": True, "aggregate": len}})
+    out({"name": "foo"})
+    assert out.stdout.strip() == ""
+
+
+def test_tabular_hidden_if_missing_column():
+    out = Tabular(["name", "status", "letter"],
+                  style={"header_": {},
+                         "name": {"aggregate": lambda _: "X"},
+                         "status": {"hide": "if_missing",
+                                    "aggregate": len}})
+    out({"name": "foo", "letter": "a"})
+    expected = ["name letter",
+                "foo  a     ",
+                "X          "]
+    assert out.stdout.splitlines() == expected
+
+    out({"name": "bar", "status": "ok", "letter": "b"})
+    lines1 = out.stdout.splitlines()
+    assert_contains_nc(lines1, "bar  ok     b     ")
+    assert_contains_nc(lines1, "X    1            ")
+
+
+def test_tabular_hidden_col_takes_back_auto_space():
+    out = Tabular(["name", "status", "letter"],
+                  style={"width_": 10,
+                         "default_": {"width": {"marker": "…"}},
+                         "status": {"hide": "if_missing"}})
+    out({"name": "foo", "letter": "abcdefg"})
+    assert out.stdout.splitlines() == ["foo abcde…"]
+    out({"name": "foo", "status": "ok"})
+    assert_contains_nc(out.stdout.splitlines(), "foo ok ab…")
 
 
 def test_tabular_summary():

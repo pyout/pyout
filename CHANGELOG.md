@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Support for Python 2 has been dropped.  Python 3.4 or later is
   required.
 
+### Added
+
+- A new style attribute, "hide", makes it possible to hide a column,
+  either unconditionally or until `Tabular` is called with a record
+  that includes the column.
 
 ### Changed
 

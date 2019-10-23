@@ -231,6 +231,9 @@ class StyleFields(object):
         self.fields = None
         self._truncaters = {}
 
+        self.hidden = {}  # column => {True, "if-empty", False}
+        self._visible_columns = None  # cached list of visible columns
+
     def build(self, columns):
         """Build the style and fields.
 
@@ -258,19 +261,8 @@ class StyleFields(object):
         elements.validate(self.style)
         self._setup_fields()
 
-        ngaps = len(self.columns) - 1
-        self.width_separtor = len(self.style["separator_"]) * ngaps
-        lgr.debug("Calculated separator width as %d", self.width_separtor)
-
-        autowidth_columns = self.autowidth_columns
-        fields = self.fields
-        self.width_fixed = sum(
-            [sum(fields[c].width for c in self.columns
-                 if c not in autowidth_columns),
-             self.width_separtor])
-        lgr.debug("Calculated fixed width as %d", self.width_fixed)
-
-        self._check_widths()
+        self.hidden = {c: self.style[c]["hide"] for c in columns}
+        self._reset_width_info()
 
     def _compose(self, name, attributes):
         """Construct a style taking `attributes` from the column styles.
@@ -363,22 +355,62 @@ class StyleFields(object):
         """
         return self.style["header_"] is not None
 
+    @property
+    def visible_columns(self):
+        """List of columns that are not marked as hidden.
+
+        This value is cached and becomes invalid if column visibility has
+        changed since the last `render` call.
+        """
+        if self._visible_columns is None:
+            hidden = self.hidden
+            self._visible_columns = [c for c in self.columns if not hidden[c]]
+        return self._visible_columns
+
     def _check_widths(self):
-        columns = self.columns
+        visible = self.visible_columns
         autowidth_columns = self.autowidth_columns
         width_table = self.style["width_"]
-        if len(columns) > width_table:
+        if len(visible) > width_table:
             raise elements.StyleError(
-                "Number of columns exceeds available table width")
+                "Number of visible columns exceeds available table width")
 
         width_fixed = self.width_fixed
         width_auto = width_table - width_fixed
 
-        if width_auto < len(autowidth_columns):
+        if width_auto < len(set(autowidth_columns).intersection(visible)):
             raise elements.StyleError(
-                "The number of auto-width columns ({}) "
+                "The number of visible auto-width columns ({}) "
                 "exceeds the available width ({})"
                 .format(len(autowidth_columns), width_auto))
+
+    def _set_fixed_widths(self):
+        """Set fixed-width attributes.
+
+        Previously calculated values are invalid if the number of visible
+        columns changes.  Call _reset_width_info() in that case.
+        """
+        visible = self.visible_columns
+        ngaps = len(visible) - 1
+        width_separtor = len(self.style["separator_"]) * ngaps
+        lgr.debug("Calculated separator width as %d", width_separtor)
+
+        autowidth_columns = self.autowidth_columns
+        fields = self.fields
+        width_fixed = sum([sum(fields[c].width for c in visible
+                               if c not in autowidth_columns),
+                           width_separtor])
+        lgr.debug("Calculated fixed width as %d", width_fixed)
+
+        self.width_separtor = width_separtor
+        self.width_fixed = width_fixed
+
+    def _reset_width_info(self):
+        """Reset visibility-dependent information.
+        """
+        self._visible_columns = None
+        self._set_fixed_widths()
+        self._check_widths()
 
     def _set_widths(self, row, proc_group):
         """Update auto-width Fields based on `row`.
@@ -406,7 +438,14 @@ class StyleFields(object):
 
         # Check what width each row wants.
         lgr.debug("Checking width for row %r", row)
+        hidden = self.hidden
         for column in autowidth_columns:
+            if hidden[column]:
+                lgr.debug("%r is hidden; setting width to 0",
+                          column)
+                autowidth_columns[column]["wants"] = 0
+                continue
+
             field = fields[column]
             lgr.debug("Checking width of column %r (current field width: %d)",
                       column, field.width)
@@ -548,7 +587,7 @@ class StyleFields(object):
         else:
             return "default"
 
-    def render(self, row, style=None, adopt=True):
+    def render(self, row, style=None, adopt=True, can_unhide=True):
         """Render fields with values from `row`.
 
         Parameters
@@ -562,12 +601,28 @@ class StyleFields(object):
             Merge `self.style` and `style`, using the latter's keys
             when there are conflicts.  If False, treat `style` as a
             standalone style.
+        can_unhide : bool, optional
+            Whether a non-missing value within `row` is able to unhide a column
+            that is marked with "if_missing".
 
         Returns
         -------
         A tuple with the rendered value (str) and a flag that indicates whether
         the field widths required adjustment (bool).
         """
+        hidden = self.hidden
+        any_unhidden = False
+        if can_unhide:
+            for c in row:
+                val = row[c]
+                if hidden[c] == "if_missing" and not isinstance(val, Nothing):
+                    lgr.debug("Unhiding column %r after encountering %r",
+                              c, val)
+                    hidden[c] = False
+                    any_unhidden = True
+        if any_unhidden:
+            self._reset_width_info()
+
         group = self._proc_group(style, adopt=adopt)
         if group == "override":
             # Override the "default" processor key.
@@ -577,8 +632,12 @@ class StyleFields(object):
             proc_keys = None
 
         adjusted = self._set_widths(row, group)
-        proc_fields = [self.fields[c](row[c], keys=proc_keys)
-                       for c in self.columns]
+        cols = self.visible_columns
+        proc_fields = ((self.fields[c], row[c]) for c in cols)
+        # Exclude fields that weren't able to claim any width to avoid
+        # surrounding empty values with separators.
+        proc_fields = filter(lambda x: x[0].width > 0, proc_fields)
+        proc_fields = (fld(val, keys=proc_keys) for fld, val in proc_fields)
         return self.style["separator_"].join(proc_fields) + "\n", adjusted
 
 
@@ -737,6 +796,7 @@ class Content(object):
             row = dict(zip(self.columns, self.columns))
         self._header = ContentRow(row,
                                   kwds={"style": self.fields.style["header_"],
+                                        "can_unhide": False,
                                         "adopt": False})
 
 
@@ -756,7 +816,9 @@ class ContentWithSummary(Content):
         lgr.log(9, "Updating with .summary set to %s", self.summary)
         content, status = super(ContentWithSummary, self).update(row, style)
         if self.summary:
-            summ_rows = self.summary.summarize([r.row for r in self._rows])
+            summ_rows = self.summary.summarize(
+                self.fields.visible_columns,
+                [r.row for r in self._rows])
 
             def join():
                 return "".join(self._render(summ_rows))

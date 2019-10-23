@@ -26,13 +26,15 @@ class Summary(object):
     def __bool__(self):
         return self._enabled
 
-    def summarize(self, rows):
-        """Return summary rows for `rows`.
+    def summarize(self, columns, rows):
+        """Return summary rows.
 
         Parameters
         ----------
+        columns : list of str
+            Summarize values within these columns.
         rows : list of dicts
-            Normalized rows to summarize.
+            Normalized rows that contain keys for `columns`.
 
         Returns
         -------
@@ -40,7 +42,6 @@ class Summary(object):
         the data and the second is a dict of keyword arguments that can be
         passed to StyleFields.render.
         """
-        columns = list(rows[0].keys())
         agg_styles = {c: self.style[c]["aggregate"]
                       for c in columns if "aggregate" in self.style[c]}
 
@@ -50,6 +51,9 @@ class Summary(object):
             colvals = filter(lambda x: not isinstance(x, Nothing),
                              (row[col] for row in rows))
             summaries[col] = agg_fn(list(colvals))
+
+        if not summaries:
+            return []
 
         # The rest is just restructuring the summaries into rows that are
         # compatible with pyout.Content.  Most the complexity below comes from
@@ -74,5 +78,6 @@ class Summary(object):
 
             summary_rows.append((sumrow,
                                  {"style": self.style.get("aggregate_"),
-                                  "adopt": False}))
+                                  "adopt": False,
+                                  "can_unhide": False}))
         return summary_rows
