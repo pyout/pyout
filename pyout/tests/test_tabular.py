@@ -1139,6 +1139,35 @@ def test_tabular_write_callable_kb_interrupt_in_exit():
 
 
 @pytest.mark.timeout(10)
+def test_tabular_write_callable_kb_interrupt_during_wait():
+    delay0 = Delayed("v0")
+    delay1 = Delayed("v1")
+
+    out = Tabular(max_workers=1)
+
+    def run_tabular():
+        def raise_kbint():
+            raise KeyboardInterrupt
+
+        out.wait = raise_kbint
+        with out:
+            out(OrderedDict([("name", "foo"), ("status", delay0.run)]))
+            out(OrderedDict([("name", "bar"), ("status", delay1.run)]))
+
+    thread = threading.Thread(target=run_tabular)
+    thread.daemon = True
+    thread.start()
+    delay0.now = True
+    delay1.now = True
+    thread.join()
+    stdout = out.stdout
+    assert_contains_nc(stdout.splitlines(),
+                       "foo v0",
+                       "bar   ")
+    assert "Keyboard interrupt" in stdout
+
+
+@pytest.mark.timeout(10)
 @pytest.mark.parametrize("kind", ["function", "generator"])
 def test_tabular_callback_bad_value(caplog, kind):
     caplog.set_level(logging.ERROR)

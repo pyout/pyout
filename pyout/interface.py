@@ -195,7 +195,14 @@ class Writer(object):
         if exc_value is not None:
             self._abort(msg="\n{!r} raised\n".format(exc_value))
         else:
-            failed = self.wait()
+            try:
+                failed = self.wait()
+            except KeyboardInterrupt:
+                lgr.debug("Caught KeyboardInterrupt "
+                          "while waiting for asynchronous workers")
+                self._abort(msg="\nKeyboard interrupt registered\n")
+                # Raise so that caller can decide how to handle.
+                raise
 
         if self._mode == "final":
             self._stream.write(str(self._content))
