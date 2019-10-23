@@ -674,6 +674,7 @@ class Content(object):
         self._header = None
         self._rows = []
         self._idkey_to_idx = {}
+        self._idx_to_idkey = {}
 
     def init_columns(self, columns, ids):
         """Set up the fields for `columns`.
@@ -761,6 +762,7 @@ class Content(object):
             self._add_header()
             self._rows.append(ContentRow(row, kwds={"style": style}))
             self._idkey_to_idx[idkey] = 0
+            self._idx_to_idkey[0] = idkey
             return str(self), "append"
 
         try:
@@ -780,7 +782,9 @@ class Content(object):
             row = self._rows[prev_idx][0]
         else:
             lgr.debug("Adding row %r to content for first time", idkey)
-            self._idkey_to_idx[idkey] = len(self._rows)
+            nrows = len(self._rows)
+            self._idkey_to_idx[idkey] = nrows
+            self._idx_to_idkey[nrows] = idkey
             self._rows.append(ContentRow(row, kwds={"style": style}))
 
         line, adjusted = self.fields.render(row, style)
