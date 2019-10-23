@@ -131,16 +131,6 @@ class Writer(object):
         self._normalizer = RowNormalizer(self._columns,
                                          self._content.fields.style)
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        self.wait()
-        if self._mode == "final":
-            self._stream.write(str(self._content))
-        if self._mode != "update" and self._last_summary is not None:
-            self._stream.write(str(self._last_summary))
-
     def _init_mode(self, streamer):
         value = self._mode
         lgr.debug("Initializing mode with given value of %s", value)
@@ -169,6 +159,16 @@ class Writer(object):
             else:
                 raise ValueError("Stream {} does not support updates"
                                  .format(self._stream))
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.wait()
+        if self._mode == "final":
+            self._stream.write(str(self._content))
+        if self._mode != "update" and self._last_summary is not None:
+            self._stream.write(str(self._last_summary))
 
     @property
     def ids(self):
