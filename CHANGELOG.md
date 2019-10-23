@@ -11,6 +11,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   required.
 
 
+### Changed
+
+- The calculation of auto-width columns has been enhanced so that the
+  available width is more evenly spread across the columns.  The width
+  style attribute takes a "weight" key to allow a column's growth to
+  be prioritized.
+
+- The width style attribute learned to take fraction that represents
+  the proportion of the table.  For example, setting the "max" key to
+  0.5 means that the key should exceed half of the total table width.
+
+
 ## [0.4.1] - 2019-10-02
 
 Fix stale `pyout.__version__`, which hasn't been updated since v0.1.0.

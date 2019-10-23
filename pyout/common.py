@@ -226,6 +226,7 @@ class StyleFields(object):
         self.columns = None
         self.autowidth_columns = {}
 
+        self.width_fixed = None
         self.width_separtor = None
         self.fields = None
         self._truncaters = {}
@@ -261,6 +262,16 @@ class StyleFields(object):
         self.width_separtor = len(self.style["separator_"]) * ngaps
         lgr.debug("Calculated separator width as %d", self.width_separtor)
 
+        autowidth_columns = self.autowidth_columns
+        fields = self.fields
+        self.width_fixed = sum(
+            [sum(fields[c].width for c in self.columns
+                 if c not in autowidth_columns),
+             self.width_separtor])
+        lgr.debug("Calculated fixed width as %d", self.width_fixed)
+
+        self._check_widths()
+
     def _compose(self, name, attributes):
         """Construct a style taking `attributes` from the column styles.
 
@@ -285,32 +296,44 @@ class StyleFields(object):
             return result
 
     def _setup_fields(self):
-        self.fields = {}
+        fields = {}
+        style = self.style
+        width_table = style["width_"]
+
+        def frac_to_int(x):
+            if x and 0 < x < 1:
+                result = int(x * width_table)
+                lgr.debug("Converted fraction %f to %d", x, result)
+            else:
+                result = x
+            return result
+
         for column in self.columns:
             lgr.debug("Setting up field for column %r", column)
-            cstyle = self.style[column]
+            cstyle = style[column]
             style_width = cstyle["width"]
 
             # Convert atomic values into the equivalent complex form.
             if style_width == "auto":
                 style_width = {}
-            elif isinstance(style_width, int):
+            elif not isinstance(style_width, Mapping):
                 style_width = {"width": style_width}
 
             is_auto = "width" not in style_width
             if is_auto:
                 lgr.debug("Automatically adjusting width for %s", column)
-                width = style_width.get("min", 0)
-                wmax = style_width.get("max")
-                self.autowidth_columns[column] = {"max": wmax}
-                if wmax is not None:
-                    lgr.debug("Setting max width of column %r to %d",
-                              column, wmax)
+                width = frac_to_int(style_width.get("min", 0))
+                wmax = frac_to_int(style_width.get("max"))
+                autoval = {"max": wmax, "min": width,
+                           "weight": style_width.get("weight", 1)}
+                self.autowidth_columns[column] = autoval
+                lgr.debug("Stored auto-width value for column %r: %s",
+                          column, autoval)
             else:
                 if "min" in style_width or "max" in style_width:
                     raise ValueError(
                         "'min' and 'max' are incompatible with 'width'")
-                width = style_width["width"]
+                width = frac_to_int(style_width["width"])
                 lgr.debug("Setting width of column %r to %d",
                           column, width)
 
@@ -330,14 +353,32 @@ class StyleFields(object):
             field.add("post", "width", truncater.truncate)
             field.add("post", "default",
                       *(self.procgen.post_from_style(cstyle)))
-            self.fields[column] = field
+            fields[column] = field
             self._truncaters[column] = truncater
+        self.fields = fields
 
     @property
     def has_header(self):
         """Whether the style specifies a header.
         """
         return self.style["header_"] is not None
+
+    def _check_widths(self):
+        columns = self.columns
+        autowidth_columns = self.autowidth_columns
+        width_table = self.style["width_"]
+        if len(columns) > width_table:
+            raise elements.StyleError(
+                "Number of columns exceeds available table width")
+
+        width_fixed = self.width_fixed
+        width_auto = width_table - width_fixed
+
+        if width_auto < len(autowidth_columns):
+            raise elements.StyleError(
+                "The number of auto-width columns ({}) "
+                "exceeds the available width ({})"
+                .format(len(autowidth_columns), width_auto))
 
     def _set_widths(self, row, proc_group):
         """Update auto-width Fields based on `row`.
@@ -353,66 +394,127 @@ class StyleFields(object):
         -------
         True if any widths required adjustment.
         """
-        width_free = self.style["width_"] - sum(
-            [sum(self.fields[c].width for c in self.columns),
-             self.width_separtor])
+        autowidth_columns = self.autowidth_columns
+        fields = self.fields
 
-        if width_free < 0:
-            width_fixed = sum(
-                [sum(self.fields[c].width for c in self.columns
-                     if c not in self.autowidth_columns),
-                 self.width_separtor])
-            assert width_fixed > self.style["width_"], "bug in width logic"
-            raise elements.StyleError(
-                "Fixed widths specified in style exceed total width")
-        elif width_free == 0:
-            lgr.debug("Not checking widths; no free width left")
+        width_table = self.style["width_"]
+        width_fixed = self.width_fixed
+        width_auto = width_table - width_fixed
+
+        if not autowidth_columns:
             return False
 
+        # Check what width each row wants.
         lgr.debug("Checking width for row %r", row)
-        adjusted = False
-        for column in sorted(self.columns, key=lambda c: self.fields[c].width):
-            # ^ Sorting the columns by increasing widths isn't necessary; we do
-            # it so that columns that already take up more of the screen don't
-            # continue to grow and use up free width before smaller columns
-            # have a chance to claim some.
-            if width_free < 1:
-                lgr.debug("Giving up on checking widths; no free width left")
-                break
+        for column in autowidth_columns:
+            field = fields[column]
+            lgr.debug("Checking width of column %r (current field width: %d)",
+                      column, field.width)
+            # If we've added any style transform functions as pre-format
+            # processors, we want to measure the width of their result rather
+            # than the raw value.
+            if field.pre[proc_group]:
+                value = field(row[column], keys=[proc_group],
+                              exclude_post=True)
+            else:
+                value = row[column]
+            value = str(value)
+            value_width = len(value)
+            wmax = autowidth_columns[column]["max"]
+            wmin = autowidth_columns[column]["min"]
+            max_seen = max(value_width, field.width)
+            requested_floor = max(max_seen, wmin)
+            wants = min(requested_floor, wmax or requested_floor)
+            lgr.debug("value=%r, value width=%d, old field length=%d, "
+                      "min width=%s, max width=%s => wants=%d",
+                      value, value_width, field.width, wmin, wmax, wants)
+            autowidth_columns[column]["wants"] = wants
 
-            if column in self.autowidth_columns:
-                field = self.fields[column]
-                lgr.debug("Checking width of column %r "
-                          "(field width: %d, free width: %d)",
-                          column, field.width, width_free)
-                # If we've added any style transform functions as
-                # pre-format processors, we want to measure the width
-                # of their result rather than the raw value.
-                if field.pre[proc_group]:
-                    value = field(row[column], keys=[proc_group],
-                                  exclude_post=True)
-                else:
-                    value = row[column]
-                value = str(value)
-                value_width = len(value)
-                wmax = self.autowidth_columns[column]["max"]
-                if value_width > field.width:
-                    width_old = field.width
-                    width_available = width_free + field.width
-                    width_new = min(value_width,
-                                    wmax or width_available,
-                                    width_available)
-                    if width_new > width_old:
-                        adjusted = True
-                        field.width = width_new
-                        lgr.debug("Adjusting width of %r column from %d to %d "
-                                  "to accommodate value %r",
-                                  column, width_old, field.width, value)
-                        self._truncaters[column].length = field.width
-                        width_free -= field.width - width_old
-                        lgr.debug("Free width is %d after processing column %r",
-                                  width_free, column)
+        # Considering those wants and the available with, assign widths to each
+        # column.
+        assigned = self._assign_widths(autowidth_columns, width_auto)
+
+        # Set the assigned widths.
+        adjusted = False
+        for column, width_assigned in assigned.items():
+            field = fields[column]
+            width_current = field.width
+            if width_assigned != width_current:
+                adjusted = True
+                field.width = width_assigned
+                lgr.debug("Adjusting width of %r column from %d to %d ",
+                          column, width_current, field.width)
+                self._truncaters[column].length = field.width
         return adjusted
+
+    @staticmethod
+    def _assign_widths(columns, available):
+        """Assign widths to auto-width columns.
+
+        Parameters
+        ----------
+        columns : dict
+            A dictionary where each key is an auto-width column.  The value
+            should be a dictionary with the following information:
+              - wants: how much width the column wants
+              - min: the minimum that the width should set to, provided there
+                is enough room
+             - weight: if present, a "weight" key indicates the number of
+               available characters the column should claim at a time.  This is
+               only in effect after each column has claimed one, and the
+               specific column has claimed its minimum.
+        available : int
+            Width available to be assigned.
+
+        Returns
+        -------
+        Dictionary mapping each auto-width column to the assigned width.
+        """
+        # NOTE: The method below is not very clever and does unnecessary
+        # iteration.  It may end up being too slow, but at least it should
+        # serve to establish the baseline (along with tests) that show the
+        # desired behavior.
+
+        assigned = {}
+
+        # Make sure every column gets at least one.
+        for column in columns:
+            col_wants = columns[column]["wants"]
+            if col_wants > 0:
+                available -= 1
+                assigned[column] = 1
+        assert available >= 0, "bug: upstream checks should make impossible"
+
+        weights = {c: columns[c].get("weight", 1) for c in columns}
+        # ATTN: The sorting here needs to be stable across calls with the same
+        # row so that the same assignments come out.
+        colnames = sorted(assigned.keys(), reverse=True,
+                          key=lambda c: (columns[c]["min"], weights[c], c))
+        columns_in_need = set(assigned.keys())
+        while available > 0 and columns_in_need:
+            for column in colnames:
+                if column not in columns_in_need:
+                    continue
+
+                col_wants = columns[column]["wants"] - assigned[column]
+                if col_wants < 1:
+                    columns_in_need.remove(column)
+                    continue
+
+                wmin = columns[column]["min"]
+                has = assigned[column]
+                claim = min(weights[column] if has >= wmin else wmin - has,
+                            col_wants,
+                            available)
+                available -= claim
+                assigned[column] += claim
+                lgr.log(9, "Claiming %d characters (of %d available) for %s",
+                        claim, available, column)
+                if available == 0:
+                    break
+        lgr.debug("Available width after assigned: %d", available)
+        lgr.debug("Assigned widths: %r", assigned)
+        return assigned
 
     def _proc_group(self, style, adopt=True):
         """Return whether group is "default" or "override".
