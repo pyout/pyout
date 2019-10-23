@@ -1113,6 +1113,32 @@ def test_tabular_write_callable_cancel_on_exception():
 
 
 @pytest.mark.timeout(10)
+@pytest.mark.parametrize("kind", ["function", "generator"])
+def test_tabular_callback_bad_value(caplog, kind):
+    caplog.set_level(logging.ERROR)
+
+    delay = Delayed("atom")
+
+    out = Tabular()
+    row = OrderedDict(
+        [("name", "foo"),
+         (("status", "path"),
+          getattr(delay, "run" if kind == "function" else "gen"))])
+
+    with out:
+        out(row)
+        delay.now = True
+
+    # Note that there is an unfortunate discrepancy between a regular function
+    # and a generator value.  With a regular function, the write happens in the
+    # callback, where concurrent.futures catches it and calls
+    # logging.exception().  With a generator value, the write happens as part
+    # of the main asynchronous function, so it is processed like any other
+    # error in the asynchronous function.
+    assert "got 'atom'" in (caplog.text if kind == "function" else out.stdout)
+
+
+@pytest.mark.timeout(10)
 def test_tabular_pool_shutdown():
     delay_0 = Delayed("v0")
     delay_1 = Delayed("v1")

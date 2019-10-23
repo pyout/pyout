@@ -396,9 +396,11 @@ class Writer(object):
             result = dict(zip(cols, result))
         elif len(cols) == 1:
             lgr.debug("Processing result as atom")
-            # Don't bother raising an exception if cols != 1
-            # because it would be lost in the thread.
             result = {cols[0]: result}
+        else:
+            raise ValueError(
+                "Expected tuple or mapping for columns {!r}, got {!r}"
+                .format(cols, result))
         result.update(id_vals)
         self._write(result)
 
