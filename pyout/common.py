@@ -764,7 +764,9 @@ class Content(object):
             return str(self), "append"
 
         try:
-            prev_idx = self._idmap[idkey] if idkey in self._idmap else None
+            prev_idx = self._idmap[idkey]
+        except KeyError:
+            prev_idx = None
         except TypeError:
             raise ContentError("ID columns must be hashable")
 
