@@ -375,6 +375,22 @@ def test_tabular_non_hashable_id_error():
         out({"name": "foo", "status": [0, 1]})
 
 
+def test_tabular_content_get_idkey():
+    out = Tabular(["first", "last", "status"])
+    out.ids = ["first", "last"]
+    data = [{"first": "foo", "last": "bert", "status": "ok"},
+            {"first": "foo", "last": "zoo", "status": "bad"},
+            {"first": "bar", "last": "t", "status": "unknown"}]
+    for row in data:
+        out(row)
+
+    for idx, key in enumerate([("foo", "bert"), ("foo", "zoo"), ("bar", "t")]):
+        assert out._content.get_idkey(idx) == key
+
+    with pytest.raises(IndexError):
+        out._content.get_idkey(4)
+
+
 def test_tabular_write_lookup_color():
     out = Tabular(style={"name": {"width": 3},
                          "status": {"color": {"lookup": {"BAD": "red"}},

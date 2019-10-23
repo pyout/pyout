@@ -727,6 +727,34 @@ class Content(object):
         except RedoContent:
             return "".join(self._render(self.rows))
 
+    def get_idkey(self, idx):
+        """Return ID keys for a row.
+
+        Parameters
+        ----------
+        idx : int
+            Index of row (determined by order it came in to `update`).
+
+        Returns
+        -------
+        ID key (tuple) matching row.  If there is a header, None is return as
+        its ID key.
+
+        Raises
+        ------
+        IndexError if `idx` does not match known row.
+        """
+        if self._header:
+            idx -= 1
+            if idx == -1:
+                return None
+        try:
+            return self._idx_to_idkey[idx]
+        except KeyError:
+            msg = ("Index {!r} outside of current range: [0, {})"
+                   .format(idx, len(self._idkey_to_idx)))
+            raise IndexError(msg) from None
+
     def update(self, row, style):
         """Modify the content.
 
