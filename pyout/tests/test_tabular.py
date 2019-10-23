@@ -5,6 +5,7 @@ pytest.importorskip("blessings")
 
 from collections import Counter
 from collections import OrderedDict
+import logging
 import sys
 import time
 import traceback
@@ -1028,6 +1029,41 @@ def test_tabular_write_callable_values_multicol_key_infer_column(result):
         delay.now = True
     lines = out.stdout.splitlines()
     assert_contains_nc(lines, "foo done /tmp/a")
+
+
+@pytest.mark.timeout(10)
+@pytest.mark.parametrize("kind", ["function", "generator"])
+def test_tabular_callback_exception_within(kind):
+    def fail():
+        raise TypeError("wrong")
+
+    if kind == "generator":
+        def value():
+            yield "ok"
+            fail()
+    else:
+        value = fail
+
+    out = Tabular()
+    rows = [OrderedDict([("name", "foo"),
+                         ("status", value)]),
+            OrderedDict([("name", "bar"),
+                         ("status", "ok")]),
+            OrderedDict([("name", "baz"),
+                         ("status", "ok")])]
+
+    with out:
+        for row in rows:
+            out(row)
+
+    stdout = out.stdout
+    assert "wrong" in stdout
+    assert "bar ok" in stdout
+
+    if kind == "generator":
+        assert "foo ok" in stdout
+    else:
+        assert "foo ok" not in stdout
 
 
 def delayed_gen_func(*values):
