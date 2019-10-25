@@ -3,7 +3,7 @@ sudo: false
 
 python:
   - 3.4
-  - 3.6
+  - 3.8
 env:
   - pip_schema=full
   - pip_schema=core
