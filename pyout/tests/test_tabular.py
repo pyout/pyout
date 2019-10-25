@@ -900,6 +900,10 @@ class Delayed(object):
                     value = value()
                 return value
 
+    def gen(self):
+        value = self.run()
+        yield value
+
 
 @pytest.mark.timeout(10)
 def test_tabular_write_callable_values():
