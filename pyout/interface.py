@@ -314,7 +314,7 @@ class Writer(object):
             self._lock = threading.Lock()
 
         for cols, fn in callables:
-            cb_func = partial(self._write_async_result, id_vals, cols)
+            write_fn = partial(self._write_async_result, id_vals, cols)
 
             gen = None
             if inspect.isgeneratorfunction(fn):
@@ -323,14 +323,15 @@ class Writer(object):
                 gen = fn
 
             if gen:
-                lgr.debug("Wrapping generator in callback")
+                lgr.debug("Wrapping generator for cols %r of row %r",
+                          cols, id_vals)
 
-                def callback_for_each():
+                def async_fn():
                     for i in gen:
-                        cb_func(i)
-                self._pool.apply_async(callback_for_each)
+                        write_fn(i)
+                self._pool.apply_async(async_fn)
             else:
-                self._pool.apply_async(fn, callback=cb_func)
+                self._pool.apply_async(fn, callback=write_fn)
 
     def __call__(self, row, style=None):
         """Write styled `row`.
