@@ -895,7 +895,10 @@ class Delayed(object):
         """
         while True:
             if self.now:
-                return self.value
+                value = self.value
+                if callable(value):
+                    value = value()
+                return value
 
 
 @pytest.mark.timeout(10)
