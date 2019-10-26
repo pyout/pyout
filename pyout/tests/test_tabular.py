@@ -1036,37 +1036,94 @@ def test_tabular_write_callable_values_multicol_key_infer_column(result):
 
 @pytest.mark.timeout(10)
 @pytest.mark.parametrize("kind", ["function", "generator"])
-def test_tabular_callback_exception_within(kind):
-    def fail():
-        raise TypeError("wrong")
-
+@pytest.mark.parametrize("should_continue", [True, False])
+def test_tabular_callback_exception_within(kind, should_continue):
     if kind == "generator":
-        def value():
-            yield "ok"
-            fail()
+        def fail(msg):
+            def fn():
+                yield "ok"
+                raise TypeError(msg)
+            return fn
     else:
-        value = fail
+        def fail(msg):
+            def fn():
+                raise TypeError(msg)
+            return fn
 
-    out = Tabular()
+    out = Tabular(max_workers=2, continue_on_failure=should_continue)
     rows = [OrderedDict([("name", "foo"),
-                         ("status", value)]),
+                         ("status", fail("foofail"))]),
             OrderedDict([("name", "bar"),
-                         ("status", "ok")]),
+                         ("status", fail("barfail"))]),
             OrderedDict([("name", "baz"),
-                         ("status", "ok")])]
+                         ("status", lambda: "only-if-continue")])]
 
-    with out:
-        for row in rows:
-            out(row)
+    if should_continue:
+        with out:
+            for row in rows:
+                out(row)
 
-    stdout = out.stdout
-    assert "wrong" in stdout
-    assert "bar ok" in stdout
+        stdout = out.stdout
+        assert "only-if-continue" in stdout
+        assert "foofail" in stdout
+        assert "barfail" in stdout
+    else:
+        with pytest.raises(TypeError):
+            with out:
+                for row in rows:
+                    out(row)
+        stdout = out.stdout
+        assert "only-if-continue" not in stdout
 
+    if should_continue:
+        assert "only-if-continue" in stdout
+    else:
+        assert "only-if-continue" not in stdout
+
+    # Regardless of the `continue_on_failure`, any value the generator yields
+    # before failing will make it through.
     if kind == "generator":
         assert "foo ok" in stdout
     else:
         assert "foo ok" not in stdout
+
+
+@pytest.mark.timeout(10)
+def test_tabular_write_callable_cancel_on_exception():
+    def fail():
+        raise TypeError("wrong")
+
+    delay_fail = Delayed(fail)
+    delay = Delayed("ok")
+
+    out = Tabular(["name", "status"],
+                  max_workers=1,
+                  continue_on_failure=False)
+
+    with pytest.raises(TypeError):
+        with out:
+            out({"name": "foo", "status": delay_fail.run})
+            out({"name": "bar", "status": delay.run})
+            delay_fail.now = True
+    assert out.stdout.splitlines()[:2] == ["foo", "bar"]
+
+
+@pytest.mark.timeout(10)
+def test_tabular_pool_shutdown():
+    delay_0 = Delayed("v0")
+    delay_1 = Delayed("v1")
+    delay_2 = Delayed("v2")
+
+    out = Tabular(columns=["name", "status"],
+                  max_workers=1)
+    with out:
+        out({"name": "foo", "status": delay_0.run})
+        out({"name": "bar", "status": delay_1.run})
+        delay_0.now = True
+        delay_1.now = True
+        out._pool.shutdown(wait=False)
+        with pytest.raises(RuntimeError):
+            out({"name": "baz", "status": delay_2.run})
 
 
 def delayed_gen_func(*values):

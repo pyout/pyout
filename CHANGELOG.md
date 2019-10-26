@@ -20,6 +20,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   controls the maximum number of asynchronous workers that run
   concurrently.
 
+- The `Tabular` class gained a `continue_on_failure` argument.  When
+  set to false, an exception in an asynchronous worker is raised as it
+  is encountered rather than after all asynchronous workers have
+  returned.
+
 ### Changed
 
 - The `mode` property of the `Tabular` class has been removed.

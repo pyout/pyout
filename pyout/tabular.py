@@ -108,6 +108,10 @@ class Tabular(interface.Writer):
 
         Defaults to "update" if the stream supports updates and "incremental"
         otherwise.  If the stream is non-interactive, defaults to "final".
+    continue_on_failure : bool, optional
+        If an asynchronous worker fails, the default behavior is to continue
+        and report the failures at the end.  Set this flag to false in order
+        to abort writing the table and raise if any exception is received.
     max_workers : int, optional
         Use at most this number of concurrent workers when retrieving values
         asynchronously (i.e., when producers are specified as row values).  The
@@ -137,10 +141,12 @@ class Tabular(interface.Writer):
     """
 
     def __init__(self, columns=None, style=None, stream=None,
-                 interactive=None, mode=None, max_workers=None):
+                 interactive=None, mode=None, continue_on_failure=True,
+                 max_workers=None):
         super(Tabular, self).__init__(
             columns, style, stream=stream,
             interactive=interactive, mode=mode,
+            continue_on_failure=continue_on_failure,
             max_workers=max_workers)
         streamer = TerminalStream(stream=stream, interactive=interactive)
         if streamer.interactive:

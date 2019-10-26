@@ -10,6 +10,7 @@ from concurrent.futures import ThreadPoolExecutor as Pool
 from contextlib import contextmanager
 from functools import wraps
 import inspect
+from itertools import chain
 from logging import getLogger
 import os
 import sys
@@ -100,7 +101,7 @@ class Writer(object):
      call Writer.__init__ and then the _init method.
     """
     def __init__(self, columns=None, style=None, stream=None,
-                 interactive=None, mode=None,
+                 interactive=None, mode=None, continue_on_failure=True,
                  max_workers=None):
         self._columns = columns
         self._ids = None
@@ -119,6 +120,7 @@ class Writer(object):
         self._lock = None
         self._aborted = False
         self._futures = defaultdict(list)
+        self._continue_on_failure = continue_on_failure
 
         self._mode = mode
         self._write_fn = None
@@ -225,11 +227,15 @@ class Writer(object):
         """
         failed = []
         lgr.debug("Waiting for asynchronous calls")
+        continue_on_failure = self._continue_on_failure
         for id_key, futures in self._futures.items():
             for future in cfut.as_completed(futures):
                 lgr.debug("Processing future %s", future)
-                if future.exception():
-                    failed.append((id_key, future))
+                if not future.cancelled() and future.exception():
+                    if continue_on_failure:
+                        failed.append((id_key, future))
+                    else:
+                        future.result()  # Raise exception.
         return failed
 
     def _print_async_exceptions(self, failed_futures):
@@ -253,6 +259,29 @@ class Writer(object):
                         "Producing value for row {} failed:\n{}\n"
                         .format(id_key, traceback.format_exc()))
 
+    @skip_if_aborted
+    def _abort(self, cause=None, msg=None):
+        if self._pool is None:
+            # No asynchronous calls; there's nothing to abort.
+            return
+
+        with self._write_lock():
+            self._aborted = cause or True
+            stream = self._stream
+            if msg:
+                stream.write(msg)
+            futures = list(chain(*self._futures.values()))
+            for f in futures:
+                lgr.debug("Calling .cancel() with for %s", f)
+                f.cancel()
+        n_running = len([f for f in futures if f.running()])
+        stream.write("Canceled pending asynchronous workers. "
+                     "{} worker{} already running\n"
+                     .format(n_running, "" if n_running == 1 else "s"))
+        # Note: We can't call shutdown() with wait=True here.  That will
+        # trigger a RuntimeError in underlying <thread>.join() call.
+        self._pool.shutdown(wait=False)
+
     def wait(self):
         """Wait for asynchronous calls to return.
 
@@ -263,10 +292,15 @@ class Writer(object):
         lgr.debug("Waiting for asynchronous calls")
         if self._pool is None:
             return
-        failed = self._process_futures()
-        self._pool.shutdown(wait=True)
-        lgr.debug("Pool shut down")
-        return failed
+        aborted = self._aborted
+        if aborted:
+            if isinstance(aborted, cfut.Future):
+                aborted.result()  # Raise exception.
+        else:
+            failed = self._process_futures()
+            self._pool.shutdown(wait=True)
+            lgr.debug("Pool shut down")
+            return failed
 
     @contextmanager
     def _write_lock(self):
@@ -391,8 +425,13 @@ class Writer(object):
                 gen = fn
 
             def check_result(future):
-                ok = False
-                if not (future.exception() or future.cancelled()):
+                if future.cancelled():
+                    ok = False
+                elif future.exception():
+                    ok = False
+                    if not self._continue_on_failure:
+                        self._abort(cause=future)
+                else:
                     ok = True
                 return ok
 
@@ -403,17 +442,30 @@ class Writer(object):
                 def async_fn():
                     for i in gen:
                         self._write_async_result(id_vals, cols, i)
-                future = self._pool.submit(async_fn)
+
+                callback = check_result
             else:
+                async_fn = fn
+
                 def callback(future):
                     if check_result(future):
                         self._write_async_result(
                             id_vals, cols, future.result())
 
-                future = self._pool.submit(fn)
+            try:
+                future = self._pool.submit(async_fn)
+            except RuntimeError as exc:
+                if self._aborted:
+                    lgr.debug(
+                        "Submitting callable for %s failed "
+                        "because pool is already shutdown: %s",
+                        id_key, exc)
+                else:
+                    raise
+            else:
                 future.add_done_callback(callback)
-            lgr.debug("Registering future %s for %s", future, id_key)
-            self._futures[id_key].append(future)
+                lgr.debug("Registering future %s for %s", future, id_key)
+                self._futures[id_key].append(future)
 
     @skip_if_aborted
     def __call__(self, row, style=None):
