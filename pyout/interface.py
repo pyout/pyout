@@ -6,6 +6,7 @@ from collections import OrderedDict
 from collections.abc import Mapping
 from concurrent.futures import ThreadPoolExecutor as Pool
 from contextlib import contextmanager
+from functools import wraps
 import inspect
 from logging import getLogger
 import os
@@ -77,6 +78,19 @@ class Stream(object, metaclass=abc.ABCMeta):
         """
 
 
+def skip_if_aborted(method):
+    """Decorate Writer `method` to prevent execution if write has been aborted.
+    """
+
+    @wraps(method)
+    def wrapped(self, *args, **kwds):
+        if self._aborted:
+            lgr.debug("Write has been aborted; not calling %r", method)
+        else:
+            return method(self, *args, **kwds)
+    return wrapped
+
+
 class Writer(object):
     """Base class implementing the core handling logic of pyout output.
 
@@ -101,6 +115,7 @@ class Writer(object):
             max_workers = min(32, (os.cpu_count() or 1) + 4)
         self._max_workers = max_workers
         self._lock = None
+        self._aborted = False
 
         self._mode = mode
         self._write_fn = None
@@ -286,6 +301,7 @@ class Writer(object):
         _, _, summary = self._content.update(row, style)
         self._last_summary = summary
 
+    @skip_if_aborted
     def _write_async_result(self, id_vals, cols, result):
         lgr.debug("Received result for %s: %s",
                   cols, result)
@@ -303,6 +319,7 @@ class Writer(object):
         result.update(id_vals)
         self._write(result)
 
+    @skip_if_aborted
     def _start_callables(self, row, callables):
         """Start running `callables` asynchronously.
         """
@@ -339,6 +356,7 @@ class Writer(object):
                 future = self._pool.submit(fn)
                 future.add_done_callback(callback)
 
+    @skip_if_aborted
     def __call__(self, row, style=None):
         """Write styled `row`.
 
