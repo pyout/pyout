@@ -8,6 +8,7 @@ from collections import OrderedDict
 import logging
 import sys
 import time
+import threading
 import traceback
 
 from pyout.common import ContentError
@@ -1113,6 +1114,31 @@ def test_tabular_write_callable_cancel_on_exception():
 
 
 @pytest.mark.timeout(10)
+def test_tabular_write_callable_kb_interrupt_in_exit():
+    delay0 = Delayed("v0")
+    delay1 = Delayed("v1")
+
+    out = Tabular(max_workers=1)
+
+    def run_tabular():
+        with out:
+            out(OrderedDict([("name", "foo"), ("status", delay0.run)]))
+            out(OrderedDict([("name", "bar"), ("status", delay1.run)]))
+            raise KeyboardInterrupt
+
+    thread = threading.Thread(target=run_tabular)
+    thread.daemon = True
+    thread.start()
+    delay0.now = True
+    thread.join()
+    stdout = out.stdout
+    assert "KeyboardInterrupt" in stdout
+    assert_contains_nc(stdout.splitlines(),
+                       "foo v0",
+                       "bar   ")
+
+
+@pytest.mark.timeout(10)
 @pytest.mark.parametrize("kind", ["function", "generator"])
 def test_tabular_callback_bad_value(caplog, kind):
     caplog.set_level(logging.ERROR)
@@ -1136,6 +1162,56 @@ def test_tabular_callback_bad_value(caplog, kind):
     # of the main asynchronous function, so it is processed like any other
     # error in the asynchronous function.
     assert "got 'atom'" in (caplog.text if kind == "function" else out.stdout)
+
+
+@pytest.mark.timeout(10)
+def test_tabular_cancel_in_exit():
+    delay_0 = Delayed("v0")
+    delay_1 = Delayed("v1")
+    delay_2 = Delayed("v2")
+
+    out = Tabular(columns=["name", "status"],
+                  max_workers=1)
+    rows = [{"name": "foo", "status": delay_0.run},
+            {"name": "bar", "status": delay_1.run},
+            {"name": "baz", "status": delay_2.run}]
+
+    try:
+        with out:
+            for row in rows:
+                out(row)
+                if row["name"] == "foo":
+                    delay_0.now = True
+            while "v0" not in out.stdout:
+                time.sleep(0.01)
+            raise TypeError("oh no")
+    except TypeError:
+        # delay_1 is running and must complete.
+        delay_1.now = True
+        stdout = out.stdout
+        assert "oh no" in stdout
+        assert "v0" in stdout
+        assert "v1" not in stdout
+        assert "v2" not in stdout
+
+
+@pytest.mark.timeout(10)
+def test_tabular_exc_in_exit_no_async():
+    out = Tabular(columns=["name", "status"])
+    rows = [{"name": "foo", "status": "a"},
+            {"name": "bar", "status": "b"},
+            {"name": "baz", "status": "c"}]
+
+    try:
+        with out:
+            for row in rows:
+                out(row)
+            raise TypeError("oh no")
+    except TypeError:
+        expected = ["foo a",
+                    "bar b",
+                    "baz c"]
+        assert out.stdout.splitlines() == expected
 
 
 @pytest.mark.timeout(10)

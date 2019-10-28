@@ -190,8 +190,13 @@ class Writer(object):
     def __enter__(self):
         return self
 
-    def __exit__(self, *args):
-        failed = self.wait()
+    def __exit__(self, _exc_type, exc_value, _tb):
+        failed = None
+        if exc_value is not None:
+            self._abort(msg="\n{!r} raised\n".format(exc_value))
+        else:
+            failed = self.wait()
+
         if self._mode == "final":
             self._stream.write(str(self._content))
         if self._mode != "update" and self._last_summary is not None:
