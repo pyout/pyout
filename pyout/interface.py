@@ -125,7 +125,7 @@ class Writer(object):
             self.mode = "final"
 
         style = style or {}
-        if "width_" not in style and self._stream.width:
+        if style.get("width_") is None:
             lgr.debug("Setting width to stream width: %s",
                       self._stream.width)
             style["width_"] = self._stream.width

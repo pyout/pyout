@@ -215,9 +215,13 @@ schema = {
             "scope": "table"},
         "width_": {
             "description": """Total width of table.
-            This is typically not set directly by the user.""",
-            "default": 90,
-            "type": "integer",
+            This is typically not set directly by the user.  With the default
+            null value, the width is set to the stream's width for interactive
+            streams and as wide as needed to fit the content for
+            non-interactive streams.""",
+            "default": None,
+            "oneOf": [{"type": "integer"},
+                      {"type": "null"}],
             "scope": "table"}
     },
     # All other keys are column names.

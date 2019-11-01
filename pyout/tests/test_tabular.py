@@ -133,6 +133,36 @@ def test_tabular_width_no_style():
     assert out.stdout == "a" * 97 + "...\n"
 
 
+def test_tabular_width_non_interactive_default():
+    out = Tabular(["name", "status"], interactive=False)
+    a = "a" * 70
+    b = "b" * 100
+    with out:
+        out([a, b])
+    assert out.stdout == "{} {}\n".format(a, b)
+
+
+def test_tabular_width_non_interactive_width_override():
+    out = Tabular(["name", "status"],
+                  style={"width_": 31,
+                         "default_": {"width": {"marker": "…"}}},
+                  interactive=False)
+    with out:
+        out(["a" * 70, "b" * 100])
+    stdout = out.stdout
+    assert stdout == "{} {}\n".format("a" * 14 + "…", "b" * 14 + "…")
+
+
+def test_tabular_width_non_interactive_col_max():
+    out = Tabular(["name", "status"],
+                  style={"status": {"width": {"max": 20, "marker": "…"}}},
+                  interactive=False)
+    with out:
+        out(["a" * 70, "b" * 100])
+    stdout = out.stdout
+    assert stdout == "{} {}\n".format("a" * 70, "b" * 19 + "…")
+
+
 def test_tabular_write_header():
     out = Tabular(["name", "status"],
                   style={"header_": {},

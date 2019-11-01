@@ -371,6 +371,10 @@ class StyleFields(object):
         visible = self.visible_columns
         autowidth_columns = self.autowidth_columns
         width_table = self.style["width_"]
+        if width_table is None:
+            # The table is unbounded (non-interactive).
+            return
+
         if len(visible) > width_table:
             raise elements.StyleError(
                 "Number of visible columns exceeds available table width")
@@ -431,7 +435,10 @@ class StyleFields(object):
 
         width_table = self.style["width_"]
         width_fixed = self.width_fixed
-        width_auto = width_table - width_fixed
+        if width_table is None:
+            width_auto = float("inf")
+        else:
+            width_auto = width_table - width_fixed
 
         if not autowidth_columns:
             return False
@@ -502,7 +509,7 @@ class StyleFields(object):
                available characters the column should claim at a time.  This is
                only in effect after each column has claimed one, and the
                specific column has claimed its minimum.
-        available : int
+        available : int or float('inf')
             Width available to be assigned.
 
         Returns
@@ -551,7 +558,7 @@ class StyleFields(object):
                         claim, available, column)
                 if available == 0:
                     break
-        lgr.debug("Available width after assigned: %d", available)
+        lgr.debug("Available width after assigned: %s", available)
         lgr.debug("Assigned widths: %r", assigned)
         return assigned
 
