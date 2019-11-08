@@ -36,6 +36,5 @@ def test_tabular_basic():
 
 
 def test_tabular_update_mode_disallowed():
-    out = Tabular(["name", "status"])
     with pytest.raises(ValueError):
-        out.mode = "update"
+        Tabular(["name", "status"], mode="update")

@@ -2,15 +2,20 @@
 """
 
 import abc
+from collections import defaultdict
 from collections import OrderedDict
 from collections.abc import Mapping
+import concurrent.futures as cfut
+from concurrent.futures import ThreadPoolExecutor as Pool
 from contextlib import contextmanager
-from functools import partial
+from functools import wraps
 import inspect
+from itertools import chain
 from logging import getLogger
-import multiprocessing
-from multiprocessing.dummy import Pool
+import os
 import sys
+import threading
+import time
 
 from pyout.common import ContentWithSummary
 from pyout.common import RowNormalizer
@@ -77,6 +82,19 @@ class Stream(object, metaclass=abc.ABCMeta):
         """
 
 
+def skip_if_aborted(method):
+    """Decorate Writer `method` to prevent execution if write has been aborted.
+    """
+
+    @wraps(method)
+    def wrapped(self, *args, **kwds):
+        if self._aborted:
+            lgr.debug("Write has been aborted; not calling %r", method)
+        else:
+            return method(self, *args, **kwds)
+    return wrapped
+
+
 class Writer(object):
     """Base class implementing the core handling logic of pyout output.
 
@@ -84,7 +102,8 @@ class Writer(object):
      call Writer.__init__ and then the _init method.
     """
     def __init__(self, columns=None, style=None, stream=None,
-                 interactive=None):
+                 interactive=None, mode=None, continue_on_failure=True,
+                 wait_for_top=3, max_workers=None):
         self._columns = columns
         self._ids = None
 
@@ -93,9 +112,19 @@ class Writer(object):
         self._normalizer = None
 
         self._pool = None
+        if max_workers is None and sys.version_info < (3, 8):
+            # ThreadPoolExecutor's max_workers didn't get a default until
+            # Python 3.5, and that default was changed in 3.8.  Use Python
+            # 3.8's default for consistent behavior.
+            max_workers = min(32, (os.cpu_count() or 1) + 4)
+        self._max_workers = max_workers
         self._lock = None
+        self._aborted = False
+        self._futures = defaultdict(list)
+        self._continue_on_failure = continue_on_failure
 
-        self._mode = None
+        self._wait_for_top = wait_for_top
+        self._mode = mode
         self._write_fn = None
 
         self._stream = None
@@ -116,13 +145,7 @@ class Writer(object):
             field.PlainProcessors().
         """
         self._stream = streamer
-        if streamer.interactive:
-            if streamer.supports_updates:
-                self.mode = "update"
-            else:
-                self.mode = "incremental"
-        else:
-            self.mode = "final"
+        self._init_mode(streamer)
 
         style = style or {}
         if "width_" not in style and self._stream.width:
@@ -137,37 +160,21 @@ class Writer(object):
         self._normalizer = RowNormalizer(self._columns,
                                          self._content.fields.style)
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        self.wait()
-        if self.mode == "final":
-            self._stream.write(str(self._content))
-        if self.mode != "update" and self._last_summary is not None:
-            self._stream.write(str(self._last_summary))
-
-    @property
-    def mode(self):
-        """Mode of display.
-
-        * update (default): Go back and update the fields.  This includes
-          resizing the automated widths.
-
-        * incremental: Don't go back to update anything.
-
-        * final: finalized representation appropriate for redirecting to file
-        """
-        return self._mode
-
-    @mode.setter
-    def mode(self, value):
+    def _init_mode(self, streamer):
+        value = self._mode
+        lgr.debug("Initializing mode with given value of %s", value)
+        if value is None:
+            if streamer.interactive:
+                if streamer.supports_updates:
+                    value = "update"
+                else:
+                    value = "incremental"
+            else:
+                value = "final"
         valid = {"update", "incremental", "final"}
         if value not in valid:
             raise ValueError("{!r} is not a valid mode: {!r}"
                              .format(value, valid))
-        if self._content:
-            raise ValueError("Must set mode before output has been written")
 
         lgr.debug("Setting write mode to %r", value)
         self._mode = value
@@ -181,6 +188,31 @@ class Writer(object):
             else:
                 raise ValueError("Stream {} does not support updates"
                                  .format(self._stream))
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, _exc_type, exc_value, _tb):
+        failed = None
+        if exc_value is not None:
+            self._abort(msg="\n{!r} raised\n".format(exc_value))
+        else:
+            try:
+                failed = self.wait()
+            except KeyboardInterrupt:
+                lgr.debug("Caught KeyboardInterrupt "
+                          "while waiting for asynchronous workers")
+                self._abort(msg="\nKeyboard interrupt registered\n")
+                # Raise so that caller can decide how to handle.
+                raise
+
+        if self._mode == "final":
+            self._stream.write(str(self._content))
+        if self._mode != "update" and self._last_summary is not None:
+            self._stream.write(str(self._last_summary))
+
+        if failed:
+            self._print_async_exceptions(failed)
 
     @property
     def ids(self):
@@ -200,16 +232,89 @@ class Writer(object):
     def ids(self, columns):
         self._ids = columns
 
+    def _process_futures(self):
+        """Process each future as it completes.
+
+        If _continue_on_failure is false, raise the exception of the first
+        failed future encountered.  Otherwise return a list of futures that had
+        an exception.
+        """
+        failed = []
+        lgr.debug("Waiting for asynchronous calls")
+        continue_on_failure = self._continue_on_failure
+        for id_key, futures in self._futures.items():
+            for future in cfut.as_completed(futures):
+                lgr.debug("Processing future %s", future)
+                if not future.cancelled() and future.exception():
+                    if continue_on_failure:
+                        failed.append((id_key, future))
+                    else:
+                        future.result()  # Raise exception.
+        return failed
+
+    def _print_async_exceptions(self, failed_futures):
+        import traceback
+
+        # Prevent any remaining callbacks from writing to stream.
+        with self._write_lock():
+            self._aborted = True
+
+        n_failed = len(failed_futures)
+        stream = self._stream
+        with self._write_lock():
+            stream.write("\n\n")
+            stream.write("ERROR: {} asynchronous worker{} failed\n\n"
+                         .format(n_failed, "" if n_failed == 1 else "s"))
+            for id_key, future in failed_futures:
+                try:
+                    future.result()
+                except Exception:
+                    stream.write(
+                        "Producing value for row {} failed:\n{}\n"
+                        .format(id_key, traceback.format_exc()))
+
+    @skip_if_aborted
+    def _abort(self, cause=None, msg=None):
+        if self._pool is None:
+            # No asynchronous calls; there's nothing to abort.
+            return
+
+        with self._write_lock():
+            self._aborted = cause or True
+            stream = self._stream
+            if msg:
+                stream.write(msg)
+            futures = list(chain(*self._futures.values()))
+            for f in futures:
+                lgr.debug("Calling .cancel() with for %s", f)
+                f.cancel()
+        n_running = len([f for f in futures if f.running()])
+        stream.write("Canceled pending asynchronous workers. "
+                     "{} worker{} already running\n"
+                     .format(n_running, "" if n_running == 1 else "s"))
+        # Note: We can't call shutdown() with wait=True here.  That will
+        # trigger a RuntimeError in underlying <thread>.join() call.
+        self._pool.shutdown(wait=False)
+
     def wait(self):
         """Wait for asynchronous calls to return.
+
+        Returns
+        -------
+        A list of futures for asynchronous calls had an exception.
         """
         lgr.debug("Waiting for asynchronous calls")
         if self._pool is None:
             return
-        self._pool.close()
-        lgr.debug("Pool closed")
-        self._pool.join()
-        lgr.debug("Pool joined")
+        aborted = self._aborted
+        if aborted:
+            if isinstance(aborted, cfut.Future):
+                aborted.result()  # Raise exception.
+        else:
+            failed = self._process_futures()
+            self._pool.shutdown(wait=True)
+            lgr.debug("Pool shut down")
+            return failed
 
     @contextmanager
     def _write_lock(self):
@@ -233,16 +338,18 @@ class Writer(object):
         with self._write_lock():
             self._write_fn(row, style)
 
+    def _get_last_summary_length(self):
+        last_summary = self._last_summary
+        return len(last_summary.splitlines()) if last_summary else 0
+
     def _write_update(self, row, style=None):
-        if self._last_summary:
-            last_summary_len = len(self._last_summary.splitlines())
+        last_summary_len = self._get_last_summary_length()
+        if last_summary_len > 0:
             # Clear the summary because 1) it has very likely changed, 2)
             # it makes the counting for row updates simpler, 3) and it is
             # possible for the summary lines to shrink.
             lgr.debug("Clearing summary of %d line(s)", last_summary_len)
             self._stream.clear_last_lines(last_summary_len)
-        else:
-            last_summary_len = 0
 
         content, status, summary = self._content.update(row, style)
 
@@ -293,54 +400,160 @@ class Writer(object):
         _, _, summary = self._content.update(row, style)
         self._last_summary = summary
 
+    @skip_if_aborted
+    def _write_async_result(self, id_vals, cols, result):
+        lgr.debug("Received result for %s: %s",
+                  cols, result)
+        if isinstance(result, Mapping):
+            lgr.debug("Processing result as mapping")
+            pass
+        elif isinstance(result, tuple):
+            lgr.debug("Processing result as tuple")
+            result = dict(zip(cols, result))
+        elif len(cols) == 1:
+            lgr.debug("Processing result as atom")
+            result = {cols[0]: result}
+        else:
+            raise ValueError(
+                "Expected tuple or mapping for columns {!r}, got {!r}"
+                .format(cols, result))
+        result.update(id_vals)
+        self._write(result)
+
+    @skip_if_aborted
     def _start_callables(self, row, callables):
         """Start running `callables` asynchronously.
         """
+        id_key = tuple(row[c] for c in self.ids)
         id_vals = {c: row[c] for c in self.ids}
 
-        def callback(tab, cols, result):
-            lgr.debug("Received result for %s: %s",
-                      cols, result)
-            if isinstance(result, Mapping):
-                lgr.debug("Processing result as mapping")
-                pass
-            elif isinstance(result, tuple):
-                lgr.debug("Processing result as tuple")
-                result = dict(zip(cols, result))
-            elif len(cols) == 1:
-                lgr.debug("Processing result as atom")
-                # Don't bother raising an exception if cols != 1
-                # because it would be lost in the thread.
-                result = {cols[0]: result}
-            result.update(id_vals)
-            tab._write(result)
-
         if self._pool is None:
-            lgr.debug("Initializing pool")
-            self._pool = Pool()
+            lgr.debug("Initializing pool with max workers=%s",
+                      self._max_workers)
+            self._pool = Pool(max_workers=self._max_workers)
         if self._lock is None:
             lgr.debug("Initializing lock")
-            self._lock = multiprocessing.Lock()
+            self._lock = threading.Lock()
 
         for cols, fn in callables:
-            cb_func = partial(callback, self, cols)
-
             gen = None
             if inspect.isgeneratorfunction(fn):
                 gen = fn()
             elif inspect.isgenerator(fn):
                 gen = fn
 
+            def check_result(future):
+                if future.cancelled():
+                    ok = False
+                elif future.exception():
+                    ok = False
+                    if not self._continue_on_failure:
+                        self._abort(cause=future)
+                else:
+                    ok = True
+                return ok
+
             if gen:
-                lgr.debug("Wrapping generator in callback")
+                lgr.debug("Wrapping generator for cols %r of row %r",
+                          cols, id_vals)
 
-                def callback_for_each():
+                def async_fn():
                     for i in gen:
-                        cb_func(i)
-                self._pool.apply_async(callback_for_each)
-            else:
-                self._pool.apply_async(fn, callback=cb_func)
+                        self._write_async_result(id_vals, cols, i)
 
+                callback = check_result
+            else:
+                async_fn = fn
+
+                def callback(future):
+                    if check_result(future):
+                        self._write_async_result(
+                            id_vals, cols, future.result())
+
+            try:
+                future = self._pool.submit(async_fn)
+            except RuntimeError as exc:
+                # We can get here if, between entering this method call and
+                # calling .submit(), _aborted was set by a callback.
+                if self._aborted:
+                    lgr.debug(
+                        "Submitting callable for %s failed "
+                        "because pool is already shutdown: %s",
+                        id_key, exc)
+                else:
+                    raise
+            else:
+                future.add_done_callback(callback)
+                lgr.debug("Registering future %s for %s", future, id_key)
+                self._futures[id_key].append(future)
+
+    def top_nrows_done(self, n):
+        """Check if the top N rows' asynchronous workers are done.
+
+        Parameters
+        ----------
+        n : int
+            Consider this many of the top rows (e.g., 1 would consider just the
+            first row).
+
+        Returns
+        -------
+        True if the asynchronous workers for the top N rows have finished, and
+        False if they have not.  None is returned if Tabular is not operating
+        in "update" mode.
+        """
+        if self._mode != "update" or not self._content:
+            return None
+        #          0|..                                  <|
+        #          1|..                                   |
+        #          2|..                                   |
+        # top_idx  3|oo <|       <|          <|           |
+        #          4|oo  |--- n=3 |           |           |
+        #          5|oo <|        |           |           |--- content
+        #          6|oo           |           |           |    length
+        #          7|oo           |--- n_free |           | (including header)
+        #          8|oo           |           |    stream |
+        #          9|oo           |           |--- height |
+        #         10|oo          <|           |          <|
+        #           |oo <|                    |
+        #           |oo  |--- summary         |
+        #           |oo <|                    |
+        #           |oo <------ cursor       <|
+        last_summary_len = self._get_last_summary_length()
+        n_free = self._stream.height - last_summary_len - 1
+        top_idx = self._last_content_len - n_free
+
+        if top_idx < 0:
+            # The content lines haven't yet filled the screen.
+            return True
+
+        idxs = (top_idx + i for i in range(min(n, n_free)))
+        id_keys = (self._content.get_idkey(i) for i in idxs
+                   if i is not None)
+
+        futures = self._futures
+        top_futures = list(chain(*(futures[k] for k in id_keys)))
+        if not top_futures:
+            # These rows have no registered producers.
+            return True
+        return all(f.done() for f in top_futures)
+
+    def _maybe_wait_on_top_rows(self):
+        n = self._wait_for_top
+        if n:
+            waited = 0
+            secs = 0.5
+            while self.top_nrows_done(n) is False:
+                time.sleep(secs)
+                waited += 1
+            if waited:
+                lgr.debug("Waited for %s cycles of sleeping %s seconds",
+                          waited, secs)
+                # Wait a bit longer so that the caller has a chance to see the
+                # last updated row if it about to go off screen.
+                time.sleep(secs)
+
+    @skip_if_aborted
     def __call__(self, row, style=None):
         """Write styled `row`.
 
@@ -379,6 +592,7 @@ class Writer(object):
             Each top-level key should be a column name and the value should be
             a style dict that overrides the class instance style.
         """
+        self._maybe_wait_on_top_rows()
         if self._columns is None:
             self._columns = self._infer_columns(row)
             lgr.debug("Inferred columns: %r", self._columns)

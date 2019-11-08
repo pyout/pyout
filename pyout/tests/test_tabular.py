@@ -5,8 +5,10 @@ pytest.importorskip("blessings")
 
 from collections import Counter
 from collections import OrderedDict
+import logging
 import sys
 import time
+import threading
 import traceback
 
 from pyout.common import ContentError
@@ -371,6 +373,22 @@ def test_tabular_non_hashable_id_error():
     out.ids = ["status"]
     with pytest.raises(ContentError):
         out({"name": "foo", "status": [0, 1]})
+
+
+def test_tabular_content_get_idkey():
+    out = Tabular(["first", "last", "status"])
+    out.ids = ["first", "last"]
+    data = [{"first": "foo", "last": "bert", "status": "ok"},
+            {"first": "foo", "last": "zoo", "status": "bad"},
+            {"first": "bar", "last": "t", "status": "unknown"}]
+    for row in data:
+        out(row)
+
+    for idx, key in enumerate([("foo", "bert"), ("foo", "zoo"), ("bar", "t")]):
+        assert out._content.get_idkey(idx) == key
+
+    with pytest.raises(IndexError):
+        out._content.get_idkey(4)
 
 
 def test_tabular_write_lookup_color():
@@ -894,7 +912,14 @@ class Delayed(object):
         """
         while True:
             if self.now:
-                return self.value
+                value = self.value
+                if callable(value):
+                    value = value()
+                return value
+
+    def gen(self):
+        value = self.run()
+        yield value
 
 
 @pytest.mark.timeout(10)
@@ -978,7 +1003,8 @@ def test_tabular_write_callable_values_multi_return():
 @pytest.mark.parametrize("nrows", [20, 21])
 def test_tabular_callback_to_offscreen_row(nrows):
     delay = Delayed("OK")
-    out = Tabular(style={"status": {"aggregate": len}})
+    out = Tabular(style={"status": {"aggregate": len}},
+                  wait_for_top=0)
     with out:
         for i in range(1, nrows + 1):
             status = delay.run if i == 3 else "s{:02d}".format(i)
@@ -1007,6 +1033,64 @@ def test_tabular_callback_to_offscreen_row(nrows):
 
 
 @pytest.mark.timeout(10)
+@pytest.mark.parametrize("header", [True, False], ids=["header", "no header"])
+def test_tabular_callback_wait_for_top(header):
+    delay_fns = {0: Delayed("v0"),
+                 4: Delayed("v4"),
+                 28: Delayed("v20")}
+    style = {"header_": {}} if header else {}
+
+    idxs = []
+
+    def run_tabular():
+        with Tabular(wait_for_top=2, style=style) as out:
+            for i in range(40):
+                if i in delay_fns:
+                    status = delay_fns[i].run
+                else:
+                    status = "s{:02d}".format(i)
+                out(OrderedDict([("name", "foo{:02d}".format(i)),
+                                 ("status", status)]))
+                idxs.append(i)
+
+    # The wait_for_top functionality involves Tabular.__call__() blocking us,
+    # so we need to test it in another thread.
+    thread = threading.Thread(target=run_tabular)
+    thread.daemon = True
+    thread.start()
+
+    def wait_then_check(idx_expected):
+        wait = 0
+        while not idxs or idxs[-1] < idx_expected:
+            time.sleep(0.1)
+            wait += 0.1
+
+        # We've encountered the index we expected in `wait` seconds.  A
+        # conservative check that we're not going to see another row is to wait
+        # that many seconds to make sure we're in the same spot.
+        time.sleep(wait)
+        assert idxs[-1] == idx_expected
+
+    # None of the workers have returned, including the one in the first row.
+    # So with a height of 20 and 1 row for the cursor, we to wait at 19 rows
+    # (an index of 18).  If there's a header, we can accommodate one fewer.
+    wait_then_check(18 - header)
+
+    delay_fns[0].now = True
+    delay_fns[28].now = True
+
+    # We've released the worker for the 1st row and the 28th, but the one in
+    # the 5th is still going.  We set wait_for_top=2, so we advance to having
+    # the 4th row at the top.
+    wait_then_check(21)
+
+    delay_fns[4].now = True
+    # We've released the final worker from the 4th row.  The last row comes in.
+    wait_then_check(39)
+    thread.join()
+
+
+@pytest.mark.timeout(10)
 @pytest.mark.parametrize("result",
                          [{"status": "done", "path": "/tmp/a"},
                           ("done", "/tmp/a")],
@@ -1028,6 +1112,228 @@ def test_tabular_write_callable_values_multicol_key_infer_column(result):
         delay.now = True
     lines = out.stdout.splitlines()
     assert_contains_nc(lines, "foo done /tmp/a")
+
+
+@pytest.mark.timeout(10)
+@pytest.mark.parametrize("kind", ["function", "generator"])
+@pytest.mark.parametrize("should_continue", [True, False])
+def test_tabular_callback_exception_within(kind, should_continue):
+    if kind == "generator":
+        def fail(msg):
+            def fn():
+                yield "ok"
+                raise TypeError(msg)
+            return fn
+    else:
+        def fail(msg):
+            def fn():
+                raise TypeError(msg)
+            return fn
+
+    out = Tabular(max_workers=2, continue_on_failure=should_continue)
+    rows = [OrderedDict([("name", "foo"),
+                         ("status", fail("foofail"))]),
+            OrderedDict([("name", "bar"),
+                         ("status", fail("barfail"))]),
+            OrderedDict([("name", "baz"),
+                         ("status", lambda: "only-if-continue")])]
+
+    if should_continue:
+        with out:
+            for row in rows:
+                out(row)
+
+        stdout = out.stdout
+        assert "only-if-continue" in stdout
+        assert "foofail" in stdout
+        assert "barfail" in stdout
+    else:
+        with pytest.raises(TypeError):
+            with out:
+                for row in rows:
+                    out(row)
+        stdout = out.stdout
+        assert "only-if-continue" not in stdout
+
+    if should_continue:
+        assert "only-if-continue" in stdout
+    else:
+        assert "only-if-continue" not in stdout
+
+    # Regardless of the `continue_on_failure`, any value the generator yields
+    # before failing will make it through.
+    if kind == "generator":
+        assert "foo ok" in stdout
+    else:
+        assert "foo ok" not in stdout
+
+
+@pytest.mark.timeout(10)
+def test_tabular_write_callable_cancel_on_exception():
+    def fail():
+        raise TypeError("wrong")
+
+    delay_fail = Delayed(fail)
+    delay = Delayed("ok")
+
+    out = Tabular(["name", "status"],
+                  max_workers=1,
+                  continue_on_failure=False)
+
+    with pytest.raises(TypeError):
+        with out:
+            out({"name": "foo", "status": delay_fail.run})
+            out({"name": "bar", "status": delay.run})
+            delay_fail.now = True
+    assert out.stdout.splitlines()[:2] == ["foo", "bar"]
+
+
+@pytest.mark.timeout(10)
+def test_tabular_write_callable_kb_interrupt_in_exit():
+    delay0 = Delayed("v0")
+    delay1 = Delayed("v1")
+
+    out = Tabular(max_workers=1)
+
+    def run_tabular():
+        with out:
+            out(OrderedDict([("name", "foo"), ("status", delay0.run)]))
+            out(OrderedDict([("name", "bar"), ("status", delay1.run)]))
+            raise KeyboardInterrupt
+
+    thread = threading.Thread(target=run_tabular)
+    thread.daemon = True
+    thread.start()
+    delay0.now = True
+    thread.join()
+    stdout = out.stdout
+    assert "KeyboardInterrupt" in stdout
+    assert_contains_nc(stdout.splitlines(),
+                       "foo v0",
+                       "bar   ")
+
+
+@pytest.mark.timeout(10)
+def test_tabular_write_callable_kb_interrupt_during_wait():
+    delay0 = Delayed("v0")
+    delay1 = Delayed("v1")
+
+    out = Tabular(max_workers=1)
+
+    def run_tabular():
+        def raise_kbint():
+            raise KeyboardInterrupt
+
+        out.wait = raise_kbint
+        with out:
+            out(OrderedDict([("name", "foo"), ("status", delay0.run)]))
+            out(OrderedDict([("name", "bar"), ("status", delay1.run)]))
+
+    thread = threading.Thread(target=run_tabular)
+    thread.daemon = True
+    thread.start()
+    delay0.now = True
+    delay1.now = True
+    thread.join()
+    stdout = out.stdout
+    assert_contains_nc(stdout.splitlines(),
+                       "foo v0",
+                       "bar   ")
+    assert "Keyboard interrupt" in stdout
+
+
+@pytest.mark.timeout(10)
+@pytest.mark.parametrize("kind", ["function", "generator"])
+def test_tabular_callback_bad_value(caplog, kind):
+    caplog.set_level(logging.ERROR)
+
+    delay = Delayed("atom")
+
+    out = Tabular()
+    row = OrderedDict(
+        [("name", "foo"),
+         (("status", "path"),
+          getattr(delay, "run" if kind == "function" else "gen"))])
+
+    with out:
+        out(row)
+        delay.now = True
+
+    # Note that there is an unfortunate discrepancy between a regular function
+    # and a generator value.  With a regular function, the write happens in the
+    # callback, where concurrent.futures catches it and calls
+    # logging.exception().  With a generator value, the write happens as part
+    # of the main asynchronous function, so it is processed like any other
+    # error in the asynchronous function.
+    assert "got 'atom'" in (caplog.text if kind == "function" else out.stdout)
+
+
+@pytest.mark.timeout(10)
+def test_tabular_cancel_in_exit():
+    delay_0 = Delayed("v0")
+    delay_1 = Delayed("v1")
+    delay_2 = Delayed("v2")
+
+    out = Tabular(columns=["name", "status"],
+                  max_workers=1)
+    rows = [{"name": "foo", "status": delay_0.run},
+            {"name": "bar", "status": delay_1.run},
+            {"name": "baz", "status": delay_2.run}]
+
+    try:
+        with out:
+            for row in rows:
+                out(row)
+                if row["name"] == "foo":
+                    delay_0.now = True
+            while "v0" not in out.stdout:
+                time.sleep(0.01)
+            raise TypeError("oh no")
+    except TypeError:
+        # delay_1 is running and must complete.
+        delay_1.now = True
+        stdout = out.stdout
+        assert "oh no" in stdout
+        assert "v0" in stdout
+        assert "v1" not in stdout
+        assert "v2" not in stdout
+
+
+@pytest.mark.timeout(10)
+def test_tabular_exc_in_exit_no_async():
+    out = Tabular(columns=["name", "status"])
+    rows = [{"name": "foo", "status": "a"},
+            {"name": "bar", "status": "b"},
+            {"name": "baz", "status": "c"}]
+
+    try:
+        with out:
+            for row in rows:
+                out(row)
+            raise TypeError("oh no")
+    except TypeError:
+        expected = ["foo a",
+                    "bar b",
+                    "baz c"]
+        assert out.stdout.splitlines() == expected
+
+
+@pytest.mark.timeout(10)
+def test_tabular_pool_shutdown():
+    delay_0 = Delayed("v0")
+    delay_1 = Delayed("v1")
+    delay_2 = Delayed("v2")
+
+    out = Tabular(columns=["name", "status"],
+                  max_workers=1)
+    with out:
+        out({"name": "foo", "status": delay_0.run})
+        out({"name": "bar", "status": delay_1.run})
+        delay_0.now = True
+        delay_1.now = True
+        out._pool.shutdown(wait=False)
+        with pytest.raises(RuntimeError):
+            out({"name": "baz", "status": delay_2.run})
 
 
 def delayed_gen_func(*values):
@@ -1231,9 +1537,8 @@ def test_tabular_shrinking_summary():
 
 
 def test_tabular_mode_invalid():
-    out = Tabular(["name", "status"])
     with pytest.raises(ValueError):
-        out.mode = "unknown"
+        Tabular(["name", "status"], mode="unknown")
 
 
 def test_tabular_mode_default():
@@ -1247,8 +1552,7 @@ def test_tabular_mode_default():
         for row in data:
             out0(row)
 
-    out1 = Tabular()
-    out1.mode = "update"
+    out1 = Tabular(mode="update")
     with out1:
         for row in data:
             out1(row)
@@ -1256,24 +1560,15 @@ def test_tabular_mode_default():
     assert out0.stdout == out1.stdout
 
 
-def test_tabular_mode_after_write():
-    out = Tabular(["name", "status"])
-    out(["foo", "ok"])
-    with pytest.raises(ValueError):
-        out.mode = "final"
-
-
 def test_tabular_mode_update_noninteractive():
     out = Tabular(["name", "status"], interactive=False)
-    assert out.mode == "final"
-    with pytest.raises(ValueError):
-        out.mode = "update"
+    assert out._mode == "final"
 
 
 def test_tabular_mode_incremental():
     out = Tabular(["name", "status"],
-                  style={"status": {"aggregate": len}})
-    out.mode = "incremental"
+                  style={"status": {"aggregate": len}},
+                  mode="incremental")
 
     with out:
         out({"name": "foo", "status": "ok"})
@@ -1288,8 +1583,7 @@ def test_tabular_mode_incremental():
 
 
 def test_tabular_mode_final():
-    out = Tabular(["name", "status"])
-    out.mode = "final"
+    out = Tabular(["name", "status"], mode="final")
 
     with out:
         out({"name": "foo", "status": "unknown"})
@@ -1302,8 +1596,8 @@ def test_tabular_mode_final():
 
 def test_tabular_mode_final_summary():
     out = Tabular(["name", "status"],
-                  style={"status": {"aggregate": len}})
-    out.mode = "final"
+                  style={"status": {"aggregate": len}},
+                  mode="final")
 
     with out:
         out({"name": "foo", "status": "unknown"})

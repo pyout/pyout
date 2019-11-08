@@ -16,7 +16,25 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   either unconditionally or until `Tabular` is called with a record
   that includes the column.
 
+- The `Tabular` class now accepts a `max_workers` argument that
+  controls the maximum number of asynchronous workers that run
+  concurrently.
+
+- The `Tabular` class gained a `continue_on_failure` argument.  When
+  set to false, an exception in an asynchronous worker is raised as it
+  is encountered rather than after all asynchronous workers have
+  returned.
+
+- `Tabular` now waits until the asynchronous workers of the top three
+  rows have completed before adding a new row that would advance the
+  screen.  The number of top rows that are considered can be
+  configured via the new `wait_for_top` keyword argument.
+
 ### Changed
+
+- The `mode` property of the `Tabular` class has been removed.
+  The mode should instead be specified via the `mode` keyword argument
+  when initializing the class.
 
 - The calculation of auto-width columns has been enhanced so that the
   available width is more evenly spread across the columns.  The width

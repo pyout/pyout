@@ -99,6 +99,28 @@ class Tabular(interface.Writer):
         determined by calling `stream.isatty()`.  If non-interactive, the bold,
         color, and underline keys will be ignored, and the mode will default to
         "final".
+    mode : {update, incremental, final}, optional
+        Mode of display.
+        * update (default): Go back and update the fields.  This includes
+          resizing the automated widths.
+        * incremental: Don't go back to update anything.
+        * final: finalized representation appropriate for redirecting to file
+
+        Defaults to "update" if the stream supports updates and "incremental"
+        otherwise.  If the stream is non-interactive, defaults to "final".
+    continue_on_failure : bool, optional
+        If an asynchronous worker fails, the default behavior is to continue
+        and report the failures at the end.  Set this flag to false in order
+        to abort writing the table and raise if any exception is received.
+    wait_for_top : int, optional
+        Wait for the asynchronous workers of this many top-most rows to finish
+        before proceeding with a row before adding a row that would take the
+        top row off screen.
+    max_workers : int, optional
+        Use at most this number of concurrent workers when retrieving values
+        asynchronously (i.e., when producers are specified as row values).  The
+        default matches the default of `concurrent.futures.ThreadPoolExecutor`
+        as of Python 3.8: `min(32, os.cpu_count() + 4)`.
 
     Examples
     --------
@@ -123,9 +145,13 @@ class Tabular(interface.Writer):
     """
 
     def __init__(self, columns=None, style=None, stream=None,
-                 interactive=None):
-        super(Tabular, self).__init__(columns, style, stream=stream,
-                                      interactive=interactive)
+                 interactive=None, mode=None, continue_on_failure=True,
+                 wait_for_top=3, max_workers=None):
+        super(Tabular, self).__init__(
+            columns, style, stream=stream,
+            interactive=interactive, mode=mode,
+            continue_on_failure=continue_on_failure,
+            wait_for_top=wait_for_top, max_workers=max_workers)
         streamer = TerminalStream(stream=stream, interactive=interactive)
         if streamer.interactive:
             processors = TermProcessors(streamer.term)

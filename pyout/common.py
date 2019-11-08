@@ -673,7 +673,8 @@ class Content(object):
 
         self._header = None
         self._rows = []
-        self._idmap = {}
+        self._idkey_to_idx = {}
+        self._idx_to_idkey = {}
 
     def init_columns(self, columns, ids):
         """Set up the fields for `columns`.
@@ -697,7 +698,7 @@ class Content(object):
         return bool(self._rows)
 
     def __getitem__(self, key):
-        idx = self._idmap[key]
+        idx = self._idkey_to_idx[key]
         return self._rows[idx].row
 
     @property
@@ -725,6 +726,34 @@ class Content(object):
             return "".join(self._render(self.rows))
         except RedoContent:
             return "".join(self._render(self.rows))
+
+    def get_idkey(self, idx):
+        """Return ID keys for a row.
+
+        Parameters
+        ----------
+        idx : int
+            Index of row (determined by order it came in to `update`).
+
+        Returns
+        -------
+        ID key (tuple) matching row.  If there is a header, None is return as
+        its ID key.
+
+        Raises
+        ------
+        IndexError if `idx` does not match known row.
+        """
+        if self._header:
+            idx -= 1
+            if idx == -1:
+                return None
+        try:
+            return self._idx_to_idkey[idx]
+        except KeyError:
+            msg = ("Index {!r} outside of current range: [0, {})"
+                   .format(idx, len(self._idkey_to_idx)))
+            raise IndexError(msg) from None
 
     def update(self, row, style):
         """Modify the content.
@@ -760,11 +789,14 @@ class Content(object):
             lgr.debug("Registering header")
             self._add_header()
             self._rows.append(ContentRow(row, kwds={"style": style}))
-            self._idmap[idkey] = 0
+            self._idkey_to_idx[idkey] = 0
+            self._idx_to_idkey[0] = idkey
             return str(self), "append"
 
         try:
-            prev_idx = self._idmap[idkey] if idkey in self._idmap else None
+            prev_idx = self._idkey_to_idx[idkey]
+        except KeyError:
+            prev_idx = None
         except TypeError:
             raise ContentError("ID columns must be hashable")
 
@@ -778,7 +810,9 @@ class Content(object):
             row = self._rows[prev_idx][0]
         else:
             lgr.debug("Adding row %r to content for first time", idkey)
-            self._idmap[idkey] = len(self._rows)
+            nrows = len(self._rows)
+            self._idkey_to_idx[idkey] = nrows
+            self._idx_to_idkey[nrows] = idkey
             self._rows.append(ContentRow(row, kwds={"style": style}))
 
         line, adjusted = self.fields.render(row, style)
