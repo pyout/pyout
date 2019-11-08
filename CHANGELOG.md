@@ -45,6 +45,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   the proportion of the table.  For example, setting the "max" key to
   0.5 means that the key should exceed half of the total table width.
 
+- When operating non-interactively, by default the width is now
+  expanded to accommodate the content.  To force a particular table
+  width in this situation, set the table's width using the "width_"
+  style attribute.
 
 ## [0.4.1] - 2019-10-02
 
