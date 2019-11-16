@@ -47,7 +47,6 @@ def test_adopt():
 
 
 def test_validate_error():
-    pytest.importorskip("jsonschema")
     with pytest.raises(StyleValidationError):
         validate("not ok")
 

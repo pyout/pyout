@@ -2,6 +2,7 @@
 """
 
 from collections.abc import Mapping
+import jsonschema
 
 schema = {
     "definitions": {
@@ -281,11 +282,6 @@ def validate(style):
     ------
     StyleValidationError if `style` is not valid.
     """
-    try:
-        import jsonschema
-    except ImportError:
-        return
-
     try:
         jsonschema.validate(style, schema)
     except jsonschema.ValidationError as exc:

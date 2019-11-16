@@ -32,6 +32,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
+- The `jsonschema` module (v3.0.0 or later) is now a requirement
+  rather than an optional dependency.
+
 - The `mode` property of the `Tabular` class has been removed.
   The mode should instead be specified via the `mode` keyword argument
   when initializing the class.
