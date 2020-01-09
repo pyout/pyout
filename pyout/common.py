@@ -622,7 +622,7 @@ class StyleFields(object):
         if can_unhide:
             for c in row:
                 val = row[c]
-                if hidden[c] == "if_missing" and not isinstance(val, Nothing):
+                if hidden.get(c) == "if_missing" and not isinstance(val, Nothing):
                     lgr.debug("Unhiding column %r after encountering %r",
                               c, val)
                     hidden[c] = False
