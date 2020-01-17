@@ -5,7 +5,7 @@ requires = {
         "blessings; sys_platform != 'win32'",
         "jsonschema>=3.0.0",
     ],
-    "tests": ["pytest", "pytest-timeout", "mock"],
+    "tests": ["pytest", "pytest-timeout"],
 }
 
 requires["full"] = list(requires.values())

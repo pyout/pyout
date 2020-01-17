@@ -2,7 +2,7 @@
 """
 
 from io import StringIO
-from mock import patch
+from unittest.mock import patch
 
 from pyout import Tabular as TheRealTabular
 from pyout.tests.terminal import Terminal
