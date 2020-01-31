@@ -469,7 +469,11 @@ class Flanks(object):
             return result
 
         match = self.flank_re.match(result)
-        assert match, "This regexp should always match"
+        if not match:
+            raise RuntimeError(
+                "Flank regexp unexpectedly did not match result: "
+                "{!r} (type: {})"
+                .format(result, type(result)))
         self.left, self.right = match.group(1), match.group(3)
         return match.group(2)
 
