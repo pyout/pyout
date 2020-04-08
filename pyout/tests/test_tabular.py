@@ -1229,6 +1229,10 @@ def test_tabular_write_callable_kb_interrupt_in_exit():
         with out:
             out(OrderedDict([("name", "foo"), ("status", delay0.run)]))
             out(OrderedDict([("name", "bar"), ("status", delay1.run)]))
+            # Hold up until output from the first callable has been
+            # written.
+            while "v0" not in out.stdout:
+                time.sleep(0.1)
             raise KeyboardInterrupt
 
     thread = threading.Thread(target=run_tabular)
@@ -1252,6 +1256,13 @@ def test_tabular_write_callable_kb_interrupt_during_wait():
 
     def run_tabular():
         def raise_kbint():
+            # Hold up until output from the callables has been
+            # written.
+            while True:
+                stdout = out.stdout
+                if "v0" and "v1" in stdout:
+                    break
+                time.sleep(0.1)
             raise KeyboardInterrupt
 
         out.wait = raise_kbint
