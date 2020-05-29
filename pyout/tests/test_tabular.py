@@ -127,6 +127,20 @@ def test_tabular_write_data_as_list():
     assert_eq_repr(out.stdout, expected)
 
 
+@pytest.mark.parametrize("data_type", ["dict", "seq", "obj"])
+def test_tabular_write_unknown_column(data_type):
+    if data_type == "dict":
+        row = {"name": "a", "unk": "unk"}
+    elif data_type == "seq":
+        row = ["a", "unk"]
+    else:
+        row = AttrData(name="a", unk="unk")
+
+    out = Tabular(columns=["name"])
+    out(row)
+    assert_eq_repr(out.stdout, "a\n")
+
+
 def test_tabular_width_no_style():
     out = Tabular(["name"])
     out(["a" * 105])
