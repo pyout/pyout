@@ -404,9 +404,18 @@ class Writer(object):
     def _write_async_result(self, id_vals, cols, result):
         lgr.debug("Received result for %s: %s",
                   cols, result)
+        result_orig = result
         if isinstance(result, Mapping):
             lgr.debug("Processing result as mapping")
-            pass
+            result_orig = result.copy()
+            # Avoid simpler dict comprehension for logging purposes.
+            columns = self._columns
+            for col in list(result):
+                if col not in columns:
+                    lgr.warning(
+                        "Callable for columns %s returned unknown column: %s",
+                        cols, col)
+                    result.pop(col)
         elif isinstance(result, tuple):
             lgr.debug("Processing result as tuple")
             result = dict(zip(cols, result))
@@ -417,8 +426,12 @@ class Writer(object):
             raise ValueError(
                 "Expected tuple or mapping for columns {!r}, got {!r}"
                 .format(cols, result))
-        result.update(id_vals)
-        self._write(result)
+        if result:
+            result.update(id_vals)
+            self._write(result)
+        else:
+            lgr.warning("Async result turned up empty (all unknown columns?):"
+                        " %s", result_orig)
 
     @skip_if_aborted
     def _start_callables(self, row, callables):

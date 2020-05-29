@@ -1044,6 +1044,38 @@ def test_tabular_write_callable_values_multi_return():
 
 
 @pytest.mark.timeout(10)
+def test_tabular_write_callable_unknown_column():
+    delay = Delayed({"status": "done", "unk": "unkval"})
+    out = Tabular(["name", "status"])
+    with out:
+        out({"name": "foo", "status": delay.run})
+        delay.now = True
+    assert_contains_nc(out.stdout.splitlines(),
+                       "foo done")
+
+
+@pytest.mark.timeout(10)
+def test_tabular_write_callable_sneaky_unknown_column():
+    delay = Delayed({"status": "ok", "unk": "unk_value"})
+    out = Tabular(["name", "status"])
+    with out:
+        out({"name": "foo", "status": delay.run})
+        delay.now = True
+    assert_contains_nc(out.stdout.splitlines(),
+                       "foo ok")
+
+
+@pytest.mark.timeout(10)
+def test_tabular_write_callable_returns_only_unknown():
+    delay = Delayed({"unk": "unk_value"})
+    out = Tabular(["name", "status"])
+    with out:
+        out({"name": "foo", "status": delay.run})
+        delay.now = True
+    assert out.stdout.strip() == "foo"
+
+
+@pytest.mark.timeout(10)
 @pytest.mark.parametrize("nrows", [20, 21])
 def test_tabular_callback_to_offscreen_row(nrows):
     delay = Delayed("OK")
