@@ -142,8 +142,7 @@ class RowNormalizer(object):
             row_norm[key] = delay(cols)
         return row_norm
 
-    @staticmethod
-    def strip_callables(row):
+    def strip_callables(self, row):
         """Extract callable values from `row`.
 
         Replace the callable values with the initial value (if specified) or
@@ -162,6 +161,7 @@ class RowNormalizer(object):
         -------
         list of (column, callable)
         """
+        known_columns = self._columns
         callables = []
         to_delete = []
         to_add = []
@@ -182,10 +182,22 @@ class RowNormalizer(object):
                     columns = columns,
                 else:
                     to_delete.append(columns)
-                for column in columns:
-                    to_add.append((column, initial))
-                callables.append((columns, fn))
 
+                callables_key = []
+                for column in columns:
+                    if column in known_columns:
+                        to_add.append((column, initial))
+                        callables_key.append(column)
+                    else:
+                        lgr.warning(
+                            "Callable key '%s' is not a known column: %s",
+                            column, known_columns)
+                if callables_key:
+                    callables.append((callables_key, fn))
+                else:
+                    lgr.warning("Callable for %s was not registered "
+                                "because no keys were known columns",
+                                columns)
         for column, value in to_add:
             row[column] = value
         for multi_columns in to_delete:

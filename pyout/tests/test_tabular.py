@@ -1055,6 +1055,28 @@ def test_tabular_write_callable_unknown_column():
 
 
 @pytest.mark.timeout(10)
+def test_tabular_write_callable_unknown_column_multikey():
+    delay = Delayed({"status": "done", "unk": "unk_value"})
+    out = Tabular(["name", "status"])
+    with out:
+        out({"name": "foo", ("status", "unk"): delay.run})
+        delay.now = True
+    assert_contains_nc(out.stdout.splitlines(),
+                       "foo done")
+
+
+@pytest.mark.timeout(10)
+def test_tabular_write_callable_only_unknown_columns_multikey():
+    def fail():
+        raise AssertionError("Should not be called")
+
+    out = Tabular(["name", "status"])
+    with out:
+        out({"name": "foo", ("unk0", "unk1"): fail})
+    assert out.stdout.strip() == "foo"
+
+
+@pytest.mark.timeout(10)
 def test_tabular_write_callable_sneaky_unknown_column():
     delay = Delayed({"status": "ok", "unk": "unk_value"})
     out = Tabular(["name", "status"])
