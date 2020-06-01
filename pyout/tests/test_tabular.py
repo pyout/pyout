@@ -127,6 +127,20 @@ def test_tabular_write_data_as_list():
     assert_eq_repr(out.stdout, expected)
 
 
+@pytest.mark.parametrize("data_type", ["dict", "seq", "obj"])
+def test_tabular_write_unknown_column(data_type):
+    if data_type == "dict":
+        row = {"name": "a", "unk": "unk"}
+    elif data_type == "seq":
+        row = ["a", "unk"]
+    else:
+        row = AttrData(name="a", unk="unk")
+
+    out = Tabular(columns=["name"])
+    out(row)
+    assert_eq_repr(out.stdout, "a\n")
+
+
 def test_tabular_width_no_style():
     out = Tabular(["name"])
     out(["a" * 105])
@@ -1027,6 +1041,60 @@ def test_tabular_write_callable_values_multi_return():
         delay.now = True
     lines = out.stdout.splitlines()
     assert_contains_nc(lines, "foo done /tmp/a")
+
+
+@pytest.mark.timeout(10)
+def test_tabular_write_callable_unknown_column():
+    delay = Delayed({"status": "done", "unk": "unkval"})
+    out = Tabular(["name", "status"])
+    with out:
+        out({"name": "foo", "status": delay.run})
+        delay.now = True
+    assert_contains_nc(out.stdout.splitlines(),
+                       "foo done")
+
+
+@pytest.mark.timeout(10)
+def test_tabular_write_callable_unknown_column_multikey():
+    delay = Delayed({"status": "done", "unk": "unk_value"})
+    out = Tabular(["name", "status"])
+    with out:
+        out({"name": "foo", ("status", "unk"): delay.run})
+        delay.now = True
+    assert_contains_nc(out.stdout.splitlines(),
+                       "foo done")
+
+
+@pytest.mark.timeout(10)
+def test_tabular_write_callable_only_unknown_columns_multikey():
+    def fail():
+        raise AssertionError("Should not be called")
+
+    out = Tabular(["name", "status"])
+    with out:
+        out({"name": "foo", ("unk0", "unk1"): fail})
+    assert out.stdout.strip() == "foo"
+
+
+@pytest.mark.timeout(10)
+def test_tabular_write_callable_sneaky_unknown_column():
+    delay = Delayed({"status": "ok", "unk": "unk_value"})
+    out = Tabular(["name", "status"])
+    with out:
+        out({"name": "foo", "status": delay.run})
+        delay.now = True
+    assert_contains_nc(out.stdout.splitlines(),
+                       "foo ok")
+
+
+@pytest.mark.timeout(10)
+def test_tabular_write_callable_returns_only_unknown():
+    delay = Delayed({"unk": "unk_value"})
+    out = Tabular(["name", "status"])
+    with out:
+        out({"name": "foo", "status": delay.run})
+        delay.now = True
+    assert out.stdout.strip() == "foo"
 
 
 @pytest.mark.timeout(10)
