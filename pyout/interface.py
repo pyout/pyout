@@ -20,6 +20,7 @@ import time
 from pyout.common import ContentWithSummary
 from pyout.common import RowNormalizer
 from pyout.common import StyleFields
+from pyout.common import UnknownColumns
 from pyout.field import PlainProcessors
 
 lgr = getLogger(__name__)
@@ -336,7 +337,12 @@ class Writer(object):
 
     def _write(self, row, style=None):
         with self._write_lock():
-            self._write_fn(row, style)
+            try:
+                self._write_fn(row, style)
+            except UnknownColumns as exc:
+                self._columns.extend(exc.unknown_columns)
+                self._init_prewrite()
+                self._write_fn(row, style)
 
     def _get_last_summary_length(self):
         last_summary = self._last_summary
@@ -404,18 +410,8 @@ class Writer(object):
     def _write_async_result(self, id_vals, cols, result):
         lgr.debug("Received result for %s: %s",
                   cols, result)
-        result_orig = result
         if isinstance(result, Mapping):
             lgr.debug("Processing result as mapping")
-            result_orig = result.copy()
-            # Avoid simpler dict comprehension for logging purposes.
-            columns = self._columns
-            for col in list(result):
-                if col not in columns:
-                    lgr.warning(
-                        "Callable for columns %s returned unknown column: %s",
-                        cols, col)
-                    result.pop(col)
         elif isinstance(result, tuple):
             lgr.debug("Processing result as tuple")
             result = dict(zip(cols, result))
@@ -426,12 +422,8 @@ class Writer(object):
             raise ValueError(
                 "Expected tuple or mapping for columns {!r}, got {!r}"
                 .format(cols, result))
-        if result:
-            result.update(id_vals)
-            self._write(result)
-        else:
-            lgr.warning("Async result turned up empty (all unknown columns?):"
-                        " %s", result_orig)
+        result.update(id_vals)
+        self._write(result)
 
     @skip_if_aborted
     def _start_callables(self, row, callables):
@@ -574,10 +566,15 @@ class Writer(object):
         ----------
         row : mapping, sequence, or other
             If a mapping is given, the keys are the column names and values are
-            the data to write.  For a sequence, the items represent the values
-            and are taken to be in the same order as the constructor's
-            `columns` argument.  Any other object type should have an attribute
-            for each column specified via `columns`.
+            the data to write.  After the initial set of columns is defined
+            (via the constructor's `columns` argument or based on inferring the
+            names from the first row passed), rows can still include new keys,
+            in which case the list of known columns will be expanded.
+
+            For a sequence, the items represent the values and are taken to be
+            in the same order as the constructor's `columns` argument.  Any
+            other object type should have an attribute for each column
+            specified via `columns`.
 
             Instead of a plain value, a column's value can be a tuple of the
             form (initial_value, producer).  If a producer is is a generator
@@ -593,7 +590,9 @@ class Writer(object):
             The producer can return an update for multiple columns.  To do so,
             the keys of `row` should include a tuple with the column names and
             the produced value should be a tuple with the same order as the key
-            or a mapping from column name to the updated value.
+            or a mapping from column name to the updated value.  A mapping's
+            keys may include unknown columns; these will be added to the set of
+            known columns.
 
             Using the (initial_value, producer) form requires some additional
             steps.  The `ids` property should be set unless the first column

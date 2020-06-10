@@ -25,6 +25,20 @@ lgr = getLogger(__name__)
 NOTHING = Nothing()
 
 
+class UnknownColumns(Exception):
+    """The row has unknown columns.
+
+    Parameters
+    ----------
+    unknown_columns : list
+    """
+
+    def __init__(self, unknown_columns):
+        self.unknown_columns = unknown_columns
+        super(UnknownColumns, self).__init__(
+            "Unknown columns: {}".format(unknown_columns))
+
+
 class RowNormalizer(object):
     """Transform various input data forms to a common form.
 
@@ -72,6 +86,7 @@ class RowNormalizer(object):
         self.delayed = defaultdict(list)
         self.delayed_columns = set()
         self.nothings = {}  # column => missing value
+        self._known_columns = set()
 
         for column in columns:
             cstyle = style[column]
@@ -116,12 +131,22 @@ class RowNormalizer(object):
         return partial(self._normalize, getter)
 
     def _normalize(self, getter, row):
+        columns = self._columns
         if isinstance(row, Mapping):
             callables0 = self.strip_callables(row)
+            # The row may have new columns.  All we're doing here is keeping
+            # them around in the normalized row so that downstream code can
+            # react to them.
+            known = self._known_columns
+            new_cols = [c for c in row.keys() if c not in known]
+            if new_cols:
+                if isinstance(self._columns, OrderedDict):
+                    columns = list(self._columns)
+                columns = columns + new_cols
         else:
             callables0 = []
 
-        norm_row = self._maybe_delay(getter, row, self._columns)
+        norm_row = self._maybe_delay(getter, row, columns)
         # We need a second pass with strip_callables because norm_row will
         # contain new callables for any delayed values.
         callables1 = self.strip_callables(norm_row)
@@ -161,7 +186,6 @@ class RowNormalizer(object):
         -------
         list of (column, callable)
         """
-        known_columns = self._columns
         callables = []
         to_delete = []
         to_add = []
@@ -182,22 +206,10 @@ class RowNormalizer(object):
                     columns = columns,
                 else:
                     to_delete.append(columns)
-
-                callables_key = []
                 for column in columns:
-                    if column in known_columns:
-                        to_add.append((column, initial))
-                        callables_key.append(column)
-                    else:
-                        lgr.warning(
-                            "Callable key '%s' is not a known column: %s",
-                            column, known_columns)
-                if callables_key:
-                    callables.append((callables_key, fn))
-                else:
-                    lgr.warning("Callable for %s was not registered "
-                                "because no keys were known columns",
-                                columns)
+                    to_add.append((column, initial))
+                callables.append((columns, fn))
+
         for column, value in to_add:
             row[column] = value
         for multi_columns in to_delete:
@@ -209,7 +221,9 @@ class RowNormalizer(object):
     # can be wrapped in a callable and delayed.
 
     def getter_dict(self, row, column):
-        return row.get(column, self.nothings[column])
+        # Note: We .get() from `nothings` because `row` is permitted to have an
+        # unknown column.
+        return row.get(column, self.nothings.get(column, NOTHING))
 
     def getter_seq(self, row, column):
         col_to_idx = {c: idx for idx, c in enumerate(self._columns)}
@@ -237,6 +251,7 @@ class StyleFields(object):
         self.style = None
         self.columns = None
         self.autowidth_columns = {}
+        self._known_columns = set()
 
         self.width_fixed = None
         self.width_separtor = None
@@ -255,6 +270,7 @@ class StyleFields(object):
             Column names.
         """
         self.columns = columns
+        self._known_columns = set(columns)
         default = dict(elements.default("default_"),
                        **self.init_style.get("default_", {}))
         self.style = elements.adopt({c: default for c in columns},
@@ -606,6 +622,16 @@ class StyleFields(object):
         else:
             return "default"
 
+    def _check_for_unknown_columns(self, row):
+        known = self._known_columns
+        # The sorted() call here isn't necessary, but it makes testing the
+        # expected output easier without relying on the order-preserving
+        # implementation detail of the new dict implementation introduced in
+        # Python 3.6.
+        cols_new = sorted(c for c in row if c not in known)
+        if cols_new:
+            raise UnknownColumns(cols_new)
+
     def render(self, row, style=None, adopt=True, can_unhide=True):
         """Render fields with values from `row`.
 
@@ -629,6 +655,8 @@ class StyleFields(object):
         A tuple with the rendered value (str) and a flag that indicates whether
         the field widths required adjustment (bool).
         """
+        self._check_for_unknown_columns(row)
+
         hidden = self.hidden
         any_unhidden = False
         if can_unhide:
@@ -709,6 +737,22 @@ class Content(object):
         self.fields.build(columns)
         self.columns = columns
         self.ids = ids
+
+        if self._rows:
+            # There are pre-existing rows, so this init_columns() call was due
+            # to encountering unknown columns.  Fill in the previous rows.
+            style = self.fields.style
+            for row in self._rows:
+                for col in columns:
+                    if col not in row.row:
+                        cstyle = style[col]
+                        if "missing" in cstyle:
+                            missing = Nothing(cstyle["missing"])
+                        else:
+                            missing = NOTHING
+                        row.row[col] = missing
+            if self.fields.has_header:
+                self._add_header()
 
     def __len__(self):
         return len(list(self.rows))
