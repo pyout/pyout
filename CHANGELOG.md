@@ -12,6 +12,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   row is a dictionary or a value of the row is a callable that returns
   a dictionary.
 
+### Added
+
+- A simple example of using `pyout.Tabular`, contributed by vsoch, is
+  now available in [examples/simple/](examples/simple).
+
 ## [0.5.1] - 2020-04-08
 
 - Fixed two racy tests.
