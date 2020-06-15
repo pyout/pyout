@@ -5,6 +5,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Changed
+
+- The list of known columns is now expanded dynamically if a row
+  passed to `Tabular` contains a new column, provided that either the
+  row is a dictionary or a value of the row is a callable that returns
+  a dictionary.
 
 ## [0.5.1] - 2020-04-08
 

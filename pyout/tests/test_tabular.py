@@ -127,11 +127,9 @@ def test_tabular_write_data_as_list():
     assert_eq_repr(out.stdout, expected)
 
 
-@pytest.mark.parametrize("data_type", ["dict", "seq", "obj"])
-def test_tabular_write_unknown_column(data_type):
-    if data_type == "dict":
-        row = {"name": "a", "unk": "unk"}
-    elif data_type == "seq":
+@pytest.mark.parametrize("data_type", ["seq", "obj"])
+def test_tabular_write_unknown_column_non_dict(data_type):
+    if data_type == "seq":
         row = ["a", "unk"]
     else:
         row = AttrData(name="a", unk="unk")
@@ -139,6 +137,37 @@ def test_tabular_write_unknown_column(data_type):
     out = Tabular(columns=["name"])
     out(row)
     assert_eq_repr(out.stdout, "a\n")
+
+
+def test_tabular_write_unknown_column_dict():
+    out = Tabular(columns=["name"])
+    out({"name": "a", "unk": "unk"})
+    assert_eq_repr(out.stdout, "a unk\n")
+
+
+def test_tabular_write_unknown_column_after_first():
+    out = Tabular(columns=["name"])
+    out({"name": "a"})
+    out({"name": "b", "status": "ok"})
+    lines = out.stdout.splitlines()
+    # First column is updated with appropriate missing value.
+    assert_contains_nc(lines, "a   ", "b ok")
+
+
+def test_tabular_write_unknown_column_after_first_custom_missing():
+    out = Tabular(columns=["name"],
+                  style={"status": {"missing": "-"}})
+    out({"name": "a"})
+    out({"name": "b", "status": "ok"})
+    lines = out.stdout.splitlines()
+    assert_contains_nc(lines, "a - ", "b ok")
+
+
+def test_tabular_write_unknown_column_header():
+    out = Tabular(columns=["name"], style={"header_": {}})
+    out({"name": "a", "status": "ok"})
+    lines = out.stdout.splitlines()
+    assert_contains_nc(lines, "name status", "a    ok    ")
 
 
 def test_tabular_width_no_style():
@@ -1051,7 +1080,7 @@ def test_tabular_write_callable_unknown_column():
         out({"name": "foo", "status": delay.run})
         delay.now = True
     assert_contains_nc(out.stdout.splitlines(),
-                       "foo done")
+                       "foo done unkval")
 
 
 @pytest.mark.timeout(10)
@@ -1062,18 +1091,18 @@ def test_tabular_write_callable_unknown_column_multikey():
         out({"name": "foo", ("status", "unk"): delay.run})
         delay.now = True
     assert_contains_nc(out.stdout.splitlines(),
-                       "foo done")
+                       "foo done unk_value")
 
 
 @pytest.mark.timeout(10)
 def test_tabular_write_callable_only_unknown_columns_multikey():
-    def fail():
-        raise AssertionError("Should not be called")
-
+    delay = Delayed(("unk_value0", "unk_value1"))
     out = Tabular(["name", "status"])
     with out:
-        out({"name": "foo", ("unk0", "unk1"): fail})
-    assert out.stdout.strip() == "foo"
+        out({"name": "foo", ("unk0", "unk1"): delay.run})
+        delay.now = True
+    assert_contains_nc(out.stdout.splitlines(),
+                       "foo unk_value0 unk_value1")
 
 
 @pytest.mark.timeout(10)
@@ -1084,7 +1113,7 @@ def test_tabular_write_callable_sneaky_unknown_column():
         out({"name": "foo", "status": delay.run})
         delay.now = True
     assert_contains_nc(out.stdout.splitlines(),
-                       "foo ok")
+                       "foo ok unk_value")
 
 
 @pytest.mark.timeout(10)
@@ -1094,7 +1123,8 @@ def test_tabular_write_callable_returns_only_unknown():
     with out:
         out({"name": "foo", "status": delay.run})
         delay.now = True
-    assert out.stdout.strip() == "foo"
+    assert_contains_nc(out.stdout.splitlines(),
+                       "foo unk_value")
 
 
 @pytest.mark.timeout(10)
