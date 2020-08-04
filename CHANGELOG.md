@@ -5,6 +5,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+- Before the last release, `Tabular` worked when given a tuple for
+  `columns` instead of one of the documented types (a list of strings
+  or an `OrderedDict`).  This previous behavior has been restored.
 
 ## [0.6.0] - 2020-08-03
 
