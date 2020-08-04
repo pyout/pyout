@@ -78,7 +78,7 @@ def test_tabular_write_columns_as_tuple():
                          ids=["False", "empty list", "empty tuple"])
 def test_tabular_write_columns_falsey(columns):
     out = Tabular(columns=columns, style={"header_": {}})
-    out({"name": "foo", "status": "ok"})
+    out(OrderedDict([("name", "foo"), ("status", "ok")]))
     lines = out.stdout.splitlines()
     assert_contains_nc(lines, "name status", "foo  ok    ")
 
