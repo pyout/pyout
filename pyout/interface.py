@@ -105,7 +105,11 @@ class Writer(object):
     def __init__(self, columns=None, style=None, stream=None,
                  interactive=None, mode=None, continue_on_failure=True,
                  wait_for_top=3, max_workers=None):
-        self._columns = columns
+        if columns and not isinstance(columns, (list, OrderedDict)):
+            self._columns = list(columns)
+        else:
+            self._columns = columns or None
+
         self._ids = None
 
         self._last_content_len = 0

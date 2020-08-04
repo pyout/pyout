@@ -67,6 +67,22 @@ def test_tabular_write_missing_column_missing_text():
     assert_eq_repr(out.stdout, "solo -\n")
 
 
+def test_tabular_write_columns_as_tuple():
+    out = Tabular(columns=("name", "status"), style={"header_": {}})
+    out({"name": "foo", "status": "ok"})
+    lines = out.stdout.splitlines()
+    assert_contains_nc(lines, "name status", "foo  ok    ")
+
+
+@pytest.mark.parametrize("columns", [False, [], tuple()],
+                         ids=["False", "empty list", "empty tuple"])
+def test_tabular_write_columns_falsey(columns):
+    out = Tabular(columns=columns, style={"header_": {}})
+    out({"name": "foo", "status": "ok"})
+    lines = out.stdout.splitlines()
+    assert_contains_nc(lines, "name status", "foo  ok    ")
+
+
 def test_tabular_write_list_value():
     out = Tabular(columns=["name", "status"])
     out({"name": "foo", "status": [0, 1]})
