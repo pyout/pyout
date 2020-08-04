@@ -5,7 +5,7 @@ Exposes a single entry point, the Tabular class.
 
 import sys
 
-__version__ = "0.6.0"
+__version__ = "0.6.1"
 
 from pyout.elements import schema
 
