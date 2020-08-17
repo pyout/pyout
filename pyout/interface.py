@@ -496,7 +496,7 @@ class Writer(object):
                 lgr.debug("Registering future %s for %s", future, id_key)
                 self._futures[id_key].append(future)
 
-    def top_nrows_done(self, n):
+    def top_nrows_done(self, n, height=None):
         """Check if the top N rows' asynchronous workers are done.
 
         Parameters
@@ -504,6 +504,8 @@ class Writer(object):
         n : int
             Consider this many of the top rows (e.g., 1 would consider just the
             first row).
+        height : int, optional
+            Take this as the terminal height instead of querying the stream.
 
         Returns
         -------
@@ -529,7 +531,7 @@ class Writer(object):
         #           |oo <|                    |
         #           |oo <------ cursor       <|
         last_summary_len = self._get_last_summary_length()
-        n_free = self._stream.height - last_summary_len - 1
+        n_free = (height or self._stream.height) - last_summary_len - 1
         top_idx = self._last_content_len - n_free
 
         if top_idx < 0:
@@ -552,7 +554,8 @@ class Writer(object):
         if n:
             waited = 0
             secs = 0.5
-            while self.top_nrows_done(n) is False:
+            height = self._stream.height
+            while self.top_nrows_done(n, height) is False:
                 time.sleep(secs)
                 waited += 1
             if waited:
