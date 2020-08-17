@@ -27,3 +27,9 @@ class Tabular(TheRealTabular):
     @property
     def stdout(self):
         return self._stream.stream.getvalue()
+
+    def change_term_width(self, value):
+        self._stream.term.width = value
+
+    def change_term_height(self, value):
+        self._stream.term.height = value
