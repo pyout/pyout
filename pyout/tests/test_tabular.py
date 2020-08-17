@@ -1012,6 +1012,31 @@ class Delayed(object):
 
 
 @pytest.mark.timeout(10)
+def test_tabular_height_change():
+    delay0 = Delayed("A")
+    out = Tabular(["name", "status"],
+                  wait_for_top=0,
+                  style={"name": {"width": 3},
+                         "status": {"width": 3}})
+    out.change_term_height(3)
+    # Even after the first query...
+    out._stream.height
+    with out:
+        out({"name": "a", "status": (".", delay0.run)})
+        out({"name": "b", "status": "B"})
+        out({"name": "c", "status": "C"})
+        out({"name": "d", "status": "D"})
+        # ... a change in height is detected.
+        out.change_term_height(5)
+        delay0.now = True
+    lines = out.stdout.splitlines()
+    assert_contains_nc(lines, "a   A  ")
+    # With a height of 5, a line-based update for A was done, so there isn't a
+    # repeated value for other lines.
+    assert sum(ln == "d   D  " for ln in lines) == 1
+
+
+@pytest.mark.timeout(10)
 def test_tabular_write_callable_values():
     delay0 = Delayed("done")
     delay1 = Delayed("over")

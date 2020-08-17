@@ -24,7 +24,6 @@ class TerminalStream(interface.Stream):
         self.term = Terminal(stream=stream,
                              # interactive=False maps to force_styling=None.
                              force_styling=self.interactive or None)
-        self._height = None
 
     @property
     def width(self):
@@ -38,9 +37,7 @@ class TerminalStream(interface.Stream):
         """Terminal height.
         """
         if self.interactive:
-            if self._height is None:
-                self._height = self.term.height
-            return self._height
+            return self.term.height
 
     def write(self, text):
         """Write `text` to terminal.
