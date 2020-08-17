@@ -988,6 +988,41 @@ def test_tabular_auto_width_exceeds_total_multiline():
     assert_contains_nc(lines1, "m... tu    v...")
 
 
+@pytest.mark.parametrize("mode", ["update", "incremental"])
+def test_tabular_width_change(mode):
+    out = Tabular(mode=mode)
+    out.change_term_width(10)
+    out(OrderedDict([("name", "a"),
+                     ("path", "x" * 20)]))
+    assert out.stdout.strip() == "a xxxxx..."
+
+    # Mimic interactive change in width.
+    out.change_term_width(22)
+    out(OrderedDict([("name", "b"),
+                     ("path", "y" * 21)]))
+
+    lines0 = out.stdout.splitlines()
+    assert_contains_nc(lines0, "a xxxxxxxxxxxxxxxxxxxx")
+    assert_contains_nc(lines0, "b yyyyyyyyyyyyyyyyy...")
+
+    out.change_term_width(7)
+    out(OrderedDict([("name", "b"),
+                     ("path", "z" * 21)]))
+
+    lines1 = out.stdout.splitlines()
+    assert_contains_nc(lines1, "a xx...")
+    assert_contains_nc(lines1, "b zz...")
+
+
+def test_tabular_width_change_mode_final():
+    out = Tabular(["name", "status"], mode="final")
+    out.change_term_width(10)
+    with out:
+        out(OrderedDict([("name", "a"),
+                         ("path", "x" * 20)]))
+    assert out.stdout.strip() == "a xxxxxxxxxxxxxxxxxxxx"
+
+
 class Delayed(object):
     """Helper for producing a delayed callable.
     """

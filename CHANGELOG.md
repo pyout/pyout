@@ -5,6 +5,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+- `Tabular` now tries to detect changes in the terminal's width and
+   height.
 
 ## [0.6.1] - 2020-08-04
 

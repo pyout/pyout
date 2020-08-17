@@ -261,13 +261,17 @@ class StyleFields(object):
         self.hidden = {}  # column => {True, "if-empty", False}
         self._visible_columns = None  # cached list of visible columns
 
-    def build(self, columns):
+        self._table_width = None
+
+    def build(self, columns, table_width=None):
         """Build the style and fields.
 
         Parameters
         ----------
         columns : list of str
             Column names.
+        table_width : int, optional
+            Table width to use instead of the previously specified width.
         """
         self.columns = columns
         self._known_columns = set(columns)
@@ -284,9 +288,14 @@ class StyleFields(object):
         self.style["separator_"] = self.init_style.get(
             "separator_", elements.default("separator_"))
         lgr.debug("Validating style %r", self.style)
-        self.style["width_"] = self.init_style.get(
-            "width_", elements.default("width_"))
+        if table_width is not None:
+            self._table_width = table_width
+        elif self._table_width is None:
+            self._table_width = self.init_style.get(
+                "width_", elements.default("width_"))
+        self.style["width_"] = self._table_width
         elements.validate(self.style)
+
         self._setup_fields()
 
         self.hidden = {c: self.style[c]["hide"] for c in columns}
@@ -723,7 +732,7 @@ class Content(object):
         self._idkey_to_idx = {}
         self._idx_to_idkey = {}
 
-    def init_columns(self, columns, ids):
+    def init_columns(self, columns, ids, table_width=None):
         """Set up the fields for `columns`.
 
         Parameters
@@ -733,8 +742,10 @@ class Content(object):
             short and long names.
         ids : sequence
             A collection of column names that uniquely identify a column.
+        table_width : int, optional
+            Update the table width to this value.
         """
-        self.fields.build(columns)
+        self.fields.build(columns, table_width=table_width)
         self.columns = columns
         self.ids = ids
 
@@ -905,8 +916,9 @@ class ContentWithSummary(Content):
         super(ContentWithSummary, self).__init__(fields)
         self.summary = None
 
-    def init_columns(self, columns, ids):
-        super(ContentWithSummary, self).init_columns(columns, ids)
+    def init_columns(self, columns, ids, table_width=None):
+        super(ContentWithSummary, self).init_columns(
+            columns, ids, table_width=table_width)
         self.summary = Summary(self.fields.style)
 
     def update(self, row, style):
