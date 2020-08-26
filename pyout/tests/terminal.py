@@ -16,14 +16,24 @@ class Terminal(blessings.Terminal):
     def __init__(self, *args, **kwargs):
         super(Terminal, self).__init__(
             *args, kind="xterm-256color", **kwargs)
+        self._width = 100
+        self._height = 20
 
     @property
     def width(self):
-        return 100
+        return self._width
+
+    @width.setter
+    def width(self, value):
+        self._width = value
 
     @property
     def height(self):
-        return 20
+        return self._height
+
+    @height.setter
+    def height(self, value):
+        self._height = value
 
 
 # unicode_cap, and unicode_parm are copied from blessings' tests.

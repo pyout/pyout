@@ -988,6 +988,41 @@ def test_tabular_auto_width_exceeds_total_multiline():
     assert_contains_nc(lines1, "m... tu    v...")
 
 
+@pytest.mark.parametrize("mode", ["update", "incremental"])
+def test_tabular_width_change(mode):
+    out = Tabular(mode=mode)
+    out.change_term_width(10)
+    out(OrderedDict([("name", "a"),
+                     ("path", "x" * 20)]))
+    assert out.stdout.strip() == "a xxxxx..."
+
+    # Mimic interactive change in width.
+    out.change_term_width(22)
+    out(OrderedDict([("name", "b"),
+                     ("path", "y" * 21)]))
+
+    lines0 = out.stdout.splitlines()
+    assert_contains_nc(lines0, "a xxxxxxxxxxxxxxxxxxxx")
+    assert_contains_nc(lines0, "b yyyyyyyyyyyyyyyyy...")
+
+    out.change_term_width(7)
+    out(OrderedDict([("name", "b"),
+                     ("path", "z" * 21)]))
+
+    lines1 = out.stdout.splitlines()
+    assert_contains_nc(lines1, "a xx...")
+    assert_contains_nc(lines1, "b zz...")
+
+
+def test_tabular_width_change_mode_final():
+    out = Tabular(["name", "status"], mode="final")
+    out.change_term_width(10)
+    with out:
+        out(OrderedDict([("name", "a"),
+                         ("path", "x" * 20)]))
+    assert out.stdout.strip() == "a xxxxxxxxxxxxxxxxxxxx"
+
+
 class Delayed(object):
     """Helper for producing a delayed callable.
     """
@@ -1009,6 +1044,31 @@ class Delayed(object):
     def gen(self):
         value = self.run()
         yield value
+
+
+@pytest.mark.timeout(10)
+def test_tabular_height_change():
+    delay0 = Delayed("A")
+    out = Tabular(["name", "status"],
+                  wait_for_top=0,
+                  style={"name": {"width": 3},
+                         "status": {"width": 3}})
+    out.change_term_height(3)
+    # Even after the first query...
+    out._stream.height
+    with out:
+        out({"name": "a", "status": (".", delay0.run)})
+        out({"name": "b", "status": "B"})
+        out({"name": "c", "status": "C"})
+        out({"name": "d", "status": "D"})
+        # ... a change in height is detected.
+        out.change_term_height(5)
+        delay0.now = True
+    lines = out.stdout.splitlines()
+    assert_contains_nc(lines, "a   A  ")
+    # With a height of 5, a line-based update for A was done, so there isn't a
+    # repeated value for other lines.
+    assert sum(ln == "d   D  " for ln in lines) == 1
 
 
 @pytest.mark.timeout(10)

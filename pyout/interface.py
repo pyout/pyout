@@ -133,6 +133,7 @@ class Writer(object):
         self._write_fn = None
 
         self._stream = None
+        self._width_from_stream = False
         self._content = None
 
     def _init(self, style, streamer, processors=None):
@@ -157,11 +158,13 @@ class Writer(object):
             lgr.debug("Setting width to stream width: %s",
                       self._stream.width)
             style["width_"] = self._stream.width
+            self._width_from_stream = True
         self._content = ContentWithSummary(
             StyleFields(style, processors or PlainProcessors()))
 
-    def _init_prewrite(self):
-        self._content.init_columns(self._columns, self.ids)
+    def _init_prewrite(self, table_width=None):
+        self._content.init_columns(self._columns, self.ids,
+                                   table_width=table_width)
         self._normalizer = RowNormalizer(self._columns,
                                          self._content.fields.style)
 
@@ -341,6 +344,14 @@ class Writer(object):
 
     def _write(self, row, style=None):
         with self._write_lock():
+            if self._width_from_stream and self._mode != "final":
+                width_current = self._content.fields.style["width_"]
+                width_stream = self._stream.width
+                if width_stream is not None and width_current != width_stream:
+                    lgr.debug("Current stream width (%d) different "
+                              "than last recorded (%d). Updating",
+                              width_stream, width_current)
+                    self._init_prewrite(table_width=width_stream)
             try:
                 self._write_fn(row, style)
             except UnknownColumns as exc:
@@ -496,7 +507,7 @@ class Writer(object):
                 lgr.debug("Registering future %s for %s", future, id_key)
                 self._futures[id_key].append(future)
 
-    def top_nrows_done(self, n):
+    def top_nrows_done(self, n, height=None):
         """Check if the top N rows' asynchronous workers are done.
 
         Parameters
@@ -504,6 +515,8 @@ class Writer(object):
         n : int
             Consider this many of the top rows (e.g., 1 would consider just the
             first row).
+        height : int, optional
+            Take this as the terminal height instead of querying the stream.
 
         Returns
         -------
@@ -529,7 +542,7 @@ class Writer(object):
         #           |oo <|                    |
         #           |oo <------ cursor       <|
         last_summary_len = self._get_last_summary_length()
-        n_free = self._stream.height - last_summary_len - 1
+        n_free = (height or self._stream.height) - last_summary_len - 1
         top_idx = self._last_content_len - n_free
 
         if top_idx < 0:
@@ -552,7 +565,8 @@ class Writer(object):
         if n:
             waited = 0
             secs = 0.5
-            while self.top_nrows_done(n) is False:
+            height = self._stream.height
+            while self.top_nrows_done(n, height) is False:
                 time.sleep(secs)
                 waited += 1
             if waited:
