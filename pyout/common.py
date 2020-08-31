@@ -513,8 +513,8 @@ class StyleFields(object):
                       value, value_width, field.width, wmin, wmax, wants)
             autowidth_columns[column]["wants"] = wants
 
-        # Considering those wants and the available with, assign widths to each
-        # column.
+        # Considering those wants and the available width, assign widths to
+        # each column.
         assigned = self._assign_widths(autowidth_columns, width_auto)
 
         # Set the assigned widths.
