@@ -367,6 +367,13 @@ def test_tabular_write_style_flanking():
     assert_eq_repr(out.stdout, expected)
 
 
+def test_tabular_write_style_flanking_newlines():
+    out = Tabular(columns=["name", "status"])
+    out({"name": "foo", "status": "a\nb"})
+    # The flanking regexp should match even if the field has new lines.
+    assert out.stdout.strip() == "foo a\nb"
+
+
 def test_tabular_write_align():
     out = Tabular(["name"],
                   style={"name": {"align": "right", "width": 10}})
