@@ -5,6 +5,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+- Python 3.6 or later is now required.
+
 - `Tabular` now tries to detect changes in the terminal's width and
    height.
 
