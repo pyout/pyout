@@ -456,7 +456,7 @@ class Flanks(object):
     """A pair of processors that split and rejoin flanking whitespace.
     """
 
-    flank_re = re.compile(r"(\s*)(.*\S)(\s*)\Z")
+    flank_re = re.compile(r"(\s*)(.*\S)(\s*)\Z", flags=re.DOTALL)
 
     def __init__(self):
         self.left, self.right = None, None
