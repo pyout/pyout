@@ -796,10 +796,21 @@ class Content(object):
             raise RedoContent
 
     def __str__(self):
-        try:
-            return "".join(self._render(self.rows))
-        except RedoContent:
-            return "".join(self._render(self.rows))
+        for redo in range(3):
+            try:
+                return "".join(self._render(self.rows))
+            except RedoContent:
+                # FIXME: Only one additional _render() call is supposed to
+                # be necessary, but as f34696a7 (Detect changes in the
+                # terminal width, 2020-08-17), it's not sufficient in some
+                # cases (see gh-114).  Until that is figured out, allow one
+                # more (i.e., three in total), which appears to get rid of
+                # the issue.
+                if redo:
+                    if redo == 1:
+                        lgr.debug("One redo was not enough. Trying again")
+                    else:
+                        raise
 
     def get_idkey(self, idx):
         """Return ID keys for a row.
