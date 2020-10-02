@@ -58,6 +58,7 @@ class Stream(object, metaclass=abc.ABCMeta):
     def width(self):
         """Maximum line width.
         """
+
     @abc.abstractproperty
     def height(self):
         """Maximum number of rows that are visible."""
