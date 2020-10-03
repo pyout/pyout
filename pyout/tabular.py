@@ -21,7 +21,7 @@ class TerminalStream(interface.Stream):
     def __init__(self, stream=None, interactive=None):
         super(TerminalStream, self).__init__(
             stream=stream, interactive=interactive)
-        self.term = Terminal(stream=stream,
+        self.term = Terminal(stream=self.stream,
                              # interactive=False maps to force_styling=None.
                              force_styling=self.interactive or None)
 
