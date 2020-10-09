@@ -5,6 +5,7 @@ This module defines the Tabular entry point.
 
 from contextlib import contextmanager
 from logging import getLogger
+import os
 
 from blessings import Terminal
 
@@ -21,7 +22,7 @@ class TerminalStream(interface.Stream):
     def __init__(self, stream=None, interactive=None):
         super(TerminalStream, self).__init__(
             stream=stream, interactive=interactive)
-        self.term = Terminal(stream=stream,
+        self.term = Terminal(stream=self.stream,
                              # interactive=False maps to force_styling=None.
                              force_styling=self.interactive or None)
 
@@ -144,6 +145,13 @@ class Tabular(interface.Writer):
     def __init__(self, columns=None, style=None, stream=None,
                  interactive=None, mode=None, continue_on_failure=True,
                  wait_for_top=3, max_workers=None):
+        in_jupyter = "JPY_PARENT_PID" in os.environ
+        if in_jupyter:
+            # TODO: More work is needed to render nicely in Jupyter.  For now,
+            # just trigger the final, non-interactive rendering.
+            mode = mode or "final"
+            interactive = False if interactive is None else interactive
+
         super(Tabular, self).__init__(
             columns, style, stream=stream,
             interactive=interactive, mode=mode,
