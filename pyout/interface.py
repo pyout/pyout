@@ -672,3 +672,31 @@ class Writer(object):
         except KeyError as exc:
             # Suppress context.
             raise KeyError(exc) from None
+
+    @contextmanager
+    def outside_write(self, clear=False):
+        """Stop writing rows and yield control to the caller.
+
+        This context manager allows callers to interrupt the table output while
+        writing their own output.  On exit, the entire table is rewritten.
+
+        Parameters
+        ----------
+        clear : bool
+            Before yielding to the caller, clear the visible rows.  This only
+            has an effect in "update" mode.
+        """
+        update = self._mode == "update"
+        with self._write_lock():
+            if update and clear:
+                n_lines = min(
+                    # -1 for the last empty line of screen.
+                    self._stream.height - 1,
+                    self._last_content_len + self._get_last_summary_length())
+                self._stream.clear_last_lines(n_lines)
+            yield
+            if update:
+                self._stream.write(str(self._content))
+                last_summary = self._last_summary
+                if last_summary:
+                    self._stream.write(last_summary)

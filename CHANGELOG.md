@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - `Tabular` now tries to detect changes in the terminal's width and
    height.
 
+- The new context manager `Tabular.outside_write` can be used by block
+  further output from `Tabular` so that callers can write to the
+  screen, restoring the table on exit.
+
 ## [0.6.1] - 2020-08-04
 
 - Before the last release, `Tabular` worked when given a tuple for

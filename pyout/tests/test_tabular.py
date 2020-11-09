@@ -1830,3 +1830,33 @@ def test_tabular_mode_final_summary():
     lines = out.stdout.splitlines()
     # Expect three lines, two regular rows and one summary.
     assert len(lines) == 3
+
+
+@pytest.mark.parametrize("clear", [True, False])
+def test_tabular_outside_write(clear):
+    out = Tabular(["name", "status"],
+                  style={"header_": {},
+                         "status": {"aggregate": len}})
+    with out:
+        out({"name": "foo", "status": "unknown"})
+        with out.outside_write(clear=clear):
+            out._stream.write("outside 1\n")
+            out._stream.write("outside 2\n")
+        out({"name": "bar", "status": "ok"})
+    lines = out.stdout.splitlines()
+    # 3 lines for the initial header, foo, and status, 2 lines from the user, 3
+    # for the refresh, and 2 lines for the bar write (1 for bar and 1 for the
+    # status).
+    assert len(lines) == 10
+    if clear:
+        # "outside 1" is in the output, but not as a pure line due to the
+        # clear=True.
+        assert "outside 1" in out.stdout
+        assert "outside 1" not in lines
+    else:
+        assert "outside 1" in lines
+    assert "outside 2" in lines
+    assert_contains_nc(lines[-4:],
+                       "foo  unknown",
+                       "bar  ok     ",
+                       "     2      ")
