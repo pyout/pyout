@@ -131,7 +131,7 @@ class Field(object):
             order.  If not specified, the `default_keys` attribute will be
             used.
         exclude_post : bool, optional
-            Whether to return the vaue after the format step rather than
+            Whether to return the value after the format step rather than
             feeding it through post-format processors.
         """
         lgr.debug("Rendering field with value %r and %s keys %r",
