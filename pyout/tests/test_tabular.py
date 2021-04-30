@@ -1753,7 +1753,7 @@ def test_tabular_shrinking_summary():
     out({"name": "foo", "status": "ok"})
 
     lines = out.stdout.splitlines()
-    # Two summary lines shrank to one, so we expect a two move-ups and a clear.
+    # Two summary lines shrank to one, so we expect two move-ups and a clear.
     expected = unicode_cap("cuu1") * 2 + unicode_cap("ed")
     assert len([ln for ln in lines if ln.startswith(expected)]) == 1
 
