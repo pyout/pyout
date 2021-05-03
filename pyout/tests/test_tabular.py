@@ -1758,6 +1758,19 @@ def test_tabular_shrinking_summary():
     assert len([ln for ln in lines if ln.startswith(expected)]) == 1
 
 
+def test_tabular_summary_avoid_repeated_clear():
+    out = Tabular(style={"name": {"aggregate": len}})
+    out(OrderedDict([("name", "foo")]))
+    out(OrderedDict([("name", "bar"),
+                     ("new", "col")]))
+    # The new column requires a rewrite, but the summary has already been
+    # removed, so that shouldn't lead to an additional move-up and clear.
+    lines = out.stdout.splitlines()
+    assert_eq_repr(lines[-3],  # -1: summary, -2: bar
+                   unicode_cap("cuu1") + unicode_cap("ed") +
+                   unicode_cap("cuu1") + "foo    ")
+
+
 def test_tabular_mode_invalid():
     with pytest.raises(ValueError):
         Tabular(["name", "status"], mode="unknown")

@@ -358,15 +358,15 @@ class Writer(object):
             except UnknownColumns as exc:
                 self._columns.extend(exc.unknown_columns)
                 self._init_prewrite()
-                self._write_fn(row, style)
+                self._write_fn(row, style, redo=True)
 
     def _get_last_summary_length(self):
         last_summary = self._last_summary
         return len(last_summary.splitlines()) if last_summary else 0
 
-    def _write_update(self, row, style=None):
+    def _write_update(self, row, style=None, redo=False):
         last_summary_len = self._get_last_summary_length()
-        if last_summary_len > 0:
+        if last_summary_len > 0 and not redo:
             # Clear the summary because 1) it has very likely changed, 2)
             # it makes the counting for row updates simpler, 3) and it is
             # possible for the summary lines to shrink.
@@ -409,7 +409,7 @@ class Writer(object):
         self._last_content_len = len(self._content)
         self._last_summary = summary
 
-    def _write_incremental(self, row, style=None):
+    def _write_incremental(self, row, style=None, redo=False):
         content, status, summary = self._content.update(row, style)
         if isinstance(status, int):
             lgr.debug("Duplicating line %d with %r", status, row)
@@ -418,7 +418,7 @@ class Writer(object):
         self._stream.write(content)
         self._last_summary = summary
 
-    def _write_final(self, row, style=None):
+    def _write_final(self, row, style=None, redo=False):
         _, _, summary = self._content.update(row, style)
         self._last_summary = summary
 

@@ -5,6 +5,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+- For a table with a summary, encountering an unknown row led to lines
+  before the first line of the table being overwritten.
 
 ## [0.7.0] - 2020-11-13
 
