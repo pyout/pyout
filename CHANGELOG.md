@@ -1,14 +1,9 @@
-# Changelog
-
-The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
-and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
-
-## [0.7.1] - 2021-05-14
+# [0.7.1] - 2021-05-14
 
 - For a table with a summary, encountering an unknown row led to lines
   before the first line of the table being overwritten.
 
-## [0.7.0] - 2020-11-13
+# [0.7.0] - 2020-11-13
 
 - Python 3.6 or later is now required.
 
@@ -19,38 +14,38 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   further output from `Tabular` so that callers can write to the
   screen, restoring the table on exit.
 
-## [0.6.1] - 2020-08-04
+# [0.6.1] - 2020-08-04
 
 - Before the last release, `Tabular` worked when given a tuple for
   `columns` instead of one of the documented types (a list of strings
   or an `OrderedDict`).  This previous behavior has been restored.
 
-## [0.6.0] - 2020-08-03
+# [0.6.0] - 2020-08-03
 
-### Changed
+## Changed
 
 - The list of known columns is now expanded dynamically if a row
   passed to `Tabular` contains a new column, provided that either the
   row is a dictionary or a value of the row is a callable that returns
   a dictionary.
 
-### Added
+## Added
 
 - A simple example of using `pyout.Tabular`, contributed by vsoch, is
   now available in [examples/simple/](examples/simple).
 
-## [0.5.1] - 2020-04-08
+# [0.5.1] - 2020-04-08
 
 - Fixed two racy tests.
 
-## [0.5.0] - 2019-11-18
+# [0.5.0] - 2019-11-18
 
-### Removed
+## Removed
 
 - Support for Python 2 has been dropped.  Python 3.4 or later is
   required.
 
-### Added
+## Added
 
 - A new style attribute, "hide", makes it possible to hide a column,
   either unconditionally or until `Tabular` is called with a record
@@ -70,7 +65,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   screen.  The number of top rows that are considered can be
   configured via the new `wait_for_top` keyword argument.
 
-### Changed
+## Changed
 
 - The `jsonschema` module (v3.0.0 or later) is now a requirement
   rather than an optional dependency.
@@ -93,13 +88,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   width in this situation, set the table's width using the "width_"
   style attribute.
 
-## [0.4.1] - 2019-10-02
+# [0.4.1] - 2019-10-02
 
 Fix stale `pyout.__version__`, which hasn't been updated since v0.1.0.
 
-## [0.4.0] - 2019-03-24
+# [0.4.0] - 2019-03-24
 
-### Added
+## Added
 
 - The new style attribute "re_lookup" adds support for styling a value
   when it matches a regular expression.
@@ -120,9 +115,9 @@ Fix stale `pyout.__version__`, which hasn't been updated since v0.1.0.
   example, by coloring the output) can now be controlled with the
   `interactive` parameter.
 
-## [0.3.0] - 2018-12-18
+# [0.3.0] - 2018-12-18
 
-### Added
+## Added
 
 - A fixed width could be specified by setting the "width" style
   attribute to an integer, but there was previously no way to specify
@@ -133,13 +128,13 @@ Fix stale `pyout.__version__`, which hasn't been updated since v0.1.0.
   be "left", "center", or "right" (e.g., `{"width": {"truncate":
   "left"}}}`).
 
-### Changed
+## Changed
 
 - When giving a dictionary as the "width" style attribute's value, the
   "auto" key is no longer supported because the appropriate behavior
   can be inferred from the "min", "max", and "width" keys.
 
-### Fixed
+## Fixed
 
 - The output was corrupted when a callback function tried to update a
   line that was no longer visible on the screen.
@@ -147,13 +142,13 @@ Fix stale `pyout.__version__`, which hasn't been updated since v0.1.0.
 - When a table did not include a summary, "incremental" and "final"
   mode added "None" as the last row.
 
-## [0.2.0] - 2018-12-10
+# [0.2.0] - 2018-12-10
 
 This release includes several new style attributes, enhancements to
 how asynchronous values can be defined, and support for different
 output "modes".
 
-### Added
+## Added
 
 - A new style attribute, "transform", can be used to provide a
   function that takes a field value and returns a transformed field
@@ -185,7 +180,7 @@ output "modes".
   previous lines are updated.  If it is set to "final", values are
   only updated once, at the exit of the context manager.
 
-### Changed
+## Changed
 
 - `pyout` has been restructured from a single module into a package.
   The only associated user-facing change is the rename of
@@ -200,13 +195,13 @@ output "modes".
   initial value will be an empty string by default and can configured
   with the "missing" style attribute.
 
-### Fixed
+## Fixed
 
 - Rows that exceeded the terminal's width wrapped to the next line and
   broke pyout's line counting logic (used to, e.g., update a previous
   line).
 
-## [0.1.0] - 2018-01-08
+# [0.1.0] - 2018-01-08
 
 Initial release
 
