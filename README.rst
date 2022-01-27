@@ -39,7 +39,7 @@ should be usable in its current form, it may change in substantial
 ways that break backward compatibility, and many aspects currently
 lack polish and documentation.
 
-``pyout`` requires Python 3 (>= 3.6).  It is developed and tested in
+``pyout`` requires Python 3 (>= 3.7).  It is developed and tested in
 GNU/Linux environments and is expected to work in macOS environments
 as well.  There is currently very limited Windows support.
 
