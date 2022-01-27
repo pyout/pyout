@@ -6,10 +6,13 @@ build: false
 
 environment:
   matrix:
-    - PYTHON: "C:\\Python36"
-      PYTHON_VERSION: "3.6.8"
+    - PYTHON: "C:\\Python38"
+      PYTHON_VERSION: "3.8.1"
       PYTHON_ARCH: "32"
-      MINICONDA: C:\Miniconda36
+    - PYTHON: "C:\\Python38-x64"
+      PYTHON_VERSION: "3.8.1"
+      PYTHON_ARCH: "64"
+      MINICONDA: C:\Miniconda38-x64
 
 init:
   - "ECHO %PYTHON% %PYTHON_VERSION% %PYTHON_ARCH% %MINICONDA%"
