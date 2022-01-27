@@ -4,18 +4,17 @@
 
 build: false
 
+image:
+  - Visual Studio 2022
+
 environment:
   matrix:
-    - PYTHON: "C:\\Python38"
-      PYTHON_VERSION: "3.8.1"
-      PYTHON_ARCH: "32"
-    - PYTHON: "C:\\Python38-x64"
-      PYTHON_VERSION: "3.8.1"
+    - PYTHON_VERSION: "3.8.1"
       PYTHON_ARCH: "64"
       MINICONDA: C:\Miniconda38-x64
 
 init:
-  - "ECHO %PYTHON% %PYTHON_VERSION% %PYTHON_ARCH% %MINICONDA%"
+  - "ECHO %PYTHON_VERSION% %PYTHON_ARCH% %MINICONDA%"
 
 install:
   - "set PATH=%MINICONDA%;%MINICONDA%\\Scripts;%PATH%"
