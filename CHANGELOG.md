@@ -1,3 +1,24 @@
+# v0.7.2 (Thu Feb 03 2022)
+
+#### 🐛 Bug Fix
+
+- Adjust README for needing 3.7 [#134](https://github.com/pyout/pyout/pull/134) ([@yarikoptic](https://github.com/yarikoptic))
+- github+appveyor: add 3.7 into matrix since we support it [#134](https://github.com/pyout/pyout/pull/134) ([@yarikoptic](https://github.com/yarikoptic))
+- appveyor: specify newer base image, drop 32bit, drop PYTHON env var [#134](https://github.com/pyout/pyout/pull/134) ([@yarikoptic](https://github.com/yarikoptic))
+- Drop Python 3.6 support, add testing for 3.10, test against 3.8 on appveyor [#134](https://github.com/pyout/pyout/pull/134) ([@yarikoptic](https://github.com/yarikoptic))
+- Declare JSON schema as following Draft 7 [#131](https://github.com/pyout/pyout/pull/131) ([@jwodder](https://github.com/jwodder))
+
+#### 🏠 Internal
+
+- Set up auto [#133](https://github.com/pyout/pyout/pull/133) ([@jwodder](https://github.com/jwodder))
+
+#### Authors: 2
+
+- John T. Wodder II ([@jwodder](https://github.com/jwodder))
+- Yaroslav Halchenko ([@yarikoptic](https://github.com/yarikoptic))
+
+---
+
 # [0.7.1] - 2021-05-14
 
 - For a table with a summary, encountering an unknown row led to lines
