@@ -6,12 +6,17 @@ from curses import tparm
 from functools import partial
 import re
 
-import blessings
+# Eventually we may want to retire blessings:
+# https://github.com/pyout/pyout/issues/136
+try:
+    import blessed as bls
+except ImportError:
+    import blessings as bls
 
 from pyout.tests.utils import assert_contains
 
 
-class Terminal(blessings.Terminal):
+class Terminal(bls.Terminal):
 
     def __init__(self, *args, **kwargs):
         super(Terminal, self).__init__(

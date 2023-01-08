@@ -1,6 +1,11 @@
 import pytest
 
-pytest.importorskip("blessings")
+# Eventually we may want to retire blessings:
+# https://github.com/pyout/pyout/issues/136
+try:
+    pytest.importorskip("blessed")
+except pytest.skip.Exception:
+    pytest.importorskip("blessings")
 
 import inspect
 

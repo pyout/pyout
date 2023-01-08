@@ -7,7 +7,12 @@ from contextlib import contextmanager
 from logging import getLogger
 import os
 
-from blessings import Terminal
+# Eventually we may want to retire blessings:
+# https://github.com/pyout/pyout/issues/136
+try:
+    from blessed import Terminal
+except ImportError:
+    from blessings import Terminal
 
 from pyout import interface
 from pyout.field import TermProcessors
@@ -16,7 +21,7 @@ lgr = getLogger(__name__)
 
 
 class TerminalStream(interface.Stream):
-    """Stream interface implementation using blessings.Terminal.
+    """Stream interface implementation using blessed/blessings.Terminal.
     """
 
     def __init__(self, stream=None, interactive=None):

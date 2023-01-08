@@ -495,7 +495,12 @@ class TermProcessors(StyleProcessors):
 
     Parameters
     ----------
-    term : blessings.Terminal
+    term : blessed.Terminal or blessings.Terminal
+
+    Notes
+    -----
+    * Eventually we may want to retire blessings:
+        https://github.com/pyout/pyout/issues/136
     """
 
     def __init__(self, term):
