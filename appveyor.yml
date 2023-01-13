@@ -27,8 +27,8 @@ install:
   - "conda create -q -n test-environment python=%PYTHON_VERSION%"
   - activate test-environment
   - python -c "import sys; print(sys.path)"
-  - pip install codecov
-  - pip install -e ".[full]"
+  - pip install codecov pytest pytest-timeout
+  - pip install -e .
 
 test_script:
   - coverage run -m pytest --doctest-ignore-import-errors -rs && coverage xml
