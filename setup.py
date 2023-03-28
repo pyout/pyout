@@ -1,17 +1,5 @@
 from setuptools import setup
 
-requires = {
-    "core": [
-        # formergly blessings were used, code allows for either
-        # see https://github.com/pyout/pyout/issues/136
-        "blessed; sys_platform != 'win32'",
-        "jsonschema>=3.0.0",
-    ],
-    "tests": ["pytest", "pytest-timeout"],
-}
-
-requires["full"] = list(requires.values())
-
 setup(
     name="pyout",
     version="0.7.3",
@@ -22,10 +10,10 @@ setup(
     url="https://github.com/pyout/pyout.git",
     packages=["pyout", "pyout.tests"],
     python_requires=">=3.7",
-    tests_require=requires["tests"],
-    setup_requires=["pytest-runner"],
-    install_requires=requires["core"],
-    extras_require=requires,
+    install_requires=[
+        "blessed; sys_platform != 'win32'",
+        "jsonschema>=3.0.0",
+    ],
     long_description=open("README.rst").read(),
     classifiers=[
         "Intended Audience :: Developers",
