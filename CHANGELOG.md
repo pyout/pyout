@@ -1,3 +1,24 @@
+# v0.7.3 (Tue Mar 28 2023)
+
+#### 🐛 Bug Fix
+
+- Accepting either bless* (blessed, blessings) library [#137](https://github.com/pyout/pyout/pull/137) ([@TheChymera](https://github.com/TheChymera) [@yarikoptic](https://github.com/yarikoptic))
+
+#### 🏠 Internal
+
+- codespell: workflow, typo fix, minor var rename [#139](https://github.com/pyout/pyout/pull/139) ([@yarikoptic](https://github.com/yarikoptic))
+
+#### 🧪 Tests
+
+- Add python 3.11 into testing [#140](https://github.com/pyout/pyout/pull/140) ([@yarikoptic](https://github.com/yarikoptic))
+
+#### Authors: 2
+
+- Horea Christian ([@TheChymera](https://github.com/TheChymera))
+- Yaroslav Halchenko ([@yarikoptic](https://github.com/yarikoptic))
+
+---
+
 # v0.7.2 (Thu Feb 03 2022)
 
 #### 🐛 Bug Fix
