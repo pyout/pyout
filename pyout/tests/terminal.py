@@ -49,9 +49,9 @@ def unicode_cap(cap):
     return tigetstr(cap).decode('latin1')
 
 
-def unicode_parm(cap, *parms):
+def unicode_parm(cap, *params):
     """Return the result of ``tparm(tigetstr())`` except as Unicode."""
-    return tparm(tigetstr(cap), *parms).decode('latin1')
+    return tparm(tigetstr(cap), *params).decode('latin1')
 
 
 COLORNUMS = {"black": 0, "red": 1, "green": 2, "yellow": 3, "blue": 4,

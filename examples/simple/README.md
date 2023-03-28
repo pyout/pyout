@@ -25,7 +25,7 @@ optional arguments:
 Note that it takes a delimiter (defaults to comma), a data file (defaults to
 cereals.csv) and optionally the ability to specify that your data doesn't
 have a header (defaults to False, meaning the data does have a header). Since
-the deafults are defined, we can run the script without providing any inputs.
+the defaults are defined, we can run the script without providing any inputs.
 
 ```bash
 $ python generate_tabular.py
