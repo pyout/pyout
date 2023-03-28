@@ -21,6 +21,8 @@ init:
 
 install:
   - "set PATH=%MINICONDA%;%MINICONDA%\\Scripts;%PATH%"
+  # to overcome some odd connection issues, we are just on CI anyways
+  - conda config --set ssl_verify False
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
   - conda info -a
