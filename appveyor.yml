@@ -9,9 +9,6 @@ image:
 
 environment:
   matrix:
-    - PYTHON_VERSION: "3.7.0"
-      PYTHON_ARCH: "64"
-      MINICONDA: C:\Miniconda37-x64
     - PYTHON_VERSION: "3.8.1"
       PYTHON_ARCH: "64"
       MINICONDA: C:\Miniconda38-x64
