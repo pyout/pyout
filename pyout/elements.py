@@ -2,7 +2,10 @@
 """
 
 from collections.abc import Mapping
+import functools
 import jsonschema
+import hashlib
+
 
 schema = {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -271,6 +274,53 @@ class StyleValidationError(StyleError):
         super(StyleValidationError, self).__init__(msg)
 
 
+class StrHasher():
+    """A wrapper for objects that hashes based on the string representation.
+
+    Primarily its purpose to provide a customized @StrHasher.lru_cache
+    decorator which allows to cache based on the string representation of the
+    argument of unhashable objects.
+    """
+    def __init__(self, obj):
+        self.value = obj
+        self.hash = hashlib.md5(str(obj).encode()).hexdigest()
+
+    def __hash__(self):
+        return hash(self.hash)
+
+    def __eq__(self, other):
+        return self.hash == other.hash
+
+    @staticmethod
+    def _to(func):
+        def cached_func(*args, **kwargs):
+            wrapper = StrHasher((args, kwargs))
+            return func(wrapper)
+        return cached_func
+
+    @staticmethod
+    def _from(func):
+        def cached_func(wrapper):
+            return func(*wrapper.value[0], **wrapper.value[1])
+        return cached_func
+
+    @classmethod
+    def lru_cache(cls, maxsize=128):
+        """
+        Custom LRU cache decorator that allows for a custom hasher function.
+        """
+        def decorator(func):
+            @functools.wraps(func)
+            @cls._to
+            @functools.lru_cache(maxsize=maxsize)
+            @cls._from
+            def cached_func(*args, **kwargs):
+                return func(*args, **kwargs)
+            return cached_func
+        return decorator
+
+
+@StrHasher.lru_cache()  # the same styles could be checked over again
 def validate(style):
     """Check `style` against pyout.styling.schema.
 
