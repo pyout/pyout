@@ -310,12 +310,21 @@ class StrHasher():
         Custom LRU cache decorator that allows for a custom hasher function.
         """
         def decorator(func):
-            @functools.wraps(func)
-            @cls._to
             @functools.lru_cache(maxsize=maxsize)
             @cls._from
-            def cached_func(*args, **kwargs):
+            def lru_cached_func(*args, **kwargs):
                 return func(*args, **kwargs)
+
+            # Interface cache operations
+            cached_func = functools.wraps(func)(
+                cls._to(
+                    lru_cached_func
+                )
+            )
+            for op in dir(lru_cached_func):
+                if op.startswith('cache_'):
+                   setattr(cached_func, op,
+                    getattr(lru_cached_func, op))
             return cached_func
         return decorator
 
