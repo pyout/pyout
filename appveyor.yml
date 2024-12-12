@@ -12,6 +12,8 @@ environment:
   matrix:
     - PY: "3.9"
     - PY: "3.10"
+    - PY: "3.11"
+    - PY: "3.12"
 
 install:
   - cmd: "set PATH=C:\\Python%PY%;C:\\Python%PY%\\Scripts;%PATH%"
