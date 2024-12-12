@@ -1,6 +1,7 @@
 # CI on Windows via appveyor
 #
 # Modified from datalad-revolution's configuration file.
+#   and then with simplifications from datasalad
 
 build: false
 
@@ -9,20 +10,11 @@ image:
 
 environment:
   matrix:
-    - PYTHON_VERSION: "3.8.1"
-      PYTHON_ARCH: "64"
-      MINICONDA: C:\Miniconda38-x64
-
-init:
-  - "ECHO %PYTHON_VERSION% %PYTHON_ARCH% %MINICONDA%"
+    - PY: "3.9"
+    - PY: "3.10"
 
 install:
-  - "set PATH=%MINICONDA%;%MINICONDA%\\Scripts;%PATH%"
-  - conda config --set always_yes yes --set changeps1 no
-  - appveyor-retry conda update -q conda
-  - conda info -a
-  - "appveyor-retry conda create -q -n test-environment python=%PYTHON_VERSION%"
-  - activate test-environment
+  - cmd: "set PATH=C:\\Python%PY%;C:\\Python%PY%\\Scripts;%PATH%"
   - python -c "import sys; print(sys.path)"
   - pip install codecov pytest pytest-timeout
   - pip install -e .
