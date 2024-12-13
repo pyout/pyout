@@ -11,7 +11,7 @@ setup(
     packages=["pyout", "pyout.tests"],
     python_requires=">=3.7",
     install_requires=[
-        "blessed; sys_platform != 'win32'",
+        "blessed>=1.17.0",
         "jsonschema>=3.0.0",
     ],
     long_description=open("README.rst").read(),
