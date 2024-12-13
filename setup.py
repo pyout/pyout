@@ -13,6 +13,7 @@ setup(
     install_requires=[
         "blessed>=1.17.0",
         "jsonschema>=3.0.0",
+        'jinxed>=1.1.0; platform_system == "Windows"',
     ],
     long_description=open("README.rst").read(),
     classifiers=[

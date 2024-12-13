@@ -1,8 +1,12 @@
 """Terminal test utilities.
 """
 
-from curses import tigetstr
-from curses import tparm
+import platform
+if platform.system() == 'Windows':
+    import jinxed as curses   # pylint: disable=import-error
+else:
+    import curses
+
 from functools import partial
 import re
 
@@ -46,12 +50,12 @@ class Terminal(bls.Terminal):
 
 def unicode_cap(cap):
     """Return the result of ``tigetstr`` except as Unicode."""
-    return tigetstr(cap).decode('latin1')
+    return curses.tigetstr(cap).decode('latin1')
 
 
 def unicode_parm(cap, *params):
     """Return the result of ``tparm(tigetstr())`` except as Unicode."""
-    return tparm(tigetstr(cap), *params).decode('latin1')
+    return curses.tparm(curses.tigetstr(cap), *params).decode('latin1')
 
 
 COLORNUMS = {"black": 0, "red": 1, "green": 2, "yellow": 3, "blue": 4,
