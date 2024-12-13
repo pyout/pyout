@@ -1,5 +1,6 @@
 import pytest
 
+from unittest import mock
 from pyout.elements import adopt
 from pyout.elements import StyleValidationError
 from pyout.elements import validate
@@ -47,13 +48,25 @@ def test_adopt():
 
 
 def test_validate_error():
-    with pytest.raises(StyleValidationError):
-        validate("not ok")
+    # With caching we want to ensure that we do not cache the error
+    # somehow and do raise it again
+    for _ in range(3):
+        with pytest.raises(StyleValidationError):
+            validate("not ok")
 
 
 def test_validate_ok():
-    validate({})
-    validate({"header_": {"colname": {"bold": True}}})
+    with mock.patch("jsonschema.validate") as mock_validate:
+
+        for i in range(3):
+            validate({})
+        # With caching we must not revalidate
+        mock_validate.assert_called_once()
+        mock_validate.reset_mock()
+
+        for _ in range(3):
+            validate({"header_": {"colname": {"bold": True}}})
+        mock_validate.assert_called_once()
 
 
 def test_value_type():
