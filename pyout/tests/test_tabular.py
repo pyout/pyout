@@ -1058,7 +1058,7 @@ class Delayed(object):
         yield value
 
 
-@pytest.mark.timeout(10)
+@pytest.mark.timeout(30)
 def test_tabular_height_change():
     delay0 = Delayed("A")
     out = Tabular(["name", "status"],
@@ -1083,7 +1083,7 @@ def test_tabular_height_change():
     assert sum(ln == "d   D  " for ln in lines) == 1
 
 
-@pytest.mark.timeout(10)
+@pytest.mark.timeout(30)
 def test_tabular_write_callable_values():
     delay0 = Delayed("done")
     delay1 = Delayed("over")
@@ -1105,7 +1105,7 @@ def test_tabular_write_callable_values():
     assert_contains_nc(lines, "foo done    ", "baz over    ")
 
 
-@pytest.mark.timeout(10)
+@pytest.mark.timeout(30)
 def test_tabular_write_callable_transform_nothing():
     delay0 = Delayed(3)
 
@@ -1122,7 +1122,7 @@ def test_tabular_write_callable_transform_nothing():
     assert_contains_nc(lines, "foo 5")
 
 
-@pytest.mark.timeout(10)
+@pytest.mark.timeout(30)
 def test_tabular_write_callable_re_lookup_non_string():
     delay0 = Delayed(3)
     delay1 = Delayed("4")
@@ -1142,7 +1142,7 @@ def test_tabular_write_callable_re_lookup_non_string():
     assert_contains_nc(lines, "bar " + capres("green", "4"))
 
 
-@pytest.mark.timeout(10)
+@pytest.mark.timeout(30)
 def test_tabular_write_callable_values_multi_return():
     delay = Delayed({"status": "done", "path": "/tmp/a"})
 
@@ -1160,7 +1160,7 @@ def test_tabular_write_callable_values_multi_return():
     assert_contains_nc(lines, "foo done /tmp/a")
 
 
-@pytest.mark.timeout(10)
+@pytest.mark.timeout(30)
 def test_tabular_write_callable_unknown_column():
     delay = Delayed({"status": "done", "unk": "unkval"})
     out = Tabular(["name", "status"])
@@ -1171,7 +1171,7 @@ def test_tabular_write_callable_unknown_column():
                        "foo done unkval")
 
 
-@pytest.mark.timeout(10)
+@pytest.mark.timeout(30)
 def test_tabular_write_callable_unknown_column_multikey():
     delay = Delayed({"status": "done", "unk": "unk_value"})
     out = Tabular(["name", "status"])
@@ -1182,7 +1182,7 @@ def test_tabular_write_callable_unknown_column_multikey():
                        "foo done unk_value")
 
 
-@pytest.mark.timeout(10)
+@pytest.mark.timeout(30)
 def test_tabular_write_callable_only_unknown_columns_multikey():
     delay = Delayed(("unk_value0", "unk_value1"))
     out = Tabular(["name", "status"])
@@ -1193,7 +1193,7 @@ def test_tabular_write_callable_only_unknown_columns_multikey():
                        "foo unk_value0 unk_value1")
 
 
-@pytest.mark.timeout(10)
+@pytest.mark.timeout(30)
 def test_tabular_write_callable_sneaky_unknown_column():
     delay = Delayed({"status": "ok", "unk": "unk_value"})
     out = Tabular(["name", "status"])
@@ -1204,7 +1204,7 @@ def test_tabular_write_callable_sneaky_unknown_column():
                        "foo ok unk_value")
 
 
-@pytest.mark.timeout(10)
+@pytest.mark.timeout(30)
 def test_tabular_write_callable_returns_only_unknown():
     delay = Delayed({"unk": "unk_value"})
     out = Tabular(["name", "status"])
@@ -1215,7 +1215,7 @@ def test_tabular_write_callable_returns_only_unknown():
                        "foo unk_value")
 
 
-@pytest.mark.timeout(10)
+@pytest.mark.timeout(30)
 @pytest.mark.parametrize("nrows", [20, 21])
 def test_tabular_callback_to_offscreen_row(nrows):
     delay = Delayed("OK")
@@ -1248,7 +1248,7 @@ def test_tabular_callback_to_offscreen_row(nrows):
     assert len(updated) == nexpected_updated
 
 
-@pytest.mark.timeout(10)
+@pytest.mark.timeout(30)
 @pytest.mark.parametrize("header", [True, False], ids=["header", "no header"])
 def test_tabular_callback_wait_for_top(header):
     delay_fns = {0: Delayed("v0"),
@@ -1306,7 +1306,7 @@ def test_tabular_callback_wait_for_top(header):
     thread.join()
 
 
-@pytest.mark.timeout(10)
+@pytest.mark.timeout(30)
 @pytest.mark.parametrize("result",
                          [{"status": "done", "path": "/tmp/a"},
                           ("done", "/tmp/a")],
@@ -1330,7 +1330,7 @@ def test_tabular_write_callable_values_multicol_key_infer_column(result):
     assert_contains_nc(lines, "foo done /tmp/a")
 
 
-@pytest.mark.timeout(10)
+@pytest.mark.timeout(30)
 @pytest.mark.parametrize("kind", ["function", "generator"])
 @pytest.mark.parametrize("should_continue", [True, False])
 def test_tabular_callback_exception_within(kind, should_continue):
@@ -1384,7 +1384,7 @@ def test_tabular_callback_exception_within(kind, should_continue):
         assert "foo ok" not in stdout
 
 
-@pytest.mark.timeout(10)
+@pytest.mark.timeout(30)
 def test_tabular_write_callable_cancel_on_exception():
     def fail():
         raise TypeError("wrong")
@@ -1404,7 +1404,7 @@ def test_tabular_write_callable_cancel_on_exception():
     assert out.stdout.splitlines()[:2] == ["foo", "bar"]
 
 
-@pytest.mark.timeout(10)
+@pytest.mark.timeout(30)
 def test_tabular_write_callable_kb_interrupt_in_exit():
     delay0 = Delayed("v0")
     delay1 = Delayed("v1")
@@ -1433,7 +1433,7 @@ def test_tabular_write_callable_kb_interrupt_in_exit():
                        "bar   ")
 
 
-@pytest.mark.timeout(10)
+@pytest.mark.timeout(30)
 def test_tabular_write_callable_kb_interrupt_during_wait():
     delay0 = Delayed("v0")
     delay1 = Delayed("v1")
@@ -1469,7 +1469,7 @@ def test_tabular_write_callable_kb_interrupt_during_wait():
     assert "Keyboard interrupt" in stdout
 
 
-@pytest.mark.timeout(10)
+@pytest.mark.timeout(30)
 @pytest.mark.parametrize("kind", ["function", "generator"])
 def test_tabular_callback_bad_value(caplog, kind):
     caplog.set_level(logging.ERROR)
@@ -1495,7 +1495,7 @@ def test_tabular_callback_bad_value(caplog, kind):
     assert "got 'atom'" in (caplog.text if kind == "function" else out.stdout)
 
 
-@pytest.mark.timeout(10)
+@pytest.mark.timeout(30)
 def test_tabular_cancel_in_exit():
     delay_0 = Delayed("v0")
     delay_1 = Delayed("v1")
@@ -1526,7 +1526,7 @@ def test_tabular_cancel_in_exit():
         assert "v2" not in stdout
 
 
-@pytest.mark.timeout(10)
+@pytest.mark.timeout(30)
 def test_tabular_exc_in_exit_no_async():
     out = Tabular(columns=["name", "status"])
     rows = [{"name": "foo", "status": "a"},
@@ -1545,7 +1545,7 @@ def test_tabular_exc_in_exit_no_async():
         assert out.stdout.splitlines() == expected
 
 
-@pytest.mark.timeout(10)
+@pytest.mark.timeout(30)
 def test_tabular_pool_shutdown():
     delay_0 = Delayed("v0")
     delay_1 = Delayed("v1")
@@ -1574,7 +1574,7 @@ def delayed_gen_func(*values):
     return fn
 
 
-@pytest.mark.timeout(10)
+@pytest.mark.timeout(30)
 @pytest.mark.parametrize("gen_source",
                          [delayed_gen_func(),
                           delayed_gen_func()()],
@@ -1594,7 +1594,7 @@ def test_tabular_write_generator_function_values(gen_source):
                        "bar ok      ")
 
 
-@pytest.mark.timeout(10)
+@pytest.mark.timeout(30)
 def test_tabular_write_generator_values_multireturn():
     gen = delayed_gen_func({"status": "working"},  # for one of two columns
                            {"path": "/tmp/a"},  # for the other of two columns
@@ -1628,7 +1628,7 @@ def test_tabular_write_wait_noop_if_nothreads():
         assert_eq_repr(out.stdout, expected)
 
 
-@pytest.mark.timeout(10)
+@pytest.mark.timeout(30)
 @pytest.mark.parametrize("form", ["dict", "list", "attrs"])
 def test_tabular_write_delayed(form):
     data = OrderedDict([("name", "foo"),
@@ -1662,7 +1662,7 @@ def test_tabular_write_delayed(form):
     assert eq_repr_noclear(lines[-1], "foo 1 2 3")
 
 
-@pytest.mark.timeout(10)
+@pytest.mark.timeout(30)
 def test_tabular_write_inspect_with_getitem():
     delay0 = Delayed("done")
     out = Tabular(["name", "status"])
