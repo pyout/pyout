@@ -4,6 +4,7 @@
 import platform
 if platform.system() == 'Windows':
     import jinxed as curses   # pylint: disable=import-error
+    curses.setupterm()
 else:
     import curses
 
