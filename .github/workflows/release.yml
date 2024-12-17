@@ -10,7 +10,9 @@ on:
     types:
       - closed
   # Allow manually triggering a release via a "Run workflow" button on the
-  # workflow's page:
+  # workflow's page. Note that the recent merged PR should still be tagged
+  # with "release" (retroactively if needed) label for 'auto' to actually
+  # mint a release.
   workflow_dispatch:
 
 
