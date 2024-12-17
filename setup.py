@@ -1,8 +1,10 @@
 from setuptools import setup
+import versioneer
 
 setup(
     name="pyout",
-    version="0.7.3",
+    version=versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass(),
     author="Kyle Meyer",
     author_email="kyle@kyleam.com",
     description="Terminal styling for tabular data",

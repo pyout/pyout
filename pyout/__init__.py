@@ -5,8 +5,6 @@ Exposes a single entry point, the Tabular class.
 
 import sys
 
-__version__ = "0.7.3"
-
 from pyout.elements import schema
 
 if sys.platform == "win32":
@@ -15,3 +13,6 @@ else:
     from pyout.tabular import Tabular
 
 del sys
+
+from . import _version
+__version__ = _version.get_versions()['version']
