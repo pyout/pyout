@@ -1,3 +1,30 @@
+# v0.8.0 (Tue Dec 17 2024)
+
+#### 🚀 Enhancement
+
+- Add pyproject.toml, use versioneer, unpin auto, make release action operate on merges and dispatch [#149](https://github.com/pyout/pyout/pull/149) ([@yarikoptic](https://github.com/yarikoptic))
+
+#### 🐛 Bug Fix
+
+- OPT: cache validation of styles [#144](https://github.com/pyout/pyout/pull/144) ([@yarikoptic](https://github.com/yarikoptic))
+
+#### 🏠 Internal
+
+- Upgrade codecov action to v5 and provide secret token [#146](https://github.com/pyout/pyout/pull/146) ([@yarikoptic](https://github.com/yarikoptic))
+- Stop using `setup.py test` [#138](https://github.com/pyout/pyout/pull/138) ([@jwodder](https://github.com/jwodder))
+
+#### 🧪 Tests
+
+- Drop use of conda in appveyor (does not work) + set overall timeout limit to 120 sec [#145](https://github.com/pyout/pyout/pull/145) ([@yarikoptic](https://github.com/yarikoptic))
+- Improve testing: run on schedule + test py 3.12 [#143](https://github.com/pyout/pyout/pull/143) ([@yarikoptic](https://github.com/yarikoptic))
+
+#### Authors: 2
+
+- John T. Wodder II ([@jwodder](https://github.com/jwodder))
+- Yaroslav Halchenko ([@yarikoptic](https://github.com/yarikoptic))
+
+---
+
 # v0.7.3 (Tue Mar 28 2023)
 
 #### 🐛 Bug Fix
