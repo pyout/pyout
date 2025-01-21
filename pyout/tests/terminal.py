@@ -11,7 +11,7 @@ import re
 try:
     import blessed as bls
 except ImportError:
-    import blessings as bls
+    import blessings as bls  # type: ignore
 
 from pyout.tests.utils import assert_contains
 

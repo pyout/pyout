@@ -12,7 +12,7 @@ import os
 try:
     from blessed import Terminal
 except ImportError:
-    from blessings import Terminal
+    from blessings import Terminal  # type: ignore
 
 from pyout import interface
 from pyout.field import TermProcessors
