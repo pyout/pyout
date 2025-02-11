@@ -9,6 +9,7 @@ import re
 import sys
 
 from pyout.elements import value_type
+from pyout.truncate import strip_ansi_codes
 
 lgr = getLogger(__name__)
 
@@ -118,7 +119,10 @@ class Field(object):
     def _format(self, _, result):
         """Wrap format call as a two-argument processor function.
         """
-        return self._fmt.format(str(result))
+        stripped = strip_ansi_codes(str(result))
+        uncolored = self._fmt.format(stripped)
+        colored = uncolored.replace(stripped, str(result))
+        return colored
 
     def __call__(self, value, keys=None, exclude_post=False):
         """Render `value` by feeding it through the processors.

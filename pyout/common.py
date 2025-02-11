@@ -14,11 +14,12 @@ from collections.abc import Sequence
 from functools import partial
 import inspect
 from logging import getLogger
+import re
 
 from pyout import elements
 from pyout.field import Field
 from pyout.field import Nothing
-from pyout.truncate import Truncater
+from pyout.truncate import Truncater, strip_ansi_codes
 from pyout.summary import Summary
 
 lgr = getLogger(__name__)
@@ -502,7 +503,7 @@ class StyleFields(object):
             else:
                 value = row[column]
             value = str(value)
-            value_width = len(value)
+            value_width = len(strip_ansi_codes(value))
             wmax = autowidth_columns[column]["max"]
             wmin = autowidth_columns[column]["min"]
             max_seen = max(value_width, field.width)

@@ -6,6 +6,7 @@ This module defines the Tabular entry point.
 from contextlib import contextmanager
 from logging import getLogger
 import os
+import re
 
 # Eventually we may want to retire blessings:
 # https://github.com/pyout/pyout/issues/136

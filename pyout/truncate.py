@@ -1,9 +1,18 @@
 """Processor for field value truncation.
 """
+import re
+
+def strip_ansi_codes(s: str) -> str:
+    ansi_escape = re.compile(
+        r'(?:\x1B[@-Z\\-_]|'   # ESC followed by any one character in this range
+        r'\x1B\[[0-?]*[ -/]*[@-~])'  # or ESC [ followed by 0 or more codes and a final command
+    )
+    return ansi_escape.sub('', s)
+
 
 
 def _truncate_right(value, length, marker):
-    if len(value) <= length:
+    if len(strip_ansi_codes(value)) <= length:
         short = value
     elif marker:
         nchars_free = length - len(marker)
@@ -53,7 +62,7 @@ def _splice(value, n):
 
 
 def _truncate_center(value, length, marker):
-    value_len = len(value)
+    value_len = len(strip_ansi_codes(value))
     if value_len <= length:
         return value
 
