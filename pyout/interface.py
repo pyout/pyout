@@ -366,6 +366,8 @@ class Writer(object):
 
     def _write_update(self, row, style=None, redo=False):
         last_summary_len = self._get_last_summary_length()
+        content, status, summary = self._content.update(row, style)
+
         if last_summary_len > 0 and not redo:
             # Clear the summary because 1) it has very likely changed, 2)
             # it makes the counting for row updates simpler, 3) and it is
@@ -373,7 +375,6 @@ class Writer(object):
             lgr.debug("Clearing summary of %d line(s)", last_summary_len)
             self._stream.clear_last_lines(last_summary_len)
 
-        content, status, summary = self._content.update(row, style)
 
         single_row_updated = False
         if isinstance(status, int):
