@@ -487,7 +487,7 @@ class PlainProcessors(StyleProcessors):
     """Ignore color, bold, or underline styling.
     """
 
-    style_types = {}
+    style_types = OrderedDict()
 
 
 class TermProcessors(StyleProcessors):

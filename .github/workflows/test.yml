@@ -25,6 +25,11 @@ jobs:
           - '3.11'
           - '3.12'
           - '3.13'
+        toxenv:
+          - py
+        include:
+          - python: '3.9'
+            toxenv: typing
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python }}
@@ -36,7 +41,7 @@ jobs:
         pip install -U pip
         pip install codecov coverage tox
     - name: Run tests
-      run: tox -e py && coverage xml
+      run: tox -e ${{ matrix.toxenv }} && coverage xml
     - name: Upload coverage to codecov
       uses: codecov/codecov-action@v5
       with:
