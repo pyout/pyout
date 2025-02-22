@@ -1046,7 +1046,12 @@ class Delayed(object):
     def run(self):
         """Return `value` once `now` is true.
         """
+        t0 = time.time()
         while True:
+            if time.time() - t0 > 10:
+                sys.stderr.write(f"Testing helper Delayed({self.value}) was never properly terminated")
+                traceback.print_stack()
+                raise RuntimeError("Timeout")
             if self.now:
                 value = self.value
                 if callable(value):
@@ -1431,6 +1436,7 @@ def test_tabular_write_callable_kb_interrupt_in_exit():
     assert_contains_nc(stdout.splitlines(),
                        "foo v0",
                        "bar   ")
+    delay1.now = True
 
 
 @pytest.mark.timeout(10)
@@ -1524,6 +1530,7 @@ def test_tabular_cancel_in_exit():
         assert "v0" in stdout
         assert "v1" not in stdout
         assert "v2" not in stdout
+    delay_2.now = True
 
 
 @pytest.mark.timeout(10)
