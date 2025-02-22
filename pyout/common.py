@@ -861,7 +861,7 @@ class Content(object):
           * append: the only change in the content is the addition of a line,
             and the returned content will consist of just this line.
 
-          * an integer, N: the Nth line of the output needs to be update, and
+          * an integer, N: the Nth line of the output needs to be updated, and
             the returned content will consist of just this line.
 
           * repaint: all lines need to be updated, and the returned content
