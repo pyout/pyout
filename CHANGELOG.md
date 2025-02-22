@@ -1,3 +1,19 @@
+# v0.8.1 (Sat Feb 22 2025)
+
+#### 🐛 Bug Fix
+
+- First get content for summary and only then clear prior one [#156](https://github.com/pyout/pyout/pull/156) ([@yarikoptic](https://github.com/yarikoptic))
+
+#### 🧪 Tests
+
+- Run GH CI testing also on macos and fix up tests for potential stalling in Delayed [#148](https://github.com/pyout/pyout/pull/148) ([@yarikoptic](https://github.com/yarikoptic))
+
+#### Authors: 1
+
+- Yaroslav Halchenko ([@yarikoptic](https://github.com/yarikoptic))
+
+---
+
 # v0.8.0 (Tue Dec 17 2024)
 
 #### 🚀 Enhancement
