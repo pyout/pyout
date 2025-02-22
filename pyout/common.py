@@ -717,10 +717,10 @@ class Content(object):
 
     Parameters
     ----------
-    fields : StyleField instance
+    fields : StyleFields instance
     """
 
-    def __init__(self, fields):
+    def __init__(self, fields: StyleFields):
         self.fields = fields
         self.summary = None
 
@@ -840,7 +840,7 @@ class Content(object):
                    .format(idx, len(self._idkey_to_idx)))
             raise IndexError(msg) from None
 
-    def update(self, row, style):
+    def update(self, row, style) -> tuple[str, str | int]:
         """Modify the content.
 
         Parameters
@@ -858,13 +858,13 @@ class Content(object):
         A tuple of (content, status), where status is 'append', an integer, or
         'repaint'.
 
-          * append: the only change in the content is the addition of a line,
+          * 'append': the only change in the content is the addition of a line,
             and the returned content will consist of just this line.
 
           * an integer, N: the Nth line of the output needs to be update, and
             the returned content will consist of just this line.
 
-          * repaint: all lines need to be updated, and the returned content
+          * 'repaint': all lines need to be updated, and the returned content
             will consist of all the lines.
         """
         called_before = bool(self)
@@ -925,14 +925,14 @@ class ContentWithSummary(Content):
 
     def __init__(self, fields):
         super(ContentWithSummary, self).__init__(fields)
-        self.summary = None
+        self.summary: Summary | None = None
 
-    def init_columns(self, columns, ids, table_width=None):
+    def init_columns(self, columns, ids, table_width=None) -> None:
         super(ContentWithSummary, self).init_columns(
             columns, ids, table_width=table_width)
         self.summary = Summary(self.fields.style)
 
-    def update(self, row, style):
+    def update(self, row, style) -> tuple[str, str | int, str | None]:
         lgr.log(9, "Updating with .summary set to %s", self.summary)
         content, status = super(ContentWithSummary, self).update(row, style)
         if self.summary:
